@@ -1,0 +1,84 @@
+<!doctype html>
+<html data-theme="shadcn">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>パスワードリセット</title>
+    <link href="./output.css" rel="stylesheet">
+
+  </head>
+
+  <body>
+    <nav class="navbar">
+      <div class="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 lg:flex lg:items-center lg:gap-2 lg:px-8">
+        <div class="navbar-start items-center justify-between max-lg:w-full">
+          <a class="text-base-content flex items-center gap-3 text-xl font-bold lg:hidden" href="#">
+            <img src="https://cdn.flyonui.com/fy-assets/logo/logo.png" class="size-8" alt="brand-logo" />
+            画像解析アプリ
+          </a>
+
+          <div class="flex items-center lg:hidden">
+            <span
+              class="icon-[tabler--search] hover:text-primary text-base-content active:text-primary me-6 size-5 cursor-pointer"></span>
+            <button type="button" class="collapse-toggle btn btn-outline btn-secondary btn-square"
+              data-collapse="#navbar-block-5" aria-controls="navbar-block-5" aria-label="Toggle navigation">
+              <span class="icon-[tabler--menu-2] collapse-open:hidden size-5.5"></span>
+              <span class="icon-[tabler--x] collapse-open:block hidden size-5.5"></span>
+            </button>
+          </div>
+        </div>
+        <div id="navbar-block-5"
+          class="lg:navbar-center transition-height collapse hidden grow overflow-hidden duration-300 lg:flex">
+          <div
+            class="text-base-content flex gap-6 text-base font-medium max-lg:mt-4 max-lg:flex-col lg:items-center lg:gap-16">
+            <a href="#" class="hover:text-primary">Home</a>
+            <a href="#" class="hover:text-primary">Products</a>
+            <a class="text-base-content flex items-center gap-3 text-xl font-bold max-lg:hidden" href="#">
+              <img src="https://cdn.flyonui.com/fy-assets/logo/logo.png" class="size-8" alt="brand-logo" />
+              画像解析アプリ
+            </a>
+            <a href="#" class="hover:text-primary">About Us</a>
+            <a href="#" class="hover:text-primary">Contacts</a>
+          </div>
+        </div>
+        <div class="navbar-end max-lg:hidden">
+          <span
+            class="icon-[tabler--search] hover:text-primary active:text-primary text-base-content size-5 cursor-pointer"></span>
+        </div>
+      </div>
+    </nav>
+
+    <div
+      class="flex h-auto min-h-screen items-center justify-center overflow-x-hidden bg-cover bg-center bg-no-repeat mt-[-100px]">
+      <div class="relative flex items-center justify-center px-4 sm:px-6 lg:px-8">
+        <div class="bg-base-100 shadow-base-300/20 z-1 w-full space-y-6 rounded-xl p-6 shadow-md sm:max-w-md lg:p-8">
+          <div class="flex items-center gap-3">
+            <h2 class="text-base-content text-xl font-bold">画像解析アプリ</h2>
+          </div>
+          <div>
+            <h3 class="text-base-content mb-1.5 text-2xl font-semibold">パスワードを忘れた場合</h3>
+            <p class="text-base-content/80">メールアドレスを入力してください。パスワードリセットの手順をお送りします。</p>
+          </div>
+          <form class="mb-4 space-y-4" onsubmit="return false;">
+            <div>
+              <label class="label-text" for="userEmail">Email address*</label>
+              <input type="email" placeholder="Enter your email address" class="input" id="userEmail" required />
+            </div>
+            <button class="btn btn-lg btn-primary btn-gradient btn-block">リセットメール送信</button>
+          </form>
+          <div class="group flex items-center justify-center gap-2">
+            <span
+              class="icon-[tabler--chevron-left] text-primary size-5 shrink-0 transition-transform group-hover:-translate-x-1 rtl:rotate-180"></span>
+            <a href="login.html" class="link link-animated link-primary font-normal">ログイン画面</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <script src="./node_modules/flyonui/flyonui.js"></script>
+    <script src="./node_modules/flyonui/dist/accordion.js"></script>
+  </body>
+
+</html>

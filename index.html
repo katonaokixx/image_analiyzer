@@ -1,0 +1,897 @@
+<!doctype html>
+<html data-theme="shadcn">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlyonUI Test</title>
+    <link href="./output.css" rel="stylesheet">
+  </head>
+
+  <body>
+
+    <nav class="navbar">
+      <div class="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 lg:flex lg:items-center lg:gap-2 lg:px-8">
+        <div class="navbar-start items-center justify-between max-lg:w-full">
+          <a class="text-base-content flex items-center gap-3 text-xl font-bold lg:hidden" href="#">
+            <img src="https://cdn.flyonui.com/fy-assets/logo/logo.png" class="size-8" alt="brand-logo" />
+            画像解析アプリ
+          </a>
+
+          <div class="flex items-center lg:hidden">
+            <span
+              class="icon-[tabler--search] hover:text-primary text-base-content active:text-primary me-6 size-5 cursor-pointer"></span>
+            <button type="button" class="collapse-toggle btn btn-outline btn-secondary btn-square"
+              data-collapse="#navbar-block-5" aria-controls="navbar-block-5" aria-label="Toggle navigation">
+              <span class="icon-[tabler--menu-2] collapse-open:hidden size-5.5"></span>
+              <span class="icon-[tabler--x] collapse-open:block hidden size-5.5"></span>
+            </button>
+          </div>
+        </div>
+        <div id="navbar-block-5"
+          class="lg:navbar-center transition-height collapse hidden grow overflow-hidden duration-300 lg:flex">
+          <div
+            class="text-base-content flex gap-6 text-base font-medium max-lg:mt-4 max-lg:flex-col lg:items-center lg:gap-16">
+            <a href="#" class="hover:text-primary">images</a>
+            <a href="#" class="hover:text-primary">Products</a>
+            <a class="text-base-content flex items-center gap-3 text-xl font-bold max-lg:hidden" href="#">
+              <img src="https://cdn.flyonui.com/fy-assets/logo/logo.png" class="size-8" alt="brand-logo" />
+              画像解析アプリ
+            </a>
+            <a href="#" class="hover:text-primary">About Us</a>
+            <a href="#" class="hover:text-primary">Contacts</a>
+          </div>
+        </div>
+        <div class="navbar-end max-lg:hidden">
+          <span
+            class="icon-[tabler--search] hover:text-primary active:text-primary text-base-content size-5 cursor-pointer"></span>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container mx-auto px-2 py-0">
+      <div class="bg-base-100 py-8 sm:py-16 lg:py-24">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="mb-12 space-y-4 text-center sm:mb-16 lg:mb-24">
+            <h2 class="text-base-content text-2xl font-semibold md:text-3xl lg:text-4xl">
+              <span class="relative z-1 font-bold">
+                Explore our
+                <span
+                  class="from-primary absolute start-0 bottom-1 -z-1 h-0.5 w-full bg-gradient-to-r to-transparent to-80%"
+                  aria-hidden="true"></span>
+              </span>
+              Gallery
+            </h2>
+            <p class="text-base-content/80 text-xl">
+              Explore our gallery to learn more about our amazing products and their features.
+            </p>
+            <div class="group flex items-center justify-center gap-2 pt-4 pb-4"
+              style="padding-top: 16px !important; padding-bottom: 16px !important;">
+              <a href="image.upload.html" class="link link-animated link-primary font-normal">画像解析へ</a>
+              <span
+                class="icon-[tabler--chevron-right] text-primary size-5 shrink-0 transition-transform group-hover:translate-x-1 rtl:rotate-180"></span>
+            </div>
+          </div>
+
+          <div class="grid gap-6 md:grid-cols-2">
+            <div>
+              <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-8.png"
+                alt="Coastal cliffs and ocean view" class="rounded-box aspect-5/4 min-h-121.75 object-cover" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-6">
+              <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-9.png"
+                alt="Silhouettes on beach" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
+              <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-10.png"
+                alt="Snowy mountain peaks" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
+              <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-11.png"
+                alt="Rolling green hills" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
+              <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-12.png"
+                alt="Sunset landscape" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-6">
+              <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-13.png"
+                alt="Silhouettes on beach" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
+              <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-14.png"
+                alt="Snowy mountain peaks" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
+              <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-15.png"
+                alt="Rolling green hills" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
+              <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-16.png"
+                alt="Sunset landscape" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
+            </div>
+            <div>
+              <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-17.png"
+                alt="Coastal cliffs and ocean view" class="rounded-box aspect-5/4 min-h-121.75 object-cover" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- テーブルセクション -->
+    <div class="container mx-auto px-4 py-8">
+      <div class="bg-base-100 rounded-xl shadow-sm p-6">
+        <!-- Filter Bar -->
+        <div class="flex flex-col flex-wrap gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+          <!-- Left side: Search -->
+          <div class="select-floating w-80">
+            <input class="input" list="datalistOptions" id="exampleDataList" placeholder="Type to search..." />
+            <label class="select-floating-label" for="selectFloating">Search</label>
+          </div>
+          <!-- Right side: Date Sort and Status Filter -->
+          <div class="flex flex-col sm:flex-row gap-4">
+            <div class="select-floating w-40">
+              <select class="select" aria-label="Date sort" id="dateSort">
+                <option>新しい順</option>
+                <option>古い順</option>
+              </select>
+              <label class="select-floating-label" for="dateSort">日順ソート</label>
+            </div>
+
+            <div class="select-floating w-40">
+              <select class="select" aria-label="Select floating label" id="selectFloating">
+                <option>すべて</option>
+                <option>解析成功</option>
+                <option>解析中</option>
+                <option>準備中</option>
+                <option>失敗</option>
+              </select>
+              <label class="select-floating-label" for="selectFloating">ステータス</label>
+            </div>
+
+            <div class="select-floating w-40">
+              <select class="select" aria-label="Label filter" id="labelFilter">
+                <option>すべて</option>
+                <option>犬</option>
+                <option>屋外</option>
+                <option>公園</option>
+                <option>風景</option>
+                <option>人物</option>
+              </select>
+              <label class="select-floating-label" for="labelFilter">ラベル</label>
+            </div>
+
+            <div class="select-floating w-40">
+              <select class="select" aria-label="Confidence filter" id="confidenceFilter">
+                <option>すべて</option>
+                <option>90%以上</option>
+                <option>80-89%</option>
+                <option>70-79%</option>
+                <option>60-69%</option>
+                <option>60%未満</option>
+              </select>
+              <label class="select-floating-label" for="confidenceFilter">信頼度</label>
+            </div>
+
+            <button type="button" class="btn btn-soft btn-sm btn-circle" onclick="resetAllFilters()" title="フィルターをリセット">
+              <span class="icon-[tabler--refresh] size-4"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-x-auto max-w-6xl mx-auto">
+          <table class="table w-full [&_tr:nth-child(even)]:bg-base-200">
+            <thead>
+              <tr>
+                <th>サムネイル画像</th>
+                <th>アップロード日時</th>
+                <th>ステータス</th>
+                <th>機械学習によってつけられたラベル</th>
+                <th>信頼度</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- row 1 -->
+              <tr>
+                <td>
+                  <div class="flex items-center gap-3">
+                    <div class="avatar cursor-pointer" data-overlay="#slide-down-animated-modal">
+                      <div class="bg-base-content/10 h-10 w-10 rounded-md">
+                        <img src="https://cdn.flyonui.com/fy-assets/components/table/product-2.png" />
+                      </div>
+                    </div>
+                    <div>
+                      <div class="text-sm opacity-50">画像ファイル</div>
+                      <div class="font-medium">sample_image_001.jpg</div>
+                    </div>
+                  </div>
+                </td>
+                <td>2024-01-15 10:30</td>
+                <td>
+                  <span class="badge badge-outline border-dashed badge-success me-2">
+                    解析成功
+                  </span>
+                </td>
+                <td>
+                  <span class="badge badge-error me-1">犬</span>
+                  <span class="badge badge-secondary me-1">屋外</span>
+                  <span class="badge badge-success me-1">公園</span>
+                </td>
+                <td>
+                  <span class="badge badge-success">95%</span>
+                </td>
+              </tr>
+              <!-- row 2 -->
+              <tr>
+                <td>
+                  <div class="flex items-center gap-3">
+                    <div class="avatar cursor-pointer" data-overlay="#slide-down-animated-modal">
+                      <div class="bg-base-content/10 h-10 w-10 rounded-md">
+                        <img src="https://cdn.flyonui.com/fy-assets/components/table/product-1.png"
+                          alt="product image" />
+                      </div>
+                    </div>
+                    <div>
+                      <div class="text-sm opacity-50">画像ファイル</div>
+                      <div class="font-medium">sample_image_002.png</div>
+                    </div>
+                  </div>
+                </td>
+                <td>2024-01-15 10:25</td>
+                <td>
+                  <span class="badge badge-outline border-dashed badge-error me-2">
+                    失敗（ファイル形式エラー）
+                  </span>
+                </td>
+                <td>
+                  <span class="text-sm text-gray-500">-</span>
+                </td>
+                <td>
+                  <span class="badge badge-secondary">-</span>
+                </td>
+              </tr>
+              <!-- row 3 -->
+              <tr>
+                <td>
+                  <div class="flex items-center gap-3">
+                    <div class="avatar cursor-pointer" data-overlay="#slide-down-animated-modal">
+                      <div class="bg-base-content/15 h-10 w-10 rounded-md">
+                        <img src="https://cdn.flyonui.com/fy-assets/components/table/product-19.png"
+                          alt="product image" />
+                      </div>
+                    </div>
+                    <div>
+                      <div class="text-sm opacity-50">画像ファイル</div>
+                      <div class="font-medium">sample_image_003.jpg</div>
+                    </div>
+                  </div>
+                </td>
+                <td>2024-01-15 10:20</td>
+                <td>
+                  <span class="badge badge-outline border-dashed badge-info me-2">
+                    解析中
+                  </span>
+                </td>
+                <td>
+                  <span class="text-sm text-gray-500">-</span>
+                </td>
+                <td>
+                  <span class="badge badge-secondary">-</span>
+                </td>
+              </tr>
+              <!-- row 4 -->
+              <tr>
+                <td>
+                  <div class="flex items-center gap-3">
+                    <div class="avatar cursor-pointer" data-overlay="#slide-down-animated-modal">
+                      <div class="bg-base-content/15 h-10 w-10 rounded-md">
+                        <img src="https://cdn.flyonui.com/fy-assets/components/table/product-5.png"
+                          alt="product image" />
+                      </div>
+                    </div>
+                    <div>
+                      <div class="text-sm opacity-50">画像ファイル</div>
+                      <div class="font-medium">sample_image_004.jpg</div>
+                    </div>
+                  </div>
+                </td>
+                <td>2024-01-15 10:15</td>
+                <td>
+                  <span class="badge badge-outline border-dashed badge-secondary me-2">
+                    準備中（あと2枚目）
+                  </span>
+                </td>
+                <td>
+                  <span class="text-sm text-gray-500">-</span>
+                </td>
+                <td>
+                  <span class="badge badge-secondary">-</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 他の行は省略 -->
+      </div>
+
+      <!-- Pagination -->
+      <div class="flex flex-wrap items-center justify-between gap-2 py-4">
+        <div class="text-sm text-base-content/80">
+          Showing <span class="font-semibold">1-4</span> of <span class="font-semibold">20</span> images
+        </div>
+        <nav class="join">
+          <button class="btn btn-soft btn-square join-item"><span
+              class="icon-[tabler--chevron-left] size-5"></span></button>
+          <button class="btn btn-soft join-item btn-square" aria-current="page">1</button>
+          <button class="btn btn-soft join-item btn-square">2</button>
+          <button class="btn btn-soft join-item btn-square">3</button>
+          <button class="btn btn-soft btn-square join-item"><span
+              class="icon-[tabler--chevron-right] size-5"></span></button>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Error Log Modal -->
+    <div id="slide-down-animated-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden"
+      role="dialog" tabindex="-1">
+      <div class="modal-dialog overlay-open:mt-12 overlay-open:duration-300 transition-all ease-out">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3 class="modal-title">画像詳細</h3>
+            <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
+              data-overlay="#slide-down-animated-modal">
+              <span class="icon-[tabler--x] size-4"></span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="flex flex-col gap-4">
+              <!-- Image -->
+              <div class="flex justify-center">
+                <img src="https://cdn.flyonui.com/fy-assets/components/table/product-2.png" alt="画像"
+                  class="max-w-full h-auto rounded-lg shadow-lg" />
+              </div>
+
+              <!-- Image Details -->
+              <div class="grid grid-cols-1 gap-3">
+                <div class="flex justify-between items-center">
+                  <span class="font-semibold">ファイル名:</span>
+                  <span class="text-sm text-gray-600">sample_image_001.jpg</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="font-semibold">アップロード日時:</span>
+                  <span class="text-sm text-gray-600">2024-01-15 10:30</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="font-semibold">ステータス:</span>
+                  <span class="badge badge-outline border-dashed badge-success me-2">解析成功</span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="font-semibold">機械学習によってつけられたラベル:</span>
+                  <div class="flex gap-2">
+                    <span class="badge badge-primary">犬</span>
+                    <span class="badge badge-secondary">屋外</span>
+                    <span class="badge badge-success">公園</span>
+                  </div>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="font-semibold">信頼度:</span>
+                  <span class="badge badge-soft badge-success">95%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-soft btn-secondary" data-overlay="#slide-down-animated-modal">
+              閉じる
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Image Detail Modal (Temporary test with same content as preview) -->
+    <div id="image-detail-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden"
+      role="dialog" tabindex="-1">
+      <div
+        class="overlay-animation-target modal-dialog overlay-open:mt-4 overlay-open:duration-300 mt-12 transition-all ease-out">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3 class="modal-title">Dialog Title</h3>
+            <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
+              data-overlay="#image-detail-modal" id="modal-close-x">
+              <span class="icon-[tabler--x] size-4"></span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="flex flex-col gap-4">
+              <!-- Image -->
+              <div class="flex justify-center">
+                <img id="modal-image" src="" alt="画像" class="max-w-full h-auto rounded-lg shadow-lg" />
+              </div>
+
+              <!-- Image Details -->
+              <div class="grid grid-cols-1 gap-3">
+                <div class="flex justify-between items-center">
+                  <span class="font-semibold">ファイル名:</span>
+                  <span id="modal-filename" class="text-sm text-gray-600"></span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="font-semibold">アップロード日時:</span>
+                  <span id="modal-upload-time" class="text-sm text-gray-600"></span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="font-semibold">ステータス:</span>
+                  <span id="modal-status-badge" class="badge badge-outline border-dashed me-2"></span>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="font-semibold">ラベル:</span>
+                  <div id="modal-labels" class="flex flex-wrap gap-1"></div>
+                </div>
+                <div class="flex justify-between items-center">
+                  <span class="font-semibold">信頼度:</span>
+                  <span id="modal-confidence" class="badge"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-soft btn-secondary" data-overlay="#image-detail-modal"
+              id="modal-close-button">
+              閉じる
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button type="button" class="btn btn-primary" aria-haspopup="dialog" aria-expanded="false"
+      aria-controls="slide-up-animated-modal" data-overlay="#slide-up-animated-modal" onclick="testOpenModal()">Open
+      modal</button>
+
+    <div id="slide-up-animated-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden"
+      role="dialog" tabindex="-1">
+      <div
+        class="overlay-animation-target modal-dialog overlay-open:mt-4 overlay-open:duration-300 mt-12 transition-all ease-out">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3 class="modal-title">Dialog Title</h3>
+            <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
+              data-overlay="#slide-up-animated-modal">
+              <span class="icon-[tabler--x] size-4"></span>
+            </button>
+          </div>
+          <div class="modal-body">
+            This is some placeholder content to show the scrolling behavior for modals. Instead of repeating the text in
+            the
+            modal, we use an inline style to set a minimum height, thereby extending the length of the overall modal and
+            demonstrating the overflow scrolling. When content becomes longer than the height of the viewport, scrolling
+            will move the modal as needed.
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-soft btn-secondary" data-overlay="#slide-up-animated-modal">
+              Close
+            </button>
+            <button type="button" class="btn btn-primary">Save changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="./node_modules/flyonui/flyonui.js"></script>
+    <script src="./node_modules/flyonui/dist/accordion.js"></script>
+
+    <style>
+      .table tbody tr:nth-child(even) {
+        background-color: #f3f4f6;
+      }
+    </style>
+
+    <script>
+      function openImageModal(filename, imageSrc, uploadTime, status, labels, confidence) {
+        console.log('openImageModal called with:', { filename, imageSrc, uploadTime, status, labels, confidence });
+
+        // Set modal content
+        document.getElementById('modal-filename').textContent = filename;
+        document.getElementById('modal-image').src = imageSrc;
+        document.getElementById('modal-upload-time').textContent = uploadTime;
+
+        // Set status with appropriate badge styling
+        const statusBadge = document.getElementById('modal-status-badge');
+        statusBadge.textContent = status;
+
+        // Remove existing badge classes
+        statusBadge.className = 'badge badge-outline border-dashed me-2';
+
+        // Add appropriate badge color based on status
+        if (status.includes('解析成功')) {
+          statusBadge.classList.add('badge-success');
+        } else if (status.includes('失敗')) {
+          statusBadge.classList.add('badge-error');
+        } else if (status.includes('解析中')) {
+          statusBadge.classList.add('badge-info');
+        } else if (status.includes('準備中')) {
+          statusBadge.classList.add('badge-secondary');
+        }
+
+        // Set labels with badge styling
+        const labelsContainer = document.getElementById('modal-labels');
+        labelsContainer.innerHTML = ''; // Clear existing content
+
+        if (labels && labels !== '-') {
+          const labelArray = labels.split(', ');
+          labelArray.forEach(label => {
+            const badge = document.createElement('span');
+            badge.className = 'badge me-1';
+
+            // Add appropriate badge color based on label content
+            if (label.includes('犬') || label.includes('猫') || label.includes('鳥') || label.includes('動物')) {
+              badge.classList.add('badge-error'); // 赤色 - 動物・生物系
+            } else if (label.includes('屋外') || label.includes('公園') || label.includes('海') || label.includes('山')) {
+              badge.classList.add('badge-secondary'); // グレー - 場所・環境系
+            } else if (label.includes('風景') || label.includes('自然') || label.includes('空') || label.includes('森')) {
+              badge.classList.add('badge-success'); // 緑色 - 自然・風景系
+            } else if (label.includes('車') || label.includes('建物') || label.includes('家具')) {
+              badge.classList.add('badge-warning'); // オレンジ - 物体系
+            } else if (label.includes('走る') || label.includes('歩く') || label.includes('座る')) {
+              badge.classList.add('badge-info'); // 水色 - 活動・動作系
+            } else if (label.includes('人物') || label.includes('男性') || label.includes('女性') || label.includes('子供')) {
+              badge.classList.add('badge-primary'); // 青色 - 人物・キャラクター系
+            } else {
+              badge.classList.add('badge-accent'); // 紫色 - その他・アニメ系
+            }
+
+            badge.textContent = label.trim();
+            labelsContainer.appendChild(badge);
+          });
+        } else {
+          // Show dash for empty labels
+          const dash = document.createElement('span');
+          dash.className = 'text-sm text-gray-500';
+          dash.textContent = '-';
+          labelsContainer.appendChild(dash);
+        }
+        // Set confidence with badge styling
+        const confidenceBadge = document.getElementById('modal-confidence');
+        confidenceBadge.textContent = confidence;
+
+        // Remove existing badge classes
+        confidenceBadge.className = 'badge';
+
+        // Add appropriate badge color and style based on confidence value
+        if (confidence === '-') {
+          confidenceBadge.classList.add('badge-outline', 'badge-secondary'); // アウトライン + グレー - 処理中/未設定
+        } else if (confidence.includes('%')) {
+          const confidenceValue = parseInt(confidence);
+          if (confidenceValue >= 90) {
+            confidenceBadge.classList.add('badge-outline', 'badge-success', 'badge-lg'); // アウトライン + 緑色 + 大きめ - 高信頼度
+          } else if (confidenceValue >= 80) {
+            confidenceBadge.classList.add('badge-soft', 'badge-info'); // ソフト + 水色 - 中高信頼度
+          } else if (confidenceValue >= 70) {
+            confidenceBadge.classList.add('badge-ghost', 'badge-warning'); // ゴースト + オレンジ - 中信頼度
+          } else if (confidenceValue >= 60) {
+            confidenceBadge.classList.add('badge-solid', 'badge-error', 'badge-sm'); // ソリッド + 赤色 + 小さい - 低信頼度
+          } else {
+            confidenceBadge.classList.add('badge-solid', 'badge-error', 'badge-xs'); // ソリッド + 赤色 + 超小 - 低信頼度
+          }
+        } else {
+          confidenceBadge.classList.add('badge-outline', 'badge-secondary'); // アウトライン + グレー - その他
+        }
+
+        console.log('Modal content set, attempting to open modal...');
+
+        // Open modal using the same method as preview modal
+        const modal = document.getElementById('image-detail-modal');
+        console.log('Modal element found:', modal);
+
+        // Try to use FlyonUI's overlay system first
+        const existingButton = document.querySelector('button[data-overlay="#image-detail-modal"]');
+        if (existingButton) {
+          console.log('Using existing button with data-overlay');
+          existingButton.click();
+        } else {
+          console.log('No existing button found, creating temporary one');
+          // Fallback: create a temporary button
+          const triggerButton = document.createElement('button');
+          triggerButton.setAttribute('data-overlay', '#image-detail-modal');
+          triggerButton.style.display = 'none';
+          document.body.appendChild(triggerButton);
+          triggerButton.click();
+          document.body.removeChild(triggerButton);
+        }
+
+        // Also try manual opening as backup after a short delay
+        setTimeout(() => {
+          console.log('Also trying manual modal opening...');
+          modal.classList.remove('hidden');
+          modal.style.display = 'block';
+          modal.style.opacity = '1';
+          modal.style.visibility = 'visible';
+        }, 50);
+
+        console.log('Modal opened using FlyonUI system - should have background overlay');
+
+        // Wait for FlyonUI to process the overlay trigger
+        setTimeout(() => {
+          console.log('Modal should now be visible with same state as preview modal');
+
+          // If FlyonUI didn't handle it properly, manually set the modal state
+          if (modal.classList.contains('hidden')) {
+            console.log('FlyonUI didn\'t open modal, manually opening...');
+            modal.classList.remove('hidden');
+            modal.style.display = 'block';
+            modal.style.opacity = '1';
+            modal.style.visibility = 'visible';
+          }
+
+          // Log detailed state after setting
+          console.log('Modal classes after setting:', modal.className);
+          console.log('Modal computed styles after setting:', {
+            display: window.getComputedStyle(modal).display,
+            opacity: window.getComputedStyle(modal).opacity,
+            visibility: window.getComputedStyle(modal).visibility,
+            zIndex: window.getComputedStyle(modal).zIndex
+          });
+
+          // Check if modal is actually visible
+          const rect = modal.getBoundingClientRect();
+          console.log('Modal bounding rect:', rect);
+          console.log('Modal is visible:', rect.width > 0 && rect.height > 0);
+        }, 100); // Give FlyonUI time to process
+
+        // Also check multiple times to see the transition
+        for (let i = 1; i <= 5; i++) {
+          setTimeout(() => {
+            console.log(`Modal state after ${i * 200}ms:`, {
+              classes: modal.className,
+              display: window.getComputedStyle(modal).display,
+              opacity: window.getComputedStyle(modal).opacity,
+              hidden: modal.classList.contains('hidden')
+            });
+          }, i * 200);
+        }
+      }
+
+      function closeImageModal() {
+        console.log('closeImageModal called');
+        const modal = document.getElementById('image-detail-modal');
+        console.log('Modal element found for closing:', modal);
+        console.log('Modal classes before closing:', modal.className);
+
+        modal.classList.add('hidden');
+        modal.classList.remove('overlay-open');
+        modal.style.display = 'none';
+        modal.style.opacity = '0';
+        modal.style.visibility = 'hidden';
+
+        console.log('Modal classes after closing:', modal.className);
+        console.log('Modal should now be hidden');
+      }
+
+      function logCloseButtonClick(buttonType) {
+        console.log(`=== ${buttonType} Clicked ===`);
+        console.log('Button clicked at:', new Date().toISOString());
+
+        const modal = document.getElementById('image-detail-modal');
+        console.log('Modal element found:', modal);
+        console.log('Modal classes before click:', modal.className);
+        console.log('Modal computed styles before click:', {
+          display: window.getComputedStyle(modal).display,
+          opacity: window.getComputedStyle(modal).opacity,
+          visibility: window.getComputedStyle(modal).visibility,
+          zIndex: window.getComputedStyle(modal).zIndex
+        });
+
+        // Check if data-overlay attribute is present
+        const button = event.target.closest('button');
+        console.log('Button data-overlay attribute:', button.getAttribute('data-overlay'));
+
+        // Log the event details
+        console.log('Event type:', event.type);
+        console.log('Event target:', event.target);
+        console.log('Event currentTarget:', event.currentTarget);
+
+        // Manually close the modal since FlyonUI is not working properly
+        console.log('Manually closing modal...');
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+        modal.style.opacity = '0';
+        modal.style.visibility = 'hidden';
+
+        // Also remove any background overlays that might be blocking clicks
+        const overlays = document.querySelectorAll('.overlay:not(#image-detail-modal)');
+        overlays.forEach(overlay => {
+          if (overlay.style.display !== 'none') {
+            console.log('Removing background overlay:', overlay);
+            overlay.style.display = 'none';
+            overlay.style.opacity = '0';
+            overlay.style.visibility = 'hidden';
+          }
+        });
+
+        // Also try to remove any FlyonUI overlay elements
+        const flyonuiOverlays = document.querySelectorAll('[data-overlay-backdrop]');
+        flyonuiOverlays.forEach(overlay => {
+          console.log('Removing FlyonUI backdrop overlay:', overlay);
+          overlay.remove();
+        });
+
+        // Remove the 4 additional overlay elements that are causing the gray background
+        const extraOverlays = document.querySelectorAll('div.overlay.modal:not(#image-detail-modal)');
+        console.log('Found extra overlays:', extraOverlays.length);
+        extraOverlays.forEach((overlay, index) => {
+          console.log(`Removing extra overlay ${index + 1}:`, overlay);
+          overlay.remove();
+        });
+
+        // Also try to remove any elements with 'open' and 'opened' classes that might be blocking
+        const openElements = document.querySelectorAll('.open.opened:not(#image-detail-modal)');
+        openElements.forEach(element => {
+          console.log('Removing open/opened element:', element);
+          element.remove();
+        });
+
+        // Safe overlay removal: Only remove specific overlay elements
+        const safeOverlays = document.querySelectorAll('div.overlay.modal:not(#image-detail-modal)');
+        safeOverlays.forEach((overlay, index) => {
+          console.log(`Removing safe overlay ${index + 1}:`, overlay);
+          overlay.remove();
+        });
+
+        // Also remove any backdrop elements
+        const backdrops = document.querySelectorAll('[class*="backdrop"], [class*="overlay-backdrop"]');
+        backdrops.forEach(backdrop => {
+          console.log('Removing backdrop:', backdrop);
+          backdrop.remove();
+        });
+
+        // Also try to reset body and html styles that might be blocking
+        document.body.style.overflow = '';
+        document.body.style.pointerEvents = '';
+        document.documentElement.style.overflow = '';
+        document.documentElement.style.pointerEvents = '';
+
+        console.log('Modal and background overlays manually closed');
+
+        // Wait a bit and check modal state after manual closing
+        setTimeout(() => {
+          console.log(`Modal state 100ms after ${buttonType} click:`, {
+            classes: modal.className,
+            display: window.getComputedStyle(modal).display,
+            opacity: window.getComputedStyle(modal).opacity,
+            visibility: window.getComputedStyle(modal).visibility,
+            hidden: modal.classList.contains('hidden')
+          });
+        }, 100);
+
+        setTimeout(() => {
+          console.log(`Modal state 500ms after ${buttonType} click:`, {
+            classes: modal.className,
+            display: window.getComputedStyle(modal).display,
+            opacity: window.getComputedStyle(modal).opacity,
+            visibility: window.getComputedStyle(modal).visibility,
+            hidden: modal.classList.contains('hidden')
+          });
+        }, 500);
+      }
+
+      // Test function to check if modal exists
+      function testModal() {
+        const modal = document.getElementById('image-detail-modal');
+        console.log('Modal element:', modal);
+        console.log('Modal HTML:', modal ? modal.outerHTML : 'Not found');
+      }
+
+      // Test function for preview modal
+      function testOpenModal() {
+        console.log('=== Preview Modal Test ===');
+        const previewModal = document.getElementById('slide-up-animated-modal');
+        console.log('Preview modal element:', previewModal);
+        console.log('Preview modal classes before:', previewModal.className);
+        console.log('Preview modal HTML:', previewModal.outerHTML);
+
+        // Check state immediately after click
+        console.log('Preview modal classes immediately after click:', previewModal.className);
+
+        // Check multiple times to see the transition
+        for (let i = 1; i <= 10; i++) {
+          setTimeout(() => {
+            console.log(`Preview modal classes after ${i * 50}ms:`, previewModal.className);
+            const rect = previewModal.getBoundingClientRect();
+            console.log(`Preview modal bounding rect after ${i * 50}ms:`, rect);
+          }, i * 50);
+        }
+
+        // Final check after longer delay
+        setTimeout(() => {
+          console.log('Preview modal final state:', previewModal.className);
+          console.log('Preview modal final computed styles:', {
+            display: window.getComputedStyle(previewModal).display,
+            opacity: window.getComputedStyle(previewModal).opacity,
+            visibility: window.getComputedStyle(previewModal).visibility,
+            zIndex: window.getComputedStyle(previewModal).zIndex
+          });
+        }, 1000);
+      }
+
+      // Test function for image detail modal
+      function testImageModal() {
+        console.log('=== Image Detail Modal Test ===');
+        const imageModal = document.getElementById('image-detail-modal');
+        console.log('Image modal element:', imageModal);
+        console.log('Image modal classes:', imageModal.className);
+        console.log('Image modal HTML:', imageModal.outerHTML);
+
+        // Test if FlyonUI can find this modal
+        const flyonuiButton = document.createElement('button');
+        flyonuiButton.setAttribute('data-overlay', '#image-detail-modal');
+        flyonuiButton.style.display = 'none';
+        document.body.appendChild(flyonuiButton);
+
+        console.log('Test button created with data-overlay:', flyonuiButton.getAttribute('data-overlay'));
+
+        // Try to trigger the modal
+        flyonuiButton.click();
+
+        // Clean up
+        document.body.removeChild(flyonuiButton);
+
+        console.log('Image modal test completed');
+      }
+
+      // Call test function when page loads
+      window.addEventListener('load', function () {
+        console.log('Page loaded, testing modal...');
+        testModal();
+        testImageModal();
+
+        // Add event listeners for close buttons
+        const closeXButton = document.getElementById('modal-close-button');
+        const closeButton = document.getElementById('modal-close-button');
+
+        if (closeXButton) {
+          closeXButton.addEventListener('click', function () {
+            logCloseButtonClick('X button');
+          });
+        }
+
+        if (closeButton) {
+          closeButton.addEventListener('click', function () {
+            logCloseButtonClick('Close button');
+          });
+        }
+      });
+
+      // Function to reset all filters
+      function resetAllFilters() {
+        console.log('Resetting all filters...');
+
+        // Reset search input
+        const searchInput = document.getElementById('exampleDataList');
+        if (searchInput) {
+          searchInput.value = '';
+        }
+
+        // Reset date sort
+        const dateSort = document.getElementById('dateSort');
+        if (dateSort) {
+          dateSort.selectedIndex = 0; // Select first option
+        }
+
+        // Reset status filter
+        const statusFilter = document.getElementById('selectFloating');
+        if (statusFilter) {
+          statusFilter.selectedIndex = 0; // Select first option
+        }
+
+        // Reset label filter
+        const labelFilter = document.getElementById('labelFilter');
+        if (labelFilter) {
+          labelFilter.selectedIndex = 0; // Select first option
+        }
+
+        // Reset confidence filter
+        const confidenceFilter = document.getElementById('confidenceFilter');
+        if (confidenceFilter) {
+          confidenceFilter.selectedIndex = 0; // Select first option
+        }
+
+        console.log('All filters have been reset');
+      }
+    </script>
+  </body>
+
+</html>

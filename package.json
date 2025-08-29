@@ -1,0 +1,28 @@
+{
+  "name": "tailwind",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build-css": "npx @tailwindcss/cli -i ./input.css -o ./output.css",
+    "watch:css": "npx @tailwindcss/cli -i ./input.css -o ./output.css --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@tailwindcss/cli": "^4.1.12",
+    "datatables.net": "^2.3.3",
+    "david-ai": "^1.0.6",
+    "dropzone": "^6.0.0-beta.2",
+    "flyonui": "^2.4.0",
+    "jquery": "^3.7.1",
+    "lodash": "^4.17.21",
+    "tailwindcss": "^4.1.12"
+  },
+  "devDependencies": {
+    "@iconify-json/tabler": "^1.2.22",
+    "@iconify/json": "^2.2.378",
+    "@iconify/tailwind4": "^1.0.6"
+  }
+}

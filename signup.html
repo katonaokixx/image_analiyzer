@@ -1,0 +1,253 @@
+<!doctype html>
+<html data-theme="shadcn">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Page</title>
+    <link href="./output.css" rel="stylesheet">
+
+  </head>
+
+  <body>
+    <nav class="navbar">
+      <div class="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 lg:flex lg:items-center lg:gap-2 lg:px-8">
+        <div class="navbar-start items-center justify-between max-lg:w-full">
+          <a class="text-base-content flex items-center gap-3 text-xl font-bold lg:hidden" href="#">
+            <img src="https://cdn.flyonui.com/fy-assets/logo/logo.png" class="size-8" alt="brand-logo" />
+            FlyonUI
+          </a>
+
+          <div class="flex items-center lg:hidden">
+            <span
+              class="icon-[tabler--search] hover:text-primary text-base-content active:text-primary me-6 size-5 cursor-pointer"></span>
+            <button type="button" class="collapse-toggle btn btn-outline btn-secondary btn-square"
+              data-collapse="#navbar-block-5" aria-controls="navbar-block-5" aria-label="Toggle navigation">
+              <span class="icon-[tabler--menu-2] collapse-open:hidden size-5.5"></span>
+              <span class="icon-[tabler--x] collapse-open:block hidden size-5.5"></span>
+            </button>
+          </div>
+        </div>
+        <div id="navbar-block-5"
+          class="lg:navbar-center transition-height collapse hidden grow overflow-hidden duration-300 lg:flex">
+          <div
+            class="text-base-content flex gap-6 text-base font-medium max-lg:mt-4 max-lg:flex-col lg:items-center lg:gap-16">
+            <a href="#" class="hover:text-primary">Home</a>
+            <a href="#" class="hover:text-primary">Products</a>
+            <a class="text-base-content flex items-center gap-3 text-xl font-bold max-lg:hidden" href="#">
+              <img src="https://cdn.flyonui.com/fy-assets/logo/logo.png" class="size-8" alt="brand-logo" />
+              画像解析アプリ
+            </a>
+            <a href="#" class="hover:text-primary">About Us</a>
+            <a href="#" class="hover:text-primary">Contacts</a>
+          </div>
+        </div>
+        <div class="navbar-end max-lg:hidden">
+          <span
+            class="icon-[tabler--search] hover:text-primary active:text-primary text-base-content size-5 cursor-pointer"></span>
+        </div>
+      </div>
+    </nav>
+    <div class="flex h-auto min-h-screen items-center justify-center overflow-x-hidden py-2">
+      <div class="relative flex items-center justify-center px-4 sm:px-6 lg:px-8">
+        <div class="bg-base-100 shadow-base-300/20 z-1 w-full space-y-6 rounded-xl p-6 shadow-md sm:min-w-md lg:p-8">
+          <div class="flex items-center gap-3">
+            <h2 class="text-base-content text-xl font-bold">画像解析アプリ</h2>
+          </div>
+          <div>
+            <h3 class="text-base-content mb-1.5 text-2xl font-semibold">Sign Up to 画像解析アプリ</h3>
+          </div>
+          <div class="space-y-4">
+            <form class="mb-4 space-y-4" onsubmit="return false;">
+              <div>
+                <label class="label-text" for="userName">Username*</label>
+                <div class="max-w-sm">
+                  <div class="flex mb-2">
+                    <div class="flex-1">
+                      <input type="text" placeholder="Enter your username" class="input" id="userName" required />
+                      <div data-strong-password='{
+                          "target": "#userName",
+                          "hints": "#username-hints-content",
+                          "stripClasses": "strong-password:bg-primary strong-password-accepted:bg-teal-500 h-1.5 flex-auto bg-neutral/20",
+                          "strengthLevels": ["Empty", "Invalid", "Valid"]
+                        }' class="rounded-full overflow-hidden mt-2 flex gap-0.5">
+                      </div>
+                    </div>
+                  </div>
+                  <div id="username-hints-content" class="mb-3">
+                    <h6 class="my-2 text-base font-semibold text-base-content">ユーザー名の要件:</h6>
+                    <ul class="text-base-content/80 space-y-1 text-sm">
+                      <li data-pw-strength-rule="min-length"
+                        class="strong-password-active:text-success flex items-center gap-x-2">
+                        <span class="icon-[tabler--circle-check] hidden size-5 shrink-0" data-check></span>
+                        <span class="icon-[tabler--circle-x] hidden size-5 shrink-0" data-uncheck></span>
+                        長さ: 3-20文字
+                      </li>
+                      <li data-pw-strength-rule="lowercase"
+                        class="strong-password-active:text-success flex items-center gap-x-2">
+                        <span class="icon-[tabler--circle-check] hidden size-5 shrink-0" data-check></span>
+                        <span class="icon-[tabler--circle-x] hidden size-5 shrink-0" data-uncheck></span>
+                        文字を含む必要があります（数字や記号のみは不可）
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label class="label-text" for="userEmail">Email address*</label>
+                <div class="max-w-sm">
+                  <div class="flex mb-2">
+                    <div class="flex-1">
+                      <input type="email" placeholder="Enter your email address" class="input" id="userEmail"
+                        required />
+                      <div data-strong-password='{
+                          "target": "#userEmail",
+                          "hints": "#email-hints-content",
+                          "stripClasses": "strong-password:bg-primary strong-password-accepted:bg-teal-500 h-1.5 flex-auto bg-neutral/20",
+                          "strengthLevels": ["Empty", "Invalid", "Valid"]
+                        }' class="rounded-full overflow-hidden mt-2 flex gap-0.5">
+                      </div>
+                    </div>
+                  </div>
+                  <div id="email-hints-content" class="mb-3">
+                    <h6 class="my-2 text-base font-semibold text-base-content">メールアドレスの要件:</h6>
+                    <ul class="text-base-content/80 space-y-1 text-sm">
+                      <li data-pw-strength-rule="min-length"
+                        class="strong-password-active:text-success flex items-center gap-x-2">
+                        <span class="icon-[tabler--circle-check] hidden size-5 shrink-0" data-check></span>
+                        <span class="icon-[tabler--circle-x] hidden size-5 shrink-0" data-uncheck></span>
+                        有効なメール形式（user@domain.com）
+                      </li>
+                      <li data-pw-strength-rule="lowercase"
+                        class="strong-password-active:text-success flex items-center gap-x-2">
+                        <span class="icon-[tabler--circle-check] hidden size-5 shrink-0" data-check></span>
+                        <span class="icon-[tabler--circle-x] hidden size-5 shrink-0" data-uncheck></span>
+                        @記号とドメインを含む必要があります
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label class="label-text" for="userPassword">Password*</label>
+                <div class="max-w-sm">
+                  <div class="flex mb-2">
+                    <div class="flex-1">
+                      <div class="input max-w-sm">
+                        <input id="toggle-password" type="password" placeholder="Enter password" value="Pwd_1242@mA1" />
+                        <button type="button" data-toggle-password='{ "target": "#toggle-password" }'
+                          class="block cursor-pointer" aria-label="password toggle">
+                          <span
+                            class="icon-[tabler--eye] text-base-content/80 password-active:block hidden size-5 shrink-0"></span>
+                          <span
+                            class="icon-[tabler--eye-off] text-base-content/80 password-active:hidden block size-5 shrink-0"></span>
+                        </button>
+                      </div>
+                      <div data-strong-password='{
+                          "target": "#toggle-password",
+                          "hints": "#password-hints-content",
+                          "stripClasses": "strong-password:bg-primary strong-password-accepted:bg-teal-500 h-1.5 flex-auto bg-neutral/20"
+                        }' class="rounded-full overflow-hidden mt-2 flex gap-0.5">
+                      </div>
+                    </div>
+                  </div>
+                  <div id="password-hints-content" class="mb-3">
+                    <div>
+                      <span class="text-sm text-base-content">Level:</span>
+                      <span data-pw-strength-hint='["Empty", "Weak", "Medium", "Strong", "Very Strong", "Super Strong"]'
+                        class="text-base-content text-sm font-semibold">
+                      </span>
+                    </div>
+                    <h6 class="my-2 text-base font-semibold text-base-content">パスワードの要件:</h6>
+                    <ul class="text-base-content/80 space-y-1 text-sm">
+                      <li data-pw-strength-rule="min-length"
+                        class="strong-password-active:text-success flex items-center gap-x-2">
+                        <span class="icon-[tabler--circle-check] hidden size-5 shrink-0" data-check></span>
+                        <span class="icon-[tabler--circle-x] hidden size-5 shrink-0" data-uncheck></span>
+                        最小6文字以上
+                      </li>
+                      <li data-pw-strength-rule="lowercase"
+                        class="strong-password-active:text-success flex items-center gap-x-2">
+                        <span class="icon-[tabler--circle-check] hidden size-5 shrink-0" data-check></span>
+                        <span class="icon-[tabler--circle-x] hidden size-5 shrink-0" data-uncheck></span>
+                        小文字を含む
+                      </li>
+                      <li data-pw-strength-rule="uppercase"
+                        class="strong-password-active:text-success flex items-center gap-x-2">
+                        <span class="icon-[tabler--circle-check] hidden size-5 shrink-0" data-check></span>
+                        <span class="icon-[tabler--circle-x] hidden size-5 shrink-0" data-uncheck></span>
+                        大文字を含む
+                      </li>
+                      <li data-pw-strength-rule="numbers"
+                        class="strong-password-active:text-success flex items-center gap-x-2">
+                        <span class="icon-[tabler--circle-check] hidden size-5 shrink-0" data-check></span>
+                        <span class="icon-[tabler--circle-x] hidden size-5 shrink-0" data-uncheck></span>
+                        数字を含む
+                      </li>
+                      <li data-pw-strength-rule="special-characters"
+                        class="strong-password-active:text-success flex items-center gap-x-2">
+                        <span class="icon-[tabler--circle-check] hidden size-5 shrink-0" data-check></span>
+                        <span class="icon-[tabler--circle-x] hidden size-5 shrink-0" data-uncheck></span>
+                        特殊文字を含む
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label class="label-text" for="userConfrimPassword">Confirm Password*</label>
+                <div class="max-w-sm">
+                  <div class="flex mb-2">
+                    <div class="flex-1">
+                      <div class="input">
+                        <input id="userConfrimPassword" type="password" placeholder="············" required />
+                        <button type="button" data-toggle-password='{ "target": "#userConfrimPassword" }'
+                          class="block cursor-pointer" aria-label="userConfrimPassword">
+                          <span class="icon-[tabler--eye] password-active:block hidden size-5 shrink-0"></span>
+                          <span class="icon-[tabler--eye-off] password-active:hidden block size-5 shrink-0"></span>
+                        </button>
+                      </div>
+                      <div data-strong-password='{
+                          "target": "#userConfrimPassword",
+                          "hints": "#confirm-password-hints-content",
+                          "stripClasses": "strong-password:bg-primary strong-password-accepted:bg-teal-500 h-1.5 flex-auto bg-neutral/20",
+                          "strengthLevels": ["Empty", "Mismatch", "Same"]
+                        }' class="rounded-full overflow-hidden mt-2 flex gap-0.5">
+                      </div>
+                    </div>
+                  </div>
+                  <div id="confirm-password-hints-content" class="mb-3">
+                    <h6 class="my-2 text-base font-semibold text-base-content">確認パスワードの要件:</h6>
+                    <ul class="text-base-content/80 space-y-1 text-sm">
+                      <li data-pw-strength-rule="min-length"
+                        class="strong-password-active:text-success flex items-center gap-x-2">
+                        <span class="icon-[tabler--circle-check] hidden size-5 shrink-0" data-check></span>
+                        <span class="icon-[tabler--circle-x] hidden size-5 shrink-0" data-uncheck></span>
+                        パスワードと一致
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <input type="checkbox" class="checkbox checkbox-primary" id="policyagreement" />
+                <label class="label-text text-base-content/80 p-0 text-base" for="policyagreement">
+                  管理者として登録します
+                </label>
+              </div>
+              <button class="btn btn-lg btn-primary btn-gradient btn-block">アカウント作成</button>
+            </form>
+            <p class="text-base-content/80 mb-4 text-center">
+              既にアカウントはお持ちですか?
+              <a href="login.html" class="link link-animated link-primary font-normal">ログイン画面</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="./node_modules/flyonui/flyonui.js"></script>
+    <script src="./node_modules/flyonui/dist/accordion.js"></script>
+  </body>
+
+</html>
