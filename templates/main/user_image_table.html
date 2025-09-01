@@ -1,109 +1,112 @@
 <!doctype html>
 <html data-theme="shadcn">
+  {% load static %}
 
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FlyonUI Test</title>
-    <link href="./output.css" rel="stylesheet">
+    <link href="{% static 'css/output.css' %}" rel="stylesheet">
   </head>
 
   <body>
 
-    <nav class="navbar">
-      <div class="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 lg:flex lg:items-center lg:gap-2 lg:px-8">
-        <div class="navbar-start items-center justify-between max-lg:w-full">
-          <a class="text-base-content flex items-center gap-3 text-xl font-bold lg:hidden" href="#">
-            <img src="https://cdn.flyonui.com/fy-assets/logo/logo.png" class="size-8" alt="brand-logo" />
-            画像解析アプリ
-          </a>
-
-          <div class="flex items-center lg:hidden">
-            <span
-              class="icon-[tabler--search] hover:text-primary text-base-content active:text-primary me-6 size-5 cursor-pointer"></span>
-            <button type="button" class="collapse-toggle btn btn-outline btn-secondary btn-square"
-              data-collapse="#navbar-block-5" aria-controls="navbar-block-5" aria-label="Toggle navigation">
-              <span class="icon-[tabler--menu-2] collapse-open:hidden size-5.5"></span>
-              <span class="icon-[tabler--x] collapse-open:block hidden size-5.5"></span>
-            </button>
+    <nav class="navbar rounded-box shadow-base-300/20 shadow-sm">
+      <div class="w-full md:flex md:items-center md:gap-2">
+        <div class="flex items-center justify-between">
+          <div class="navbar-start items-center justify-between max-md:w-full">
+            <a class="link text-base-content link-neutral text-xl font-bold no-underline whitespace-nowrap"
+              href="#">画像解析アプリ</a>
+            <div class="md:hidden">
+              <button type="button" class="collapse-toggle btn btn-outline btn-secondary btn-sm btn-square"
+                data-collapse="#dropdown-navbar-collapse" aria-controls="dropdown-navbar-collapse"
+                aria-label="Toggle navigation">
+                <span class="icon-[tabler--menu-2] collapse-open:hidden size-4"></span>
+                <span class="icon-[tabler--x] collapse-open:block hidden size-4"></span>
+              </button>
+            </div>
           </div>
         </div>
-        <div id="navbar-block-5"
-          class="lg:navbar-center transition-height collapse hidden grow overflow-hidden duration-300 lg:flex">
-          <div
-            class="text-base-content flex gap-6 text-base font-medium max-lg:mt-4 max-lg:flex-col lg:items-center lg:gap-16">
-            <a href="#" class="hover:text-primary">images</a>
-            <a href="#" class="hover:text-primary">Products</a>
-            <a class="text-base-content flex items-center gap-3 text-xl font-bold max-lg:hidden" href="#">
-              <img src="https://cdn.flyonui.com/fy-assets/logo/logo.png" class="size-8" alt="brand-logo" />
-              画像解析アプリ
-            </a>
-            <a href="#" class="hover:text-primary">About Us</a>
-            <a href="#" class="hover:text-primary">Contacts</a>
-          </div>
-        </div>
-        <div class="navbar-end max-lg:hidden">
-          <span
-            class="icon-[tabler--search] hover:text-primary active:text-primary text-base-content size-5 cursor-pointer"></span>
+        <div id="dropdown-navbar-collapse"
+          class="md:navbar-end collapse hidden grow basis-full overflow-hidden transition-[height] duration-300 max-md:w-full">
+          <ul class="menu md:menu-horizontal gap-2 p-0 text-base max-md:mt-2">
+            <li><a href="#">Home</a></li>
+            <li><a href="#">Services</a></li>
+            <li class="dropdown relative inline-flex [--auto-close:inside] [--offset:9] [--placement:bottom-end]">
+              <button id="dropdown-nav" type="button"
+                class="dropdown-toggle dropdown-open:bg-base-content/10 dropdown-open:text-base-content"
+                aria-haspopup="menu" aria-expanded="false" aria-label="Dropdown">
+                Products
+                <span class="icon-[tabler--chevron-down] dropdown-open:rotate-180 size-4"></span>
+              </button>
+              <ul class="dropdown-menu dropdown-open:opacity-100 hidden" role="menu" aria-orientation="vertical"
+                aria-labelledby="dropdown-nav">
+                <li><a class="dropdown-item" href="#">UI kits</a></li>
+                <li><a class="dropdown-item" href="#">Templates</a></li>
+                <li><a class="dropdown-item" href="#">Component library</a></li>
+                <hr class="border-base-content/25 -mx-2" />
+                <li><a class="dropdown-item" href="#">Figma designs</a></li>
+              </ul>
+            </li>
+          </ul>
         </div>
       </div>
     </nav>
 
-    <div class="container mx-auto px-2 py-0">
-      <div class="bg-base-100 py-8 sm:py-16 lg:py-24">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div class="mb-12 space-y-4 text-center sm:mb-16 lg:mb-24">
-            <h2 class="text-base-content text-2xl font-semibold md:text-3xl lg:text-4xl">
-              <span class="relative z-1 font-bold">
-                Explore our
-                <span
-                  class="from-primary absolute start-0 bottom-1 -z-1 h-0.5 w-full bg-gradient-to-r to-transparent to-80%"
-                  aria-hidden="true"></span>
-              </span>
-              Gallery
-            </h2>
-            <p class="text-base-content/80 text-xl">
-              Explore our gallery to learn more about our amazing products and their features.
-            </p>
-            <div class="group flex items-center justify-center gap-2 pt-4 pb-4"
-              style="padding-top: 16px !important; padding-bottom: 16px !important;">
-              <a href="image.upload.html" class="link link-animated link-primary font-normal">画像解析へ</a>
+    <div class="pt-16 py-8 sm:py-16 lg:py-24">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="mb-12 space-y-4 text-center sm:mb-16 lg:mb-24">
+          <h2 class="text-base-content text-2xl font-semibold md:text-3xl lg:text-4xl">
+            <span class="relative z-1 font-bold">
+              Explore our
               <span
-                class="icon-[tabler--chevron-right] text-primary size-5 shrink-0 transition-transform group-hover:translate-x-1 rtl:rotate-180"></span>
-            </div>
+                class="from-primary absolute start-0 bottom-1 -z-1 h-0.5 w-full bg-gradient-to-r to-transparent to-80%"
+                aria-hidden="true"></span>
+            </span>
+            Gallery
+          </h2>
+          <p class="text-base-content/80 text-xl">
+            Explore our gallery to learn more about our amazing products and their features.
+          </p>
+          <div class="group flex items-center justify-center gap-2 pt-4 pb-4"
+            style="padding-top: 16px !important; padding-bottom: 16px !important;">
+            <a href="{% url 'image_upload' %}" class="link link-animated link-primary font-normal">画像解析へ</a>
+            <span
+              class="icon-[tabler--chevron-right] text-primary size-5 shrink-0 transition-transform group-hover:translate-x-1 rtl:rotate-180"></span>
           </div>
 
-          <div class="grid gap-6 md:grid-cols-2">
-            <div>
-              <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-8.png"
-                alt="Coastal cliffs and ocean view" class="rounded-box aspect-5/4 min-h-121.75 object-cover" />
-            </div>
+        </div>
 
-            <div class="grid grid-cols-2 gap-6">
-              <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-9.png"
-                alt="Silhouettes on beach" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
-              <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-10.png"
-                alt="Snowy mountain peaks" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
-              <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-11.png"
-                alt="Rolling green hills" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
-              <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-12.png"
-                alt="Sunset landscape" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
-            </div>
+        <div class="grid gap-6 md:grid-cols-2">
+          <div>
+            <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-8.png"
+              alt="Coastal cliffs and ocean view" class="rounded-box aspect-5/4 min-h-121.75 object-cover" />
+          </div>
 
-            <div class="grid grid-cols-2 gap-6">
-              <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-13.png"
-                alt="Silhouettes on beach" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
-              <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-14.png"
-                alt="Snowy mountain peaks" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
-              <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-15.png"
-                alt="Rolling green hills" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
-              <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-16.png"
-                alt="Sunset landscape" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
-            </div>
-            <div>
-              <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-17.png"
-                alt="Coastal cliffs and ocean view" class="rounded-box aspect-5/4 min-h-121.75 object-cover" />
-            </div>
+          <div class="grid grid-cols-2 gap-6">
+            <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-9.png"
+              alt="Silhouettes on beach" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
+            <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-10.png"
+              alt="Snowy mountain peaks" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
+            <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-11.png"
+              alt="Rolling green hills" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
+            <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-12.png"
+              alt="Sunset landscape" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
+          </div>
+
+          <div class="grid grid-cols-2 gap-6">
+            <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-13.png"
+              alt="Silhouettes on beach" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
+            <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-14.png"
+              alt="Snowy mountain peaks" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
+            <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-15.png"
+              alt="Rolling green hills" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
+            <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-16.png"
+              alt="Sunset landscape" class="rounded-box aspect-5/4 min-h-57.75 object-cover" />
+          </div>
+          <div>
+            <img src="https://cdn.flyonui.com/fy-assets/blocks/marketing-ui/gallery/gallery-17.png"
+              alt="Coastal cliffs and ocean view" class="rounded-box aspect-5/4 min-h-121.75 object-cover" />
           </div>
         </div>
       </div>
@@ -438,41 +441,13 @@
       </div>
     </div>
 
-    <button type="button" class="btn btn-primary" aria-haspopup="dialog" aria-expanded="false"
-      aria-controls="slide-up-animated-modal" data-overlay="#slide-up-animated-modal" onclick="testOpenModal()">Open
-      modal</button>
 
-    <div id="slide-up-animated-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden"
-      role="dialog" tabindex="-1">
-      <div
-        class="overlay-animation-target modal-dialog overlay-open:mt-4 overlay-open:duration-300 mt-12 transition-all ease-out">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3 class="modal-title">Dialog Title</h3>
-            <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
-              data-overlay="#slide-up-animated-modal">
-              <span class="icon-[tabler--x] size-4"></span>
-            </button>
-          </div>
-          <div class="modal-body">
-            This is some placeholder content to show the scrolling behavior for modals. Instead of repeating the text in
-            the
-            modal, we use an inline style to set a minimum height, thereby extending the length of the overall modal and
-            demonstrating the overflow scrolling. When content becomes longer than the height of the viewport, scrolling
-            will move the modal as needed.
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-soft btn-secondary" data-overlay="#slide-up-animated-modal">
-              Close
-            </button>
-            <button type="button" class="btn btn-primary">Save changes</button>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <script src="./node_modules/flyonui/flyonui.js"></script>
-    <script src="./node_modules/flyonui/dist/accordion.js"></script>
+
+
+
+    <script src="{% static 'js/libs/flyonui.js' %}"></script>
+    <script src="{% static 'js/libs/accordion.js' %}"></script>
 
     <style>
       .table tbody tr:nth-child(even) {

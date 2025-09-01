@@ -1,53 +1,15 @@
 <!doctype html>
 <html data-theme="shadcn">
+  {% load static %}
 
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FlyonUI Test</title>
-    <link href="./output.css" rel="stylesheet">
+    <link href="{% static 'css/output.css' %}" rel="stylesheet">
   </head>
 
   <body>
-
-    <nav class="navbar">
-      <div class="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 lg:flex lg:items-center lg:gap-2 lg:px-8">
-        <div class="navbar-start items-center justify-between max-lg:w-full">
-          <a class="text-base-content flex items-center gap-3 text-xl font-bold lg:hidden" href="#">
-            <img src="https://cdn.flyonui.com/fy-assets/logo/logo.png" class="size-8" alt="brand-logo" />
-            画像解析アプリ
-          </a>
-
-          <div class="flex items-center lg:hidden">
-            <span
-              class="icon-[tabler--search] hover:text-primary text-base-content active:text-primary me-6 size-5 cursor-pointer"></span>
-            <button type="button" class="collapse-toggle btn btn-outline btn-secondary btn-square"
-              data-collapse="#navbar-block-5" aria-controls="navbar-block-5" aria-label="Toggle navigation">
-              <span class="icon-[tabler--menu-2] collapse-open:hidden size-5.5"></span>
-              <span class="icon-[tabler--x] collapse-open:block hidden size-5.5"></span>
-            </button>
-          </div>
-        </div>
-        <div id="navbar-block-5"
-          class="lg:navbar-center transition-height collapse hidden grow overflow-hidden duration-300 lg:flex">
-          <div
-            class="text-base-content flex gap-6 text-base font-medium max-lg:mt-4 max-lg:flex-col lg:items-center lg:gap-16">
-            <a href="#" class="hover:text-primary">images</a>
-            <a href="#" class="hover:text-primary">Products</a>
-            <a class="text-base-content flex items-center gap-3 text-xl font-bold max-lg:hidden" href="#">
-              <img src="https://cdn.flyonui.com/fy-assets/logo/logo.png" class="size-8" alt="brand-logo" />
-              画像解析アプリ
-            </a>
-            <a href="#" class="hover:text-primary">About Us</a>
-            <a href="#" class="hover:text-primary">Contacts</a>
-          </div>
-        </div>
-        <div class="navbar-end max-lg:hidden">
-          <span
-            class="icon-[tabler--search] hover:text-primary active:text-primary text-base-content size-5 cursor-pointer"></span>
-        </div>
-      </div>
-    </nav>
 
     <div class="mt-8 mb-8">
       <div class="card max-w-5xl !max-w-5xl w-full mx-auto" style="max-width: 1024px !important; width: 100%;">
@@ -154,7 +116,7 @@
               style="padding-top: 16px !important; padding-bottom: 16px !important;">
               <span
                 class="icon-[tabler--chevron-left] text-primary size-5 shrink-0 transition-transform group-hover:-translate-x-1 rtl:rotate-180"></span>
-              <a href="index.html" class="link link-animated link-primary font-normal">画像一覧へ</a>
+              <a href="{% url 'user_image_table' %}" class="link link-animated link-primary font-normal">画像一覧へ</a>
             </div>
             <ul id="timeline-container"
               class="timeline timeline-snap-icon timeline-compact timeline-vertical w-full hidden">
@@ -288,13 +250,6 @@
 
       <!-- Dropzone -->
       <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
-
-      <!-- FlyonUI 本体 -->
-      <script src="./node_modules/flyonui/flyonui.js"></script>
-
-      <!-- FlyonUI コンポーネント -->
-      <script src="./node_modules/flyonui/dist/accordion.js"></script>
-
       <!-- ここで初期化 -->
       <script>
         window.addEventListener('load', () => {
