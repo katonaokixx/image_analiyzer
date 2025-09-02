@@ -128,6 +128,8 @@
 
     <!-- Table -->
     <div class="overflow-x-auto max-w-6xl mx-auto">
+      <!-- Debug: has_data = {{ has_data }} -->
+      {% if has_data %}
       <table class="table w-full [&_tr:nth-child(even)]:bg-base-200">
         <thead>
           <tr>
@@ -144,7 +146,6 @@
           </tr>
         </thead>
         <tbody>
-          {% if has_data %}
           {% for image in images %}
           <tr data-image-id="{{ image.id }}">
             <td>
@@ -234,18 +235,20 @@
             </td>
           </tr>
           {% endfor %}
-          {% else %}
-          <tr>
-            <td colspan="10" class="text-center py-8">
-              <div class="text-gray-500">
-                <span class="icon-[tabler--photo] size-8 mx-auto mb-2 block"></span>
-                画像データがありません
-              </div>
-            </td>
-          </tr>
-          {% endif %}
         </tbody>
       </table>
+      {% else %}
+      <!-- データがない場合の表示 -->
+      <div class="text-center py-12">
+        <div class="text-base-content/50 text-lg mb-4">
+          <span class="icon-[tabler--table-off] size-16 mx-auto block mb-4"></span>
+          データがありません
+        </div>
+        <p class="text-base-content/60">
+          画像をアップロードすると、ここに解析結果が表示されます。
+        </p>
+      </div>
+      {% endif %}
     </div>
 
     <!-- 他の行は省略 -->
@@ -255,43 +258,65 @@
   <div class="flex flex-wrap items-center justify-between gap-2 py-4">
     <div class="text-sm text-base-content/80">
       {% if has_data %}
+      {% if view_all %}
+      Showing all <span class="font-semibold">{{ images|length }}</span> images
+      {% else %}
       Showing <span class="font-semibold">{{ page_obj.start_index }}-{{ page_obj.end_index }}</span> of
       <span class="font-semibold">{{ page_obj.paginator.count }}</span> images
+      {% endif %}
       {% else %}
-      画像データがありません
       {% endif %}
     </div>
-    {% if has_data and page_obj.has_other_pages %}
-    <nav class="join">
-      {% if page_obj.has_previous %}
-      <a href="?page={{ page_obj.previous_page_number }}" class="btn btn-soft btn-square join-item">
-        <span class="icon-[tabler--chevron-left] size-5"></span>
+
+    <div class="flex items-center gap-2">
+      <!-- View All / Paginated Toggle -->
+      {% if has_data %}
+      {% if view_all %}
+      <a href="?" class="btn btn-soft btn-sm">
+        <span class="icon-[tabler--layout-grid] size-4"></span>
+        ページ分割表示
       </a>
       {% else %}
-      <button class="btn btn-soft btn-square join-item" disabled>
-        <span class="icon-[tabler--chevron-left] size-5"></span>
-      </button>
+      <a href="?view_all=true" class="btn btn-soft btn-sm">
+        <span class="icon-[tabler--list] size-4"></span>
+        全件表示
+      </a>
+      {% endif %}
       {% endif %}
 
-      {% for num in page_obj.paginator.page_range %}
-      {% if page_obj.number == num %}
-      <button class="btn btn-soft join-item btn-square" aria-current="page">{{ num }}</button>
-      {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %} <a href="?page={{ num }}"
-        class="btn btn-soft join-item btn-square">{{ num }}</a>
-        {% endif %}
-        {% endfor %}
-
-        {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}" class="btn btn-soft btn-square join-item">
-          <span class="icon-[tabler--chevron-right] size-5"></span>
+      <!-- Pagination Navigation -->
+      {% if has_data and not view_all and page_obj.has_other_pages %}
+      <nav class="join">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="btn btn-soft btn-square join-item">
+          <span class="icon-[tabler--chevron-left] size-5"></span>
         </a>
         {% else %}
         <button class="btn btn-soft btn-square join-item" disabled>
-          <span class="icon-[tabler--chevron-right] size-5"></span>
+          <span class="icon-[tabler--chevron-left] size-5"></span>
         </button>
         {% endif %}
-    </nav>
-    {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+        <button class="btn btn-soft join-item btn-square" aria-current="page">{{ num }}</button>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %} <a href="?page={{ num }}"
+          class="btn btn-soft join-item btn-square">{{ num }}</a>
+          {% endif %}
+          {% endfor %}
+
+          {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}" class="btn btn-soft btn-square join-item">
+            <span class="icon-[tabler--chevron-right] size-5"></span>
+          </a>
+          {% else %}
+          <button class="btn btn-soft btn-square join-item" disabled>
+            <span class="icon-[tabler--chevron-right] size-5"></span>
+          </button>
+          {% endif %}
+      </nav>
+      {% endif %}
+    </div>
   </div>
 </div>
 
