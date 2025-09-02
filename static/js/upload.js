@@ -469,6 +469,58 @@ function startAnalysisAnimation() {
   return animationInterval;
 }
 
+// モデル選択モーダルを閉じる
+function closeModelSelectionModal() {
+  const modal = document.getElementById('slide-down-animated-modal');
+  if (modal) {
+    // 方法1: モーダル内の閉じるボタンをクリック
+    const closeButton = modal.querySelector('[data-hs-overlay-close]');
+    if (closeButton) {
+      closeButton.click();
+      return; // 成功したら終了
+    }
+
+    // 方法2: FlyonUIのHSOverlayを使用してモーダルを閉じる
+    if (typeof HSOverlay !== 'undefined') {
+      try {
+        // getInstanceを使用
+        const overlay = HSOverlay.getInstance(modal);
+        if (overlay && typeof overlay.close === 'function') {
+          overlay.close();
+          return; // 成功したら終了
+        }
+
+        // 直接closeメソッドを呼び出し
+        if (typeof HSOverlay.close === 'function') {
+          HSOverlay.close(modal);
+          return; // 成功したら終了
+        }
+      } catch (error) {
+        console.log('HSOverlay.close()でエラー:', error);
+      }
+    }
+
+    // フォールバック - 手動でモーダルを閉じる
+    setTimeout(() => {
+      modal.classList.add('hidden');
+      modal.classList.remove('overlay-open');
+      modal.style.display = 'none';
+      modal.style.opacity = '0';
+      modal.style.visibility = 'hidden';
+
+      // 背景オーバーレイも除去
+      const overlay = document.querySelector('.overlay');
+      if (overlay) {
+        overlay.classList.remove('overlay-open');
+        overlay.style.display = 'none';
+      }
+
+      // bodyからoverlay-openクラスを除去
+      document.body.classList.remove('overlay-open');
+    }, 100);
+  }
+}
+
 // 解析開始ボタン
 document.addEventListener('DOMContentLoaded', () => {
   const modalStartBtn = document.getElementById('modal-start-analysis-btn');
@@ -480,14 +532,8 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('モデルを選択してください');
         return;
       }
-      const modal = document.getElementById('slide-down-animated-modal');
-      if (modal) {
-        modal.classList.add('hidden');
-        modal.classList.remove('overlay-open');
-        modal.style.display = 'none';
-        modal.style.opacity = '0';
-        modal.style.visibility = 'hidden';
-      }
+      // モーダルを正しく閉じる
+      closeModelSelectionModal();
       startAnalysis(model);
     });
   }
@@ -532,7 +578,7 @@ function startAnalysis(modelName) {
   const valEl = document.getElementById('analysis-progress-value');
 
   // 実際のAPI呼び出し
-  fetch('/image_analyzer/api/analysis/start/', {
+  fetch('/api/analysis/start/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -542,7 +588,14 @@ function startAnalysis(modelName) {
       'model': modelName
     })
   })
-    .then(response => response.json())
+    .then(response => {
+      // レスポンスがJSONかどうかをチェック
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('サーバーから無効なレスポンスが返されました');
+      }
+      return response.json();
+    })
     .then(data => {
       if (data.ok) {
         console.log('解析開始API成功:', data);
@@ -556,7 +609,7 @@ function startAnalysis(modelName) {
     })
     .catch(error => {
       console.error('解析開始API呼び出しエラー:', error);
-      showAnalysisError('解析の開始に失敗しました');
+      showAnalysisError('解析の開始中にエラーが発生しました: ' + error.message);
       clearInterval(animationInterval);
     });
 }
@@ -565,17 +618,122 @@ function monitorAnalysisProgress(bar, valEl, animationInterval) {
   let progress = 0;
   const progressInterval = setInterval(() => {
     // 実際の進捗を取得するAPI呼び出し
-    fetch('/image_analyzer/api/analysis/progress/')
-      .then(response => response.json())
+    fetch('/api/analysis/progress/')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
       .then(data => {
+        console.log('進捗取得結果:', data);
         if (data.ok && data.progress !== undefined) {
           progress = data.progress;
+          console.log(`進捗更新: ${progress}% - ${data.description}`);
           if (bar) bar.style.width = progress + '%';
           if (valEl) valEl.textContent = Math.round(progress);
+
+          // 進捗説明も更新
+          const progressDescription = document.querySelector('#timeline-item-2 .text-xs');
+          if (progressDescription && data.description) {
+            progressDescription.textContent = data.description;
+          }
 
           if (progress >= 100) {
             clearInterval(progressInterval);
             clearInterval(animationInterval);
+            console.log('解析完了');
+
+            // 3点アニメーションを停止して完了アイコンを表示
+            console.log('3点アニメーションを停止します');
+
+            // 方法1: IDで検索
+            const dots = [document.getElementById('dot-1'), document.getElementById('dot-2'), document.getElementById('dot-3')];
+            console.log('IDで検索したドット要素:', dots);
+
+            // 方法2: クラスで検索（フォールバック）
+            const dotsByClass = document.querySelectorAll('.animate-pulse');
+            console.log('クラスで検索したドット要素:', dotsByClass);
+
+            // 両方の方法でアニメーションを停止
+            [...dots, ...dotsByClass].forEach((dot, index) => {
+              if (dot && dot.classList.contains('animate-pulse')) {
+                console.log(`ドット${index + 1}を停止:`, dot);
+                console.log(`ドット${index + 1}の現在のクラス:`, dot.className);
+                dot.classList.remove('opacity-50', 'animate-pulse');
+                dot.style.opacity = '1';
+                console.log(`ドット${index + 1}の変更後のクラス:`, dot.className);
+              }
+            });
+
+            // 完了アイコンを表示
+            const dot1 = document.getElementById('dot-1') || document.querySelector('.animate-pulse');
+            if (dot1) {
+              console.log('完了アイコンを表示:', dot1);
+              dot1.innerHTML = '<i class="icon-[tabler--check] text-success size-3"></i>';
+              dot1.classList.remove('bg-warning', 'animate-pulse');
+              dot1.classList.add('text-success');
+              console.log('完了アイコン表示後のクラス:', dot1.className);
+            } else {
+              console.log('完了アイコンを表示する要素が見つかりません');
+            }
+
+            // 他のドットを非表示
+            const dot2 = document.getElementById('dot-2');
+            const dot3 = document.getElementById('dot-3');
+            if (dot2) dot2.style.display = 'none';
+            if (dot3) dot3.style.display = 'none';
+
+            // 進捗バーを完了状態に変更
+            if (bar) {
+              bar.classList.remove('bg-info');
+              bar.classList.add('bg-success');
+            }
+
+            // ステータス表示を完了状態に変更
+            const statusText = document.querySelector('#timeline-item-2 .text-warning');
+            if (statusText) {
+              statusText.textContent = '解析完了';
+              statusText.classList.remove('text-warning');
+              statusText.classList.add('text-success');
+            }
+
+            // 進捗バー横のステータステキストを更新
+            const analysisStatusText = document.getElementById('analysis-status-text');
+            if (analysisStatusText) {
+              analysisStatusText.textContent = '解析完了';
+              analysisStatusText.classList.remove('text-warning');
+              analysisStatusText.classList.add('text-success');
+              console.log('進捗バー横のステータスを更新:', analysisStatusText.textContent);
+            }
+
+            // 進捗バー下のステータステキストを更新
+            const analysisStatusText2 = document.getElementById('analysis-status-text-2');
+            if (analysisStatusText2) {
+              analysisStatusText2.textContent = '解析完了';
+              analysisStatusText2.classList.remove('text-warning');
+              analysisStatusText2.classList.add('text-success');
+              console.log('進捗バー下のステータスを更新:', analysisStatusText2.textContent);
+            }
+
+            // ステータスアイコンを更新
+            const analysisStatusIcon = document.getElementById('analysis-status-icon');
+            if (analysisStatusIcon) {
+              analysisStatusIcon.innerHTML = '<i class="icon-[tabler--check] text-success size-4 sm:size-5"></i>';
+              console.log('ステータスアイコンを更新');
+            }
+
+            // 解析開始タイムラインの背景色を緑色に更新
+            const timelineItem2 = document.getElementById('timeline-item-2');
+            if (timelineItem2) {
+              const timelineEnd2 = timelineItem2.querySelector('.timeline-end');
+              if (timelineEnd2) {
+                timelineEnd2.classList.remove('bg-warning/5', 'border-warning/20');
+                timelineEnd2.classList.add('bg-success/5', 'border-success/20');
+                console.log('解析開始タイムラインの背景色を緑色に更新');
+              }
+            }
+
             setTimeout(() => {
               const item3 = document.getElementById('timeline-item-3');
               if (item3) {
@@ -588,6 +746,8 @@ function monitorAnalysisProgress(bar, valEl, animationInterval) {
               }
             }, 600);
           }
+        } else {
+          console.log('進捗データが無効:', data);
         }
       })
       .catch(error => {

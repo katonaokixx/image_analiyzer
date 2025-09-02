@@ -8,7 +8,7 @@ from django.shortcuts import render
 from django.views.decorators.http import require_POST, require_GET
 from django.views.decorators.csrf import csrf_protect
 
-from .models import Image, MLModel
+from .models import Image, MLModel, ProgressLog
 from .services import analysis_service
 
 ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif'}
@@ -94,8 +94,14 @@ def api_start_analysis(request: HttpRequest):
     # バックグラウンドで解析を実行
     def run_analysis():
         try:
-            image_ids = [img.id for img in images]
-            result = analysis_service.analyze_images_batch(image_ids, model_name)
+            if image_id:
+                # 個別画像解析
+                result = analysis_service.analyze_single_image(int(image_id), model_name)
+            else:
+                # 一括解析
+                image_ids = [img.id for img in images]
+                result = analysis_service.analyze_images_batch(image_ids, model_name)
+            
             if not result['success']:
                 print(f"解析エラー: {result['error']}")
         except Exception as e:
@@ -117,14 +123,47 @@ def api_start_analysis(request: HttpRequest):
 def api_analysis_progress(request: HttpRequest):
     """解析進捗取得API"""
     try:
-        progress_data = analysis_service.get_analysis_progress()
-        return JsonResponse({
-            'ok': True,
-            'progress': progress_data.get('progress', 0),
-            'status': progress_data.get('status', 'unknown'),
-            'current_stage': progress_data.get('current_stage', ''),
-            'description': progress_data.get('description', '')
-        })
+        image_id = request.GET.get('image_id')
+        
+        if image_id:
+            # 個別画像の進捗を取得
+            try:
+                image = Image.objects.get(id=image_id)
+                latest_progress = ProgressLog.objects.filter(
+                    image=image
+                ).order_by('-timestamp').first()
+                
+                if latest_progress:
+                    return JsonResponse({
+                        'ok': True,
+                        'progress': float(latest_progress.progress_percentage),
+                        'status': image.status,
+                        'current_stage': latest_progress.current_stage,
+                        'description': latest_progress.stage_description
+                    })
+                else:
+                    return JsonResponse({
+                        'ok': True,
+                        'progress': 0,
+                        'status': image.status,
+                        'current_stage': 'waiting',
+                        'description': '解析待機中...'
+                    })
+            except Image.DoesNotExist:
+                return JsonResponse({
+                    'ok': False,
+                    'error': '画像が見つかりません'
+                }, status=404)
+        else:
+            # 全体の進捗を取得（既存の動作）
+            progress_data = analysis_service.get_analysis_progress()
+            return JsonResponse({
+                'ok': True,
+                'progress': progress_data.get('progress', 0),
+                'status': progress_data.get('status', 'unknown'),
+                'current_stage': progress_data.get('current_stage', ''),
+                'description': progress_data.get('description', '')
+            })
     except Exception as e:
         return JsonResponse({
             'ok': False,
@@ -156,6 +195,39 @@ def save_file_and_create_image(f):
         status='preparing'
     )
     return img
+
+@require_POST
+@csrf_protect
+def api_update_status(request: HttpRequest):
+    """画像ステータス更新API"""
+    image_id = request.POST.get('image_id')
+    status = request.POST.get('status')
+    
+    if not image_id or not status:
+        return JsonResponse({
+            'ok': False,
+            'error': 'image_idとstatusが必要です'
+        })
+    
+    try:
+        image = Image.objects.get(id=image_id)
+        image.status = status
+        image.save()
+        
+        return JsonResponse({
+            'ok': True,
+            'message': f'ステータスを{status}に更新しました'
+        })
+    except Image.DoesNotExist:
+        return JsonResponse({
+            'ok': False,
+            'error': '画像が見つかりません'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'ok': False,
+            'error': f'ステータス更新エラー: {str(e)}'
+        })
 
 def secure_unique_filename(directory: str, base: str, ext: str) -> str:
     name = f"{base}{ext}"

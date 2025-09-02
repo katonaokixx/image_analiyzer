@@ -4,6 +4,7 @@
 {% block title %}Test Page{% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="pt-16 py-8 sm:py-16 lg:py-24">
   <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
     <div class="mb-12 space-y-4 text-center sm:mb-16 lg:mb-24">
@@ -201,10 +202,11 @@
               {% if image.status == 'success' %}
               <span class="badge badge-outline border-dashed badge-success me-2">解析成功</span>
               {% elif image.status == 'analyzing' %}
-              <span class="badge badge-outline border-dashed badge-info me-2">解析中</span>
+              <span class="badge badge-outline border-dashed badge-info me-2 cursor-pointer" title="クリックして進捗を確認"
+                data-overlay="#analysis-progress-modal">解析中</span>
               {% elif image.status == 'preparing' %}
-              <span class="badge badge-outline border-dashed badge-secondary me-2 cursor-pointer"
-                title="クリックして解析を開始">準備中</span>
+              <span class="badge badge-outline border-dashed badge-secondary me-2 cursor-pointer" title="クリックして解析を開始"
+                data-overlay="#model-selection-modal">準備中</span>
               {% elif image.status == 'failed' %}
               <span class="badge badge-outline border-dashed badge-error me-2">失敗</span>
               {% endif %}
@@ -320,6 +322,110 @@
   </div>
 </div>
 
+<!-- モデル選択モーダル -->
+<div id="model-selection-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden"
+  role="dialog" tabindex="-1">
+  <div
+    class="modal-dialog overlay-open:mt-4 sm:overlay-open:mt-8 lg:overlay-open:mt-12 overlay-open:duration-300 transition-all ease-out max-w-sm sm:max-w-md lg:max-w-lg">
+    <div class="modal-content">
+      <div class="modal-header p-4 sm:p-6">
+        <h3 class="modal-title text-lg sm:text-xl">画像解析モデル選択</h3>
+        <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
+          data-overlay="#model-selection-modal">
+          <span class="icon-[tabler--x] size-4"></span>
+        </button>
+      </div>
+      <div class="modal-body p-4 sm:p-6">
+        <div class="flex flex-col gap-4 sm:gap-6">
+          <div class="text-center">
+            <p class="text-sm sm:text-base text-gray-600 mb-2">アップロードされた画像を解析するための機械学習モデルを選択してください。</p>
+            <p class="text-xs sm:text-sm text-gray-500">各モデルは異なる特徴を持ち、解析目的に応じて最適なものを選択できます。</p>
+          </div>
+          <div class="space-y-3">
+            <div class="form-control">
+              <label class="label"><span class="label-text font-semibold text-sm sm:text-base">解析モデル</span></label>
+              <select class="select select-bordered w-full text-sm sm:text-base" id="model-selector">
+                <option value="">モデルを選択してください</option>
+                <option value="resnet50">ResNet-50 v2.1 (汎用画像分類)</option>
+                <option value="efficientnet">EfficientNet-B0 (軽量・高速)</option>
+                <option value="mobilenet">MobileNet v2 (モバイル最適化)</option>
+                <option value="vgg16">VGG-16 (高精度・詳細分析)</option>
+                <option value="custom">カスタムモデル (特定用途特化)</option>
+              </select>
+            </div>
+            <div class="bg-base-200 rounded-lg p-3 sm:p-4">
+              <h4 class="font-semibold text-xs sm:text-sm mb-2">選択されたモデルの特徴</h4>
+              <p class="text-xs sm:text-sm text-gray-600" id="model-description">モデルを選択すると、ここに詳細な説明が表示されます。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="flex justify-end gap-3">
+          <button type="button" class="btn btn-soft btn-secondary" data-overlay="#model-selection-modal">キャンセル</button>
+          <button type="button" class="btn btn-primary" id="modal-start-analysis-btn">
+            <span class="icon-[tabler--player-play] size-5 mr-2"></span>解析開始
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 解析進捗モーダル -->
+<div id="analysis-progress-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden"
+  role="dialog" tabindex="-1">
+  <div
+    class="modal-dialog overlay-open:mt-4 sm:overlay-open:mt-8 lg:overlay-open:mt-12 overlay-open:duration-300 transition-all ease-out max-w-sm sm:max-w-md lg:max-w-lg">
+    <div class="modal-content">
+      <div class="modal-header p-4 sm:p-6">
+        <h3 class="modal-title text-lg sm:text-xl">解析進捗</h3>
+        <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
+          data-overlay="#analysis-progress-modal">
+          <span class="icon-[tabler--x] size-4"></span>
+        </button>
+      </div>
+      <div class="modal-body p-4 sm:p-6">
+        <div class="flex flex-col gap-4 sm:gap-6">
+          <div class="text-center">
+            <p class="text-sm sm:text-base text-gray-600 mb-4">画像解析の進捗状況を表示しています。</p>
+
+            <!-- ローディングアニメーション -->
+            <div class="flex justify-center items-center gap-2 mb-4">
+              <div class="flex gap-1">
+                <span class="w-1.5 h-1.5 bg-info rounded-full animate-pulse"></span>
+                <span class="w-1.5 h-1.5 bg-info rounded-full animate-pulse"></span>
+                <span class="w-1.5 h-1.5 bg-info rounded-full animate-pulse"></span>
+              </div>
+            </div>
+
+            <!-- 進捗バー -->
+            <div class="flex items-center gap-x-3 whitespace-nowrap mb-4">
+              <div class="progress h-2 flex-1" id="modal-analysis-progress">
+                <div class="progress-bar progress-info transition-all duration-500" style="width:0%"
+                  id="modal-analysis-progress-bar"></div>
+              </div>
+              <span class="text-base-content mb-0.5 text-sm">
+                <span id="modal-analysis-progress-value">0</span>%
+              </span>
+            </div>
+
+            <!-- ステータス表示 -->
+            <div class="flex items-center justify-center gap-2">
+              <span class="icon-[tabler--brain] text-info size-4"></span>
+              <span class="text-sm text-info font-medium">解析中</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="flex justify-end gap-3">
+          <button type="button" class="btn btn-soft btn-secondary" data-overlay="#analysis-progress-modal">閉じる</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 {% endblock %}
 
@@ -409,6 +515,584 @@
       });
     });
   });
+
+  // クリックされた準備中バッジの画像IDを保存する変数
+  let clickedImageId = null;
+
+  // 進捗監視用の変数
+  let progressInterval = null;
+
+  // モデル選択モーダルの機能
+  document.addEventListener('DOMContentLoaded', () => {
+    // イベント委譲を使用して準備中バッジのクリックイベントを処理
+    document.addEventListener('click', function (event) {
+      // 準備中バッジがクリックされた場合
+      if (event.target.classList.contains('badge-secondary') &&
+        event.target.getAttribute('data-overlay') === '#model-selection-modal') {
+        const row = event.target.closest('tr');
+        clickedImageId = row ? row.getAttribute('data-image-id') : null;
+        console.log('準備中バッジクリック、画像ID:', clickedImageId);
+        console.log('行要素:', row);
+        console.log('data-image-id属性:', row ? row.getAttribute('data-image-id') : '行が見つからない');
+
+        // 画像IDが取得できない場合の代替手段
+        if (!clickedImageId) {
+          console.error('画像IDを取得できませんでした');
+          alert('画像IDを取得できませんでした。ページを再読み込みしてください。');
+        }
+      }
+    });
+
+    // イベント委譲を使用して解析中バッジのクリックイベントを処理
+    document.addEventListener('click', function (event) {
+      console.log('クリックされた要素:', event.target);
+      console.log('クラス一覧:', event.target.classList.toString());
+      console.log('data-overlay属性:', event.target.getAttribute('data-overlay'));
+
+      // 解析中バッジがクリックされた場合
+      if (event.target.classList.contains('badge-info') &&
+        event.target.getAttribute('data-overlay') === '#analysis-progress-modal') {
+        const row = event.target.closest('tr');
+        const imageId = row ? row.getAttribute('data-image-id') : null;
+        console.log('解析中バッジクリック、画像ID:', imageId);
+
+        // 進捗監視を開始
+        if (imageId) {
+          startProgressMonitoring(imageId);
+        } else {
+          console.error('解析中バッジ: 画像IDを取得できませんでした');
+        }
+      }
+
+      // 解析成功バッジがクリックされた場合
+      if (event.target.classList.contains('badge-success') &&
+        event.target.getAttribute('data-overlay') === '#slide-down-animated-modal') {
+        const row = event.target.closest('tr');
+        const imageId = row ? row.getAttribute('data-image-id') : null;
+        console.log('解析成功バッジクリック、画像ID:', imageId);
+
+        // 画像詳細モーダルを開く
+        if (imageId) {
+          openImageDetailModal(imageId);
+        }
+      }
+    });
+
+    // 解析開始ボタン
+    const modalStartBtn = document.getElementById('modal-start-analysis-btn');
+    if (modalStartBtn) {
+      modalStartBtn.addEventListener('click', () => {
+        const selector = document.getElementById('model-selector');
+        const model = selector ? selector.value : '';
+        if (!model) {
+          alert('モデルを選択してください');
+          return;
+        }
+
+        console.log('解析開始ボタンクリック時の画像ID:', clickedImageId);
+        if (!clickedImageId) {
+          console.error('画像IDが見つかりません');
+          alert('画像IDを取得できませんでした');
+          return;
+        }
+
+        startIndividualAnalysis(clickedImageId, model);
+      });
+    }
+
+    // モーダルが閉じられた時に画像IDをリセット
+    const modal = document.getElementById('model-selection-modal');
+    if (modal) {
+      modal.addEventListener('hidden.bs.modal', function () {
+        clickedImageId = null;
+        console.log('モーダル閉じる、画像IDリセット');
+      });
+    }
+
+    // キャンセルボタンとXボタンで画像IDをリセット
+    const cancelBtn = document.querySelector('[data-overlay="#model-selection-modal"]');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', function () {
+        clickedImageId = null;
+        console.log('キャンセルボタンクリック、画像IDリセット');
+      });
+    }
+
+    // モデル選択時の説明表示
+    const modelSelector = document.getElementById('model-selector');
+    if (modelSelector) {
+      modelSelector.addEventListener('change', (e) => {
+        const selectedModel = e.target.value;
+        const descriptionEl = document.getElementById('model-description');
+        if (!descriptionEl) return;
+
+        const descriptions = {
+          'resnet50': 'ResNet-50 v2.1は、深層学習における代表的な画像分類モデルです。高い精度と汎用性を持ち、様々な画像タスクに適用できます。ImageNetで学習済みで、1000クラスの分類が可能です。',
+          'efficientnet': 'EfficientNet-B0は、効率性を重視した軽量モデルです。少ないパラメータ数で高い性能を実現し、モバイルデバイスやエッジコンピューティングに最適です。高速な推論が可能です。',
+          'mobilenet': 'MobileNet v2は、モバイル環境に特化して設計されたモデルです。軽量で高速な処理が可能で、スマートフォンやタブレットでのリアルタイム画像認識に適しています。',
+          'vgg16': 'VGG-16は、深いネットワーク構造を持つ高精度モデルです。詳細な特徴抽出が得意で、複雑な画像パターンの識別に優れています。計算量は多いですが、高い精度が期待できます。',
+          'custom': 'カスタムモデルは、特定の用途やデータセットに特化して学習されたモデルです。ドメイン固有の特徴を捉えることができ、専門的な画像解析タスクに最適です。'
+        };
+
+        if (selectedModel && descriptions[selectedModel]) {
+          descriptionEl.textContent = descriptions[selectedModel];
+        } else {
+          descriptionEl.textContent = 'モデルを選択すると、ここに詳細な説明が表示されます。';
+        }
+      });
+    }
+  });
+
+  // 個別画像解析開始
+  function startIndividualAnalysis(imageId, modelName) {
+    console.log('個別画像解析開始:', imageId, modelName);
+
+    // 画像IDが取得できない場合の処理
+    if (!imageId) {
+      console.error('画像IDが取得できません');
+      alert('画像IDが取得できません。ページを再読み込みしてください。');
+      return;
+    }
+
+    // CSRFトークンを取得
+    const csrfToken = getCSRFToken();
+
+    // API呼び出し
+    fetch('/api/analysis/start/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': csrfToken
+      },
+      body: new URLSearchParams({
+        'image_id': imageId,
+        'model': modelName
+      })
+    })
+      .then(response => {
+        // レスポンスがJSONかどうかをチェック
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('サーバーから無効なレスポンスが返されました');
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.ok) {
+          console.log('解析開始成功:', data);
+          // バッジを「解析中」に更新
+          updateBadgeStatus(imageId, 'analyzing');
+
+          // モーダルを閉じる
+          closeModelSelectionModal();
+
+          // ページリロードは不要
+        } else {
+          console.error('解析開始失敗:', data.error);
+          handleAnalysisError('解析の開始に失敗しました: ' + (data.error || '不明なエラー'));
+        }
+      })
+      .catch(error => {
+        console.error('API呼び出しエラー:', error);
+        handleAnalysisError('解析の開始中にエラーが発生しました: ' + error.message);
+      });
+  }
+
+  // 解析エラー処理
+  function handleAnalysisError(errorMessage) {
+    console.error('解析エラー:', errorMessage);
+
+    // 画像IDを取得
+    const imageId = clickedImageId;
+    console.log('エラー処理時の画像ID:', imageId);
+
+    // 画像IDをリセット
+    clickedImageId = null;
+
+    // FlyonUIのモーダルを正しく閉じる
+    const modal = document.getElementById('model-selection-modal');
+    if (modal) {
+      // 方法1: FlyonUIのHSOverlayを使用してモーダルを閉じる
+      if (window.HSOverlay) {
+        const overlay = window.HSOverlay.getInstance(modal);
+        if (overlay) {
+          overlay.close();
+        }
+      }
+
+      // 方法2: data-overlay属性を持つ要素をクリックしてモーダルを閉じる
+      const closeBtn = document.querySelector('[data-overlay="#model-selection-modal"]');
+      if (closeBtn) {
+        closeBtn.click();
+      }
+
+      // 方法3: フォールバック - 手動でモーダルを閉じる
+      setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('overlay-open');
+        modal.style.display = 'none';
+        modal.style.opacity = '0';
+        modal.style.visibility = 'hidden';
+
+        // 背景オーバーレイも除去
+        const overlay = document.querySelector('.overlay');
+        if (overlay) {
+          overlay.classList.remove('overlay-open');
+          overlay.style.display = 'none';
+        }
+
+        // bodyからoverlay-openクラスを除去
+        document.body.classList.remove('overlay-open');
+      }, 100);
+    }
+
+    // エラーメッセージを表示
+    alert(errorMessage);
+
+    // 画像IDがある場合は、ステータスを失敗に更新
+    if (imageId) {
+      updateImageStatusToFailed(imageId).then(() => {
+        // バッジを「失敗」に更新
+        updateBadgeStatus(imageId, 'failed');
+      }).catch(() => {
+        // ステータス更新に失敗してもバッジを更新
+        updateBadgeStatus(imageId, 'failed');
+      });
+    }
+  }
+
+  // 画像ステータスを失敗に更新
+  function updateImageStatusToFailed(imageId) {
+    const csrfToken = getCSRFToken();
+
+    return fetch('/api/update-status/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': csrfToken
+      },
+      body: new URLSearchParams({
+        'image_id': imageId,
+        'status': 'failed'
+      })
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.ok) {
+          console.log('ステータス更新成功:', data);
+        } else {
+          console.error('ステータス更新失敗:', data.error);
+        }
+      })
+      .catch(error => {
+        console.error('ステータス更新エラー:', error);
+      });
+  }
+
+  // 進捗監視開始
+  function startProgressMonitoring(imageId) {
+    console.log('進捗監視開始:', imageId);
+
+    // 既存の監視を停止
+    if (progressInterval) {
+      clearInterval(progressInterval);
+    }
+
+    // 進捗モーダルを手動で開く
+    const modal = document.getElementById('analysis-progress-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.style.display = 'block';
+      modal.style.opacity = '1';
+      modal.style.visibility = 'visible';
+
+      // 背景オーバーレイを追加
+      document.body.classList.add('overlay-open');
+    }
+
+    // 進捗バーと％をリセット
+    const progressBar = document.getElementById('modal-analysis-progress-bar');
+    const progressValue = document.getElementById('modal-analysis-progress-value');
+    if (progressBar) progressBar.style.width = '0%';
+    if (progressValue) progressValue.textContent = '0';
+
+    // 進捗説明をリセット
+    const progressDescription = document.querySelector('#analysis-progress-modal .text-gray-600');
+    if (progressDescription) {
+      progressDescription.textContent = '解析を開始しています...';
+    }
+
+    // 1秒ごとに進捗を取得
+    progressInterval = setInterval(() => {
+      fetch(`/api/analysis/progress/?image_id=${imageId}`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          console.log('進捗取得結果:', data);
+          if (data.ok && data.progress !== undefined) {
+            const progress = data.progress;
+            console.log(`進捗更新: ${progress}% - ${data.description}`);
+            if (progressBar) progressBar.style.width = progress + '%';
+            if (progressValue) progressValue.textContent = progress;
+
+            // 進捗説明も更新
+            const progressDescription = document.querySelector('#analysis-progress-modal .text-gray-600');
+            if (progressDescription && data.description) {
+              progressDescription.textContent = data.description;
+            }
+
+            // 100%になったら監視を停止
+            if (progress >= 100) {
+              clearInterval(progressInterval);
+              progressInterval = null;
+              console.log('解析完了');
+
+              // モーダル表示を完了状態に変更
+              updateProgressModalToCompleted();
+
+              // バッジを自動で更新
+              updateBadgeStatus(imageId, 'success');
+            }
+          } else {
+            console.log('進捗データが無効:', data);
+          }
+        })
+        .catch(error => {
+          console.error('進捗取得エラー:', error);
+          // エラーが続く場合は監視を停止
+          clearInterval(progressInterval);
+          progressInterval = null;
+        });
+    }, 1000);
+  }
+
+  // 進捗監視停止
+  function stopProgressMonitoring() {
+    if (progressInterval) {
+      clearInterval(progressInterval);
+      progressInterval = null;
+      console.log('進捗監視停止');
+    }
+  }
+
+  // 進捗モーダルを完了状態に変更
+  function updateProgressModalToCompleted() {
+    // 進捗バーを完了状態に変更
+    const progressBar = document.getElementById('modal-analysis-progress-bar');
+    if (progressBar) {
+      progressBar.style.width = '100%';
+      progressBar.classList.remove('progress-info');
+      progressBar.classList.add('progress-success');
+    }
+
+    // 進捗値を100%に設定
+    const progressValue = document.getElementById('modal-analysis-progress-value');
+    if (progressValue) {
+      progressValue.textContent = '100';
+    }
+
+    // 進捗説明を完了メッセージに変更
+    const progressDescription = document.querySelector('#analysis-progress-modal .text-gray-600');
+    if (progressDescription) {
+      progressDescription.textContent = '解析が完了しました！';
+      progressDescription.classList.remove('text-gray-600');
+      progressDescription.classList.add('text-success');
+    }
+
+    // モーダルのタイトルを変更
+    const modalTitle = document.querySelector('#analysis-progress-modal .modal-title');
+    if (modalTitle) {
+      modalTitle.textContent = '解析完了';
+    }
+
+    // ステータス表示を完了状態に変更
+    const statusIcon = document.querySelector('#analysis-progress-modal .icon-\\[tabler--brain\\]');
+    const statusText = document.querySelector('#analysis-progress-modal .text-info.font-medium');
+    if (statusIcon && statusText) {
+      statusIcon.className = 'icon-[tabler--check-circle] text-success size-4';
+      statusText.textContent = '解析完了';
+      statusText.classList.remove('text-info');
+      statusText.classList.add('text-success');
+    }
+
+    // ローディングアニメーションを停止
+    const loadingDots = document.querySelector('#analysis-progress-modal .flex.gap-1');
+    if (loadingDots) {
+      loadingDots.style.display = 'none';
+    }
+
+    console.log('進捗モーダルを完了状態に変更しました');
+
+    // 3秒後に自動でモーダルを閉じる（オプション）
+    setTimeout(() => {
+      const modal = document.getElementById('analysis-progress-modal');
+      if (modal) {
+        const closeButton = modal.querySelector('[data-overlay="#analysis-progress-modal"]');
+        if (closeButton) {
+          closeButton.click();
+        }
+      }
+    }, 3000);
+  }
+
+  // モデル選択モーダルを閉じる
+  function closeModelSelectionModal() {
+    const modal = document.getElementById('model-selection-modal');
+    if (modal) {
+      // 方法1: モーダル内の閉じるボタンをクリック
+      const closeButton = modal.querySelector('[data-hs-overlay-close]');
+      if (closeButton) {
+        closeButton.click();
+        return; // 成功したら終了
+      }
+
+      // 方法2: FlyonUIのHSOverlayを使用してモーダルを閉じる
+      if (typeof HSOverlay !== 'undefined') {
+        try {
+          // getInstanceを使用
+          const overlay = HSOverlay.getInstance(modal);
+          if (overlay && typeof overlay.close === 'function') {
+            overlay.close();
+            return; // 成功したら終了
+          }
+
+          // 直接closeメソッドを呼び出し
+          if (typeof HSOverlay.close === 'function') {
+            HSOverlay.close(modal);
+            return; // 成功したら終了
+          }
+        } catch (error) {
+          console.log('HSOverlay.close()でエラー:', error);
+        }
+      }
+
+      // フォールバック - 手動でモーダルを閉じる
+      setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('overlay-open');
+        modal.style.display = 'none';
+        modal.style.opacity = '0';
+        modal.style.visibility = 'hidden';
+
+        // 背景オーバーレイも除去
+        const overlay = document.querySelector('.overlay');
+        if (overlay) {
+          overlay.classList.remove('overlay-open');
+          overlay.style.display = 'none';
+        }
+
+        // bodyからoverlay-openクラスを除去
+        document.body.classList.remove('overlay-open');
+      }, 100);
+    }
+  }
+
+  // バッジステータスを更新
+  function updateBadgeStatus(imageId, status) {
+    const row = document.querySelector(`tr[data-image-id="${imageId}"]`);
+    if (!row) return;
+
+    const statusCell = row.querySelector('td:nth-child(3)');
+    if (!statusCell) return;
+
+    // 既存のバッジを削除
+    const existingBadge = statusCell.querySelector('.badge');
+    if (existingBadge) {
+      existingBadge.remove();
+    }
+
+    // 新しいバッジを作成
+    let newBadge;
+    if (status === 'success') {
+      newBadge = document.createElement('span');
+      newBadge.className = 'badge badge-outline border-dashed badge-success me-2 cursor-pointer';
+      newBadge.textContent = '解析成功';
+      newBadge.title = 'クリックして結果を確認';
+      newBadge.setAttribute('data-overlay', '#slide-down-animated-modal');
+    } else if (status === 'failed') {
+      newBadge = document.createElement('span');
+      newBadge.className = 'badge badge-outline border-dashed badge-error me-2 cursor-pointer';
+      newBadge.textContent = '失敗';
+      newBadge.title = 'クリックしてエラーログを確認';
+      newBadge.setAttribute('data-overlay', '#error-log-modal');
+    } else if (status === 'analyzing') {
+      newBadge = document.createElement('span');
+      newBadge.className = 'badge badge-outline border-dashed badge-info me-2 cursor-pointer';
+      newBadge.textContent = '解析中';
+      newBadge.title = 'クリックして進捗を確認';
+      newBadge.setAttribute('data-overlay', '#analysis-progress-modal');
+    }
+
+    if (newBadge) {
+      statusCell.appendChild(newBadge);
+      console.log(`バッジを更新: 画像ID ${imageId} -> ${status}`);
+      console.log('新しいバッジのクラス:', newBadge.className);
+      console.log('新しいバッジのdata-overlay:', newBadge.getAttribute('data-overlay'));
+
+      // FlyonUIのモーダル機能を再初期化
+      if (typeof HSOverlay !== 'undefined') {
+        try {
+          HSOverlay.autoInit();
+          console.log('FlyonUIを再初期化しました');
+        } catch (error) {
+          console.log('FlyonUI再初期化エラー:', error);
+        }
+      }
+
+      // 解析中バッジの場合は手動でクリックイベントを追加
+      if (status === 'analyzing') {
+        newBadge.addEventListener('click', function () {
+          const row = this.closest('tr');
+          const imageId = row ? row.getAttribute('data-image-id') : null;
+          console.log('手動イベント: 解析中バッジクリック、画像ID:', imageId);
+
+          if (imageId) {
+            startProgressMonitoring(imageId);
+          }
+        });
+        console.log('解析中バッジに手動クリックイベントを追加しました');
+      }
+    }
+  }
+
+  // モーダルが閉じられた時に進捗監視を停止
+  const progressModal = document.getElementById('analysis-progress-modal');
+  if (progressModal) {
+    progressModal.addEventListener('hidden.bs.modal', function () {
+      stopProgressMonitoring();
+    });
+  }
+
+  // CSRFトークン取得
+  function getCSRFToken() {
+    // 方法1: csrfmiddlewaretokenフィールドから取得
+    const token = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (token) {
+      return token.value;
+    }
+
+    // 方法2: Cookieから取得
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === 'csrftoken') {
+        return value;
+      }
+    }
+
+    // 方法3: メタタグから取得
+    const metaToken = document.querySelector('meta[name=csrf-token]');
+    if (metaToken) {
+      return metaToken.getAttribute('content');
+    }
+
+    console.error('CSRFトークンが見つかりません');
+    return '';
+  }
 </script>
 {% endblock %}
 

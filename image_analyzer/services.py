@@ -253,8 +253,97 @@ class ImageAnalysisService:
         
         return results
     
+    def analyze_single_image(self, image_id: int, model_name: str) -> Dict:
+        """単一画像を解析する（進捗シミュレーション付き）"""
+        import time
+        import threading
+        
+        try:
+            image = ImageModel.objects.get(id=image_id, status='preparing')
+            
+            # 解析開始
+            image.status = 'analyzing'
+            image.save()
+            
+            # 進捗シミュレーション用のスレッドを開始
+            progress_thread = threading.Thread(
+                target=self._simulate_single_progress, 
+                args=(image_id, model_name)
+            )
+            progress_thread.daemon = True
+            progress_thread.start()
+            
+            return {'success': True, 'message': f'画像 {image.filename} の解析を開始しました'}
+            
+        except ImageModel.DoesNotExist:
+            return {'success': False, 'error': '画像が見つかりません'}
+        except Exception as e:
+            logger.error(f"単一画像解析の開始に失敗: {e}")
+            return {'success': False, 'error': str(e)}
+    
+    def _simulate_single_progress(self, image_id: int, model_name: str):
+        """単一画像の進捗をシミュレートする"""
+        import time
+        
+        try:
+            image = ImageModel.objects.get(id=image_id)
+            
+            # 解析ステージの進捗シミュレーション
+            stages = [
+                (10, 'image_loading', '画像を読み込み中...'),
+                (30, 'preprocessing', '画像を前処理中...'),
+                (60, 'model_execution', 'AIモデルで解析中...'),
+                (85, 'postprocessing', '結果を処理中...'),
+                (100, 'completed', '解析完了')
+            ]
+            
+            for progress, stage, description in stages:
+                # 進捗ログを記録
+                ProgressLog.objects.create(
+                    image=image,
+                    progress_percentage=progress,
+                    current_stage=stage,
+                    stage_description=description
+                )
+                
+                print(f"進捗更新: {progress}% - {description}")
+                
+                # 少し待機（リアルな進捗感を演出）
+                time.sleep(1.5)
+            
+            # ダミーの解析結果を生成
+            dummy_results = self._generate_dummy_results(model_name)
+            
+            # 結果をデータベースに保存
+            for result in dummy_results:
+                AnalysisResult.objects.create(
+                    image=image,
+                    label=result['label'],
+                    confidence=result['confidence'],
+                    model_version='1.0.0'
+                )
+            
+            # 画像のステータスを完了に更新
+            image.status = 'success'
+            image.save()
+            
+            logger.info(f"画像 {image.filename} の解析が完了しました")
+            
+        except Exception as e:
+            logger.error(f"画像 {image_id} の解析に失敗: {e}")
+            # エラーの場合はステータスを失敗に更新
+            try:
+                image = ImageModel.objects.get(id=image_id)
+                image.status = 'failed'
+                image.save()
+            except:
+                pass
+
     def analyze_images_batch(self, image_ids: List[int], model_name: str) -> Dict:
-        """複数の画像を一括解析する"""
+        """複数の画像を一括解析する（進捗シミュレーション付き）"""
+        import time
+        import threading
+        
         try:
             images = ImageModel.objects.filter(id__in=image_ids, status='preparing')
             total_images = images.count()
@@ -265,23 +354,56 @@ class ImageAnalysisService:
             # 解析開始
             images.update(status='analyzing')
             
-            results = []
-            for i, image in enumerate(images):
+            # 進捗シミュレーション用のスレッドを開始
+            progress_thread = threading.Thread(
+                target=self._simulate_progress, 
+                args=(image_ids, total_images, model_name)
+            )
+            progress_thread.daemon = True
+            progress_thread.start()
+            
+            return {'success': True, 'message': f'{total_images}件の画像の解析を開始しました'}
+            
+        except Exception as e:
+            logger.error(f"一括解析の開始に失敗: {e}")
+            return {'success': False, 'error': str(e)}
+    
+    def _simulate_progress(self, image_ids: List[int], total_images: int, model_name: str):
+        """進捗をシミュレートする"""
+        import time
+        
+        try:
+            # 各画像に対して進捗シミュレーション
+            for i, image_id in enumerate(image_ids):
                 try:
-                    # 進捗ログを記録
-                    progress = (i / total_images) * 100
-                    ProgressLog.objects.create(
-                        image=image,
-                        progress_percentage=progress,
-                        current_stage='model_execution',
-                        stage_description=f'画像 {i+1}/{total_images} を解析中'
-                    )
+                    image = ImageModel.objects.get(id=image_id)
                     
-                    # 画像解析実行
-                    analysis_results = self.analyze_image(image.file_path, model_name)
+                    # 解析ステージの進捗シミュレーション
+                    stages = [
+                        (10, 'image_loading', '画像を読み込み中...'),
+                        (30, 'preprocessing', '画像を前処理中...'),
+                        (60, 'model_execution', 'AIモデルで解析中...'),
+                        (85, 'postprocessing', '結果を処理中...'),
+                        (100, 'completed', '解析完了')
+                    ]
+                    
+                    for progress, stage, description in stages:
+                        # 進捗ログを記録
+                        ProgressLog.objects.create(
+                            image=image,
+                            progress_percentage=progress,
+                            current_stage=stage,
+                            stage_description=description
+                        )
+                        
+                        # 少し待機（リアルな進捗感を演出）
+                        time.sleep(1.5)
+                    
+                    # ダミーの解析結果を生成
+                    dummy_results = self._generate_dummy_results(model_name)
                     
                     # 結果をデータベースに保存
-                    for result in analysis_results:
+                    for result in dummy_results:
                         AnalysisResult.objects.create(
                             image=image,
                             label=result['label'],
@@ -289,39 +411,26 @@ class ImageAnalysisService:
                             model_version='1.0.0'
                         )
                     
-                    results.append({
-                        'image_id': image.id,
-                        'filename': image.filename,
-                        'results': analysis_results
-                    })
+                    # 画像のステータスを完了に更新
+                    image.status = 'success'
+                    image.save()
+                    
+                    logger.info(f"画像 {image.filename} の解析が完了しました")
                     
                 except Exception as e:
-                    logger.error(f"画像 {image.filename} の解析に失敗: {e}")
-                    image.status = 'failed'
-                    image.error_log = str(e)
-                    image.save()
+                    logger.error(f"画像 {image_id} の解析に失敗: {e}")
+                    # エラーの場合はステータスを失敗に更新
+                    try:
+                        image = ImageModel.objects.get(id=image_id)
+                        image.status = 'failed'
+                        image.save()
+                    except:
+                        pass
             
-            # 解析完了
-            images.filter(status='analyzing').update(status='success')
-            
-            # 最終進捗ログ
-            for image in images:
-                ProgressLog.objects.create(
-                    image=image,
-                    progress_percentage=100.0,
-                    current_stage='completed',
-                    stage_description='解析完了'
-                )
-            
-            return {
-                'success': True,
-                'total_images': total_images,
-                'results': results
-            }
+            # 全体の進捗を100%に設定（完了）
             
         except Exception as e:
-            logger.error(f"一括解析に失敗: {e}")
-            return {'success': False, 'error': str(e)}
+            logger.error(f"進捗シミュレーションに失敗: {e}")
     
     def get_analysis_progress(self) -> Dict:
         """解析進捗を取得する"""

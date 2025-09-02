@@ -8,4 +8,5 @@ urlpatterns = [
     path('api/form-upload/', views.api_form_upload, name='api_form_upload'),
     path('api/analysis/start/', views.api_start_analysis, name='api_start_analysis'),
     path('api/analysis/progress/', views.api_analysis_progress, name='api_analysis_progress'),
+    path('api/update-status/', views.api_update_status, name='api_update_status'),
 ]

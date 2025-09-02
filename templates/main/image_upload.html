@@ -176,7 +176,7 @@
                 <span class="icon-[tabler--player-play] text-warning-content size-3.5"></span>
               </span>
             </div>
-            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1">
+            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-warning/5 border border-warning/20">
               <div
                 class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
                 <span class="text-sm sm:text-base">解析開始</span>
@@ -184,11 +184,11 @@
               </div>
               <p class="mb-2 text-xs sm:text-sm">AIによる画像解析を開始しました。</p>
               <div class="flex items-center gap-1 mb-3">
-                <span class="text-xs sm:text-sm text-warning font-medium">解析中</span>
+                <span id="analysis-status-text" class="text-xs sm:text-sm text-warning font-medium">解析中</span>
                 <div class="flex gap-1">
-                  <span class="w-1 sm:w-1.5 h-1 sm:h-1.5 bg-warning rounded-full animate-pulse"></span>
-                  <span class="w-1 sm:w-1.5 h-1 sm:h-1.5 bg-warning rounded-full animate-pulse"></span>
-                  <span class="w-1 sm:w-1.5 h-1 sm:h-1.5 bg-warning rounded-full animate-pulse"></span>
+                  <span id="dot-1" class="w-1 sm:w-1.5 h-1 sm:h-1.5 bg-warning rounded-full animate-pulse"></span>
+                  <span id="dot-2" class="w-1 sm:w-1.5 h-1 sm:h-1.5 bg-warning rounded-full animate-pulse"></span>
+                  <span id="dot-3" class="w-1 sm:w-1.5 h-1 sm:h-1.5 bg-warning rounded-full animate-pulse"></span>
                 </div>
               </div>
               <div class="flex items-center gap-x-2 sm:gap-x-3 whitespace-nowrap mb-2">
@@ -200,8 +200,8 @@
                     id="analysis-progress-value">0</span>%</span>
               </div>
               <div class="flex items-center gap-2" id="analysis-status-container">
-                <span class="icon-[tabler--brain] text-warning size-4 sm:size-5"></span>
-                <span class="text-xs sm:text-sm text-warning font-medium">解析中</span>
+                <span id="analysis-status-icon" class="icon-[tabler--brain] text-warning size-4 sm:size-5"></span>
+                <span id="analysis-status-text-2" class="text-xs sm:text-sm text-warning font-medium">解析中</span>
               </div>
             </div>
             <hr class="bg-warning" />
@@ -209,13 +209,13 @@
 
           <!-- 解析完了 -->
           <li id="timeline-item-3" class="hidden">
-            <hr class="bg-info" />
+            <hr class="bg-success" />
             <div class="timeline-middle">
-              <span class="badge badge-info size-4.5 rounded-full p-0">
-                <span class="icon-[tabler--check] text-info-content size-3.5"></span>
+              <span class="badge badge-success size-4.5 rounded-full p-0">
+                <span class="icon-[tabler--check] text-success-content size-3.5"></span>
               </span>
             </div>
-            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1">
+            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-success/5 border border-success/20">
               <div
                 class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
                 <span class="text-sm sm:text-base">解析完了</span>
@@ -227,7 +227,7 @@
                 <span class="text-xs sm:text-sm text-info font-medium">完了</span>
               </div>
             </div>
-            <hr class="bg-info" />
+            <hr class="bg-success" />
           </li>
 
         </ul>
@@ -292,7 +292,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/upload.js' %}"></script>
+<script src="{% static 'js/upload.js' %}?v={{ timestamp|default:'1.0' }}"></script>
 {% endblock %}
 
 {% block extra_css %}
