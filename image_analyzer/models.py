@@ -1,4 +1,6 @@
 from django.db import models
+from django.conf import settings
+import os
 
 # Create your models here.
 
@@ -128,6 +130,24 @@ class Image(models.Model):
     
     def __str__(self):
         return f"{self.filename} ({self.get_status_display()})"
+    
+    @property
+    def file_url(self):
+        """Webアクセス可能なファイルURLを生成"""
+        if self.file_path:
+            # 絶対パスから相対パスに変換
+            relative_path = os.path.relpath(self.file_path, settings.MEDIA_ROOT)
+            return f"{settings.MEDIA_URL}{relative_path}"
+        return None
+    
+    @property
+    def thumbnail_url(self):
+        """Webアクセス可能なサムネイルURLを生成"""
+        if self.thumbnail_path:
+            # 絶対パスから相対パスに変換
+            relative_path = os.path.relpath(self.thumbnail_path, settings.MEDIA_ROOT)
+            return f"{settings.MEDIA_URL}{relative_path}"
+        return self.file_url  # サムネイルがない場合は元画像を使用
 
 
 class ProgressLog(models.Model):

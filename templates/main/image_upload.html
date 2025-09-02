@@ -1,713 +1,307 @@
-<!doctype html>
-<html data-theme="shadcn">
-  {% load static %}
+{% extends 'base.html' %}
+{% load static %}
 
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FlyonUI Test</title>
-    <link href="{% static 'css/output.css' %}" rel="stylesheet">
-  </head>
+{% block title %}画像アップロード - 画像解析アプリ{% endblock %}
 
-  <body>
+{% block content %}
+<div class="pt-8 mb-8">
+  <div class="card max-w-5xl !max-w-5xl w-full mx-auto" style="max-width:1024px!important;width:100%;">
+    <div class="card-header">
+      <h5 class="card-title">画像アップロード</h5>
+    </div>
+    <div class="card-body">
 
-    <div class="mt-8 mb-8">
-      <div class="card max-w-5xl !max-w-5xl w-full mx-auto" style="max-width: 1024px !important; width: 100%;">
-        <div class="card-header">
-          <h5 class="card-title">Image Uploader</h5>
+      <!-- CSRFトークン -->
+      {% csrf_token %}
+
+      <!-- data-file-upload は厳密な JSON -->
+      <div id="file-upload-limit" data-file-upload='{
+             "url": "/api/form-upload/",
+             "maxFilesize": 1,
+             "maxFiles": 5,
+             "autoProcessQueue": false,
+             "extensions": {
+               "jpg": { "class": "shrink-0 size-5" },
+               "png": { "class": "shrink-0 size-5" },
+               "gif": { "class": "shrink-0 size-5" }
+             }
+           }'>
+
+        <!-- プレビュー用テンプレート -->
+        <template data-file-upload-preview="">
+          <div class="rounded-box bg-base-100 shadow-base-300/20 p-3 shadow-lg">
+            <div class="mb-1 flex items-center justify-between">
+              <div class="flex items-center gap-x-3">
+                <span
+                  class="text-base-content/80 border-base-content/20 flex size-8 items-center justify-center rounded-lg border p-0.5"
+                  data-file-upload-file-icon="">
+                  <img class="hidden rounded-md" data-dz-thumbnail="" alt="">
+                </span>
+                <div>
+                  <p class="text-base-content text-sm font-medium">
+                    <span class="inline-block truncate align-bottom" data-file-upload-file-name=""></span>.
+                    <span data-file-upload-file-ext=""></span>
+                  </p>
+                  <p class="text-base-content/50 text-xs" data-file-upload-file-size=""
+                    data-file-upload-file-success=""></p>
+                  <p class="text-error text-xs" style="display:none" data-file-upload-file-error="">File exceeds size
+                    limit.</p>
+                </div>
+              </div>
+              <div class="flex items-center">
+                <div class="tooltip [--placement:top]" style="display:none" data-file-upload-file-error="">
+                  <button type="button" class="tooltip-toggle btn btn-sm btn-circle btn-text btn-error">
+                    <span class="icon-[tabler--alert-circle] size-4 shrink-0"></span>
+                  </button>
+                  <span class="tooltip-content tooltip-shown:opacity-100 tooltip-shown:visible" role="tooltip">
+                    <span class="tooltip-body">Please try to upload a file smaller than 1MB.</span>
+                  </span>
+                </div>
+                <button type="button" class="btn btn-sm btn-circle btn-text" data-file-upload-reload="">
+                  <span class="icon-[tabler--refresh] size-4 shrink-0"></span>
+                </button>
+                <button type="button" class="btn btn-sm btn-circle btn-text" data-file-upload-remove="">
+                  <span class="icon-[tabler--trash] size-4 shrink-0"></span>
+                </button>
+              </div>
+            </div>
+            <div class="flex items-center gap-x-3 whitespace-nowrap">
+              <div class="progress h-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
+                data-file-upload-progress-bar="">
+                <div
+                  class="progress-bar progress-primary file-upload-complete:progress-success transition-all duration-500"
+                  style="width:0" data-file-upload-progress-bar-pane=""></div>
+              </div>
+              <span class="text-base-content mb-0.5 text-sm">
+                <span data-file-upload-progress-bar-value="">0</span>%
+              </span>
+            </div>
+          </div>
+        </template>
+
+        <!-- ドロップ領域 -->
+        <div
+          class="bg-base-200/60 rounded-box flex flex-col justify-center border-2 border-base-content/20 border-dashed">
+          <div class="text-center cursor-pointer p-12" data-file-upload-trigger="">
+            <p class="text-base-content/50 mb-3 text-sm">1MB以下のファイルを選択してください。（最大5枚、合計5MBまで）</p>
+            <button class="btn btn-soft btn-sm btn-primary text-nowrap">
+              <span class="icon-[tabler--file-upload] size-4.5 shrink-0"></span> ドラッグ&ドロップでアップロード
+            </button>
+            <p class="text-base-content/50 my-2 text-xs">または</p>
+            <p class="link link-animated link-primary font-medium text-sm">ファイルを選択</p>
+          </div>
+          <div class="mx-12 mb-8 space-y-2 empty:m-0" data-file-upload-previews=""></div>
         </div>
-        <div class="card-body">
-          <div id="file-upload-limit" data-file-upload='{
-          "url": "https://httpbin.org/post",
-  "maxFilesize": 1,
-  "maxFiles": 5,
-  "extensions": {
-    "jpg": {
-      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" ry=\"2\"/><circle cx=\"9\" cy=\"9\" r=\"2\"/><path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\"/></svg>",
-      "class": "shrink-0 size-5"
-    },
-    "png": {
-      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" ry=\"2\"/><circle cx=\"9\" cy=\"9\" r=\"2\"/><path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\"/></svg>",
-      "class": "shrink-0 size-5"
-    },
-    "gif": {
-      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\" ry=\"2\"/><circle cx=\"9\" cy=\"9\" r=\"2\"/><path d=\"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\"/></svg>",
-      "class": "shrink-0 size-5"
-    }
+
+        <!-- アップロード開始ボタン -->
+        <div id="upload-button-container" class="hidden flex justify-center mt-4">
+          <button id="start-upload-btn" class="btn btn-primary btn-outline waves waves-primary">
+            <span class="icon-[tabler--upload] size-5 mr-2"></span>アップロード開始
+          </button>
+        </div>
+
+        <!-- 解析開始(モデル選択)ボタン -->
+        <div id="analysis-button-container" class="hidden flex justify-center mt-4">
+          <button id="start-analysis-btn" class="btn btn-primary btn-outline waves waves-primary"
+            data-overlay="#slide-down-animated-modal">
+            <span class="icon-[tabler--brain] size-5 mr-2"></span>モデルを選択
+          </button>
+        </div>
+
+        <!-- 戻るリンク -->
+        <div class="group flex items-center justify-center gap-2 pt-4 pb-4">
+          <span
+            class="icon-[tabler--chevron-left] text-primary size-5 shrink-0 transition-transform group-hover:-translate-x-1 rtl:rotate-180"></span>
+          <a href="{% url 'user_image_table' %}" class="link link-animated link-primary font-normal">画像一覧へ</a>
+        </div>
+
+        <!-- タイムライン -->
+        <ul id="timeline-container"
+          class="timeline timeline-snap-icon timeline-compact timeline-vertical w-full hidden">
+
+          <!-- アップロード成功 -->
+          <li id="timeline-item-1-success" class="hidden">
+            <div class="timeline-middle">
+              <span class="badge badge-success size-4.5 rounded-full p-0" id="timeline-circle-1">
+                <span class="icon-[tabler--check] text-success-content size-3.5" id="timeline-badge-1"></span>
+              </span>
+            </div>
+            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-4 pt-1 bg-success/5 border border-success/20">
+              <div
+                class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
+                ファイルアップロード完了
+                <span class="text-base-content/50 text-sm font-normal">今すぐ</span>
+              </div>
+              <p id="timeline-description" class="mb-2">ファイルのアップロードに成功しました</p>
+              <div class="flex items-center gap-2">
+                <span class="icon-[tabler--check-circle] text-success size-5"></span>
+                <span class="text-sm text-success font-medium">アップロード成功</span>
+              </div>
+            </div>
+            <hr class="bg-success" />
+          </li>
+
+          <!-- アップロード失敗 -->
+          <li id="timeline-item-1-error" class="hidden">
+            <hr class="bg-error" />
+            <div class="timeline-middle">
+              <span class="badge badge-error size-4.5 rounded-full p-0">
+                <span class="icon-[tabler--alert-triangle] text-error-content size-3.5"></span>
+              </span>
+            </div>
+            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-4 pt-1 border border-error/30 bg-error/5">
+              <div
+                class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
+                ファイルアップロード失敗
+                <span class="text-base-content/50 text-sm font-normal">今すぐ</span>
+              </div>
+              <p id="timeline-error-description" class="mb-2">ファイルのアップロードに失敗しました</p>
+              <div class="flex items-center gap-2">
+                <span class="icon-[tabler--alert-circle] text-error size-5"></span>
+                <span class="text-sm text-error font-medium">アップロード失敗</span>
+              </div>
+            </div>
+            <hr class="bg-error" />
+          </li>
+
+          <!-- 解析開始 -->
+          <li id="timeline-item-2" class="hidden">
+            <hr class="bg-warning" />
+            <div class="timeline-middle">
+              <span class="badge badge-warning size-4.5 rounded-full p-0">
+                <span class="icon-[tabler--player-play] text-warning-content size-3.5"></span>
+              </span>
+            </div>
+            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-4 pt-1">
+              <div
+                class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
+                解析開始
+                <span class="text-base-content/50 text-sm font-normal">今すぐ</span>
+              </div>
+              <p class="mb-2">AIによる画像解析を開始しました。</p>
+              <div class="flex items-center gap-1 mb-3">
+                <span class="text-sm text-warning font-medium">解析中</span>
+                <div class="flex gap-1">
+                  <span class="w-1.5 h-1.5 bg-warning rounded-full animate-pulse"></span>
+                  <span class="w-1.5 h-1.5 bg-warning rounded-full animate-pulse"></span>
+                  <span class="w-1.5 h-1.5 bg-warning rounded-full animate-pulse"></span>
+                </div>
+              </div>
+              <div class="flex items-center gap-x-3 whitespace-nowrap mb-2">
+                <div class="progress h-2" id="analysis-progress">
+                  <div class="progress-bar progress-success transition-all duration-500" style="width:0%"
+                    id="analysis-progress-bar"></div>
+                </div>
+                <span class="text-base-content mb-0.5 text-sm"><span id="analysis-progress-value">0</span>%</span>
+              </div>
+              <div class="flex items-center gap-2" id="analysis-status-container">
+                <span class="icon-[tabler--brain] text-warning size-5"></span>
+                <span class="text-sm text-warning font-medium">解析中</span>
+              </div>
+            </div>
+            <hr class="bg-warning" />
+          </li>
+
+          <!-- 解析完了 -->
+          <li id="timeline-item-3" class="hidden">
+            <hr class="bg-info" />
+            <div class="timeline-middle">
+              <span class="badge badge-info size-4.5 rounded-full p-0">
+                <span class="icon-[tabler--check] text-info-content size-3.5"></span>
+              </span>
+            </div>
+            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-4 pt-1">
+              <div
+                class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
+                解析完了
+                <span class="text-base-content/50 text-sm font-normal">今すぐ</span>
+              </div>
+              <p class="mb-2">画像のカテゴリー分類が完了しました</p>
+              <div class="flex items-center gap-2">
+                <span class="icon-[tabler--brain] text-info size-5"></span>
+                <span class="text-sm text-info font-medium">完了</span>
+              </div>
+            </div>
+            <hr class="bg-info" />
+          </li>
+
+        </ul>
+
+      </div><!-- /#file-upload-limit -->
+    </div>
+  </div>
+</div>
+
+<div class="h-16"></div>
+
+<!-- モデル選択モーダル -->
+<div id="slide-down-animated-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden"
+  role="dialog" tabindex="-1">
+  <div class="modal-dialog overlay-open:mt-12 overlay-open:duration-300 transition-all ease-out">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">画像解析モデル選択</h3>
+        <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
+          data-overlay="#slide-down-animated-modal">
+          <span class="icon-[tabler--x] size-4"></span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="flex flex-col gap-6">
+          <div class="text-center">
+            <p class="text-base text-gray-600 mb-2">アップロードされた画像を解析するための機械学習モデルを選択してください。</p>
+            <p class="text-sm text-gray-500">各モデルは異なる特徴を持ち、解析目的に応じて最適なものを選択できます。</p>
+          </div>
+          <div class="space-y-3">
+            <div class="form-control">
+              <label class="label"><span class="label-text font-semibold">解析モデル</span></label>
+              <select class="select select-bordered w-full" id="model-selector">
+                <option value="">モデルを選択してください</option>
+                <option value="resnet50">ResNet-50 v2.1 (汎用画像分類)</option>
+                <option value="efficientnet">EfficientNet-B0 (軽量・高速)</option>
+                <option value="mobilenet">MobileNet v2 (モバイル最適化)</option>
+                <option value="vgg16">VGG-16 (高精度・詳細分析)</option>
+                <option value="custom">カスタムモデル (特定用途特化)</option>
+              </select>
+            </div>
+            <div class="bg-base-200 rounded-lg p-4">
+              <h4 class="font-semibold text-sm mb-2">選択されたモデルの特徴</h4>
+              <p class="text-sm text-gray-600" id="model-description">モデルを選択すると、ここに詳細な説明が表示されます。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="flex justify-end gap-3">
+          <button type="button" class="btn btn-soft btn-secondary"
+            data-overlay="#slide-down-animated-modal">キャンセル</button>
+          <button type="button" class="btn btn-primary" id="modal-start-analysis-btn">
+            <span class="icon-[tabler--player-play] size-5 mr-2"></span>解析開始
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/upload.js' %}"></script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* タイムラインアイコン完全非表示 */
+  #timeline-container .timeline-middle {
+    display: none !important;
   }
-}'>
-            <template data-file-upload-preview="">
-              <div class="rounded-box bg-base-100 shadow-base-300/20 p-3 shadow-lg">
-                <div class="mb-1 flex items-center justify-between">
-                  <div class="flex items-center gap-x-3">
-                    <span
-                      class="text-base-content/80 border-base-content/20 flex size-8 items-center justify-center rounded-lg border p-0.5"
-                      data-file-upload-file-icon="">
-                      <img class="hidden rounded-md" data-dz-thumbnail="" />
-                    </span>
-                    <div>
-                      <p class="text-base-content text-sm font-medium">
-                        <span class="inline-block truncate align-bottom" data-file-upload-file-name=""></span>
-                        .
-                        <span data-file-upload-file-ext=""></span>
-                      </p>
-                      <p class="text-base-content/50 text-xs" data-file-upload-file-size=""
-                        data-file-upload-file-success="">
-                      </p>
-                      <p class="text-error text-xs" style="display: none" data-file-upload-file-error="">
-                        File exceeds size limit.
-                      </p>
-                    </div>
-                  </div>
-                  <div class="flex items-center">
-                    <div class="tooltip [--placement:top]" style="display: none" data-file-upload-file-error="">
-                      <button type="button" class="tooltip-toggle btn btn-sm btn-circle btn-text btn-error">
-                        <span class="icon-[tabler--alert-circle] size-4 shrink-0"></span>
-                      </button>
-                      <span class="tooltip-content tooltip-shown:opacity-100 tooltip-shown:visible" role="tooltip">
-                        <span class="tooltip-body">Please try to upload a file smaller than 1MB.</span>
-                      </span>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-circle btn-text" data-file-upload-reload="">
-                      <span class="icon-[tabler--refresh] size-4 shrink-0"></span>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-circle btn-text" data-file-upload-remove="">
-                      <span class="icon-[tabler--trash] size-4 shrink-0"></span>
-                    </button>
-                  </div>
-                </div>
-                <div class="flex items-center gap-x-3 whitespace-nowrap">
-                  <div class="progress h-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
-                    data-file-upload-progress-bar="">
-                    <div
-                      class="progress-bar progress-primary file-upload-complete:progress-success transition-all duration-500"
-                      style="width: 0" data-file-upload-progress-bar-pane=""></div>
-                  </div>
-                  <span class="text-base-content mb-0.5 text-sm">
-                    <span data-file-upload-progress-bar-value="">0</span>%
-                  </span>
-                </div>
-              </div>
-            </template>
 
-            <div
-              class="bg-base-200/60 rounded-box flex flex-col justify-center border-2 border-base-content/20 border-dashed">
-              <div class="text-center cursor-pointer p-12" data-file-upload-trigger="">
-                <p class="text-base-content/50 mb-3 text-sm">Choose a file no larger than 1MB.</p>
-                <button class="btn btn-soft btn-sm btn-primary text-nowrap"> <span
-                    class="icon-[tabler--file-upload] size-4.5 shrink-0"></span> Drag & Drop to Upload </button>
-                <p class="text-base-content/50 my-2 text-xs">or</p>
-                <p class="link link-animated link-primary font-medium text-sm">Browse</p>
-              </div>
-              <div class="mx-12 mb-8 space-y-2 empty:m-0" data-file-upload-previews=""></div>
-            </div>
-            <!-- 解析開始ボタン（初期状態では非表示） -->
-            <div id="analysis-button-container" class="hidden flex justify-center mt-4">
-              <button id="start-analysis-btn" class="btn btn-primary btn-outline waves waves-primary"
-                data-overlay="#slide-down-animated-modal">
-                <span class="icon-[tabler--brain] size-5 mr-2"></span>
-                モデルを選択
-              </button>
-            </div>
-
-
-
-            <div class="group flex items-center justify-center gap-2 pt-4 pb-4"
-              style="padding-top: 16px !important; padding-bottom: 16px !important;">
-              <span
-                class="icon-[tabler--chevron-left] text-primary size-5 shrink-0 transition-transform group-hover:-translate-x-1 rtl:rotate-180"></span>
-              <a href="{% url 'user_image_table' %}" class="link link-animated link-primary font-normal">画像一覧へ</a>
-            </div>
-            <ul id="timeline-container"
-              class="timeline timeline-snap-icon timeline-compact timeline-vertical w-full hidden">
-              <!-- ファイルアップロード完了状態 -->
-              <li id="timeline-item-1-success">
-                <div class="timeline-middle">
-                  <span class="bg-success/20 flex size-4.5 items-center justify-center rounded-full"
-                    id="timeline-circle-1">
-                    <span class="badge badge-success size-3 rounded-full p-0" id="timeline-badge-1"></span>
-                  </span>
-                </div>
-                <div class="timeline-end hover:bg-base-200/50 mb-0 ms-1 w-full rounded-lg p-4 pt-1">
-                  <div
-                    class="text-base-content mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
-                    ファイルアップロード完了
-                    <span class="text-base-content/50 text-sm font-normal">今すぐ</span>
-                  </div>
-                  <p id="timeline-description" class="mb-2">画像ファイルが正常にアップロードされました</p>
-                  <div class="flex items-center gap-2">
-                    <span class="icon-[tabler--check-circle] text-success size-5"></span>
-                    <span class="text-sm text-success font-medium">アップロード成功</span>
-                  </div>
-                </div>
-                <hr />
-              </li>
-              <!-- /ファイルアップロード完了状態 -->
-
-              <!-- ファイルアップロード失敗状態 -->
-              <li id="timeline-item-1-error" class="hidden">
-                <div class="timeline-middle">
-                  <span class="bg-error/20 flex size-4.5 items-center justify-center rounded-full">
-                    <span class="badge badge-error size-3 rounded-full p-0"></span>
-                  </span>
-                </div>
-                <div class="timeline-end hover:bg-base-200/50 mb-0 ms-1 w-full rounded-lg p-4 pt-1">
-                  <div
-                    class="text-base-content mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
-                    ファイルアップロード失敗
-                    <span class="text-base-content/50 text-sm font-normal">今すぐ</span>
-                  </div>
-                  <p id="timeline-error-description" class="mb-2">ファイルのアップロードに失敗しました</p>
-                  <div class="flex items-center gap-2">
-                    <span class="icon-[tabler--alert-circle] text-error size-5"></span>
-                    <span class="text-sm text-error font-medium">アップロード失敗</span>
-                  </div>
-                </div>
-                <hr />
-              </li>
-              <!-- /ファイルアップロード失敗状態 -->
-              <!-- Hoverable timeline item 2 (初期状態では非表示) -->
-              <li id="timeline-item-2" class="hidden">
-                <hr />
-                <div class="timeline-middle">
-                  <span class="bg-success/20 flex size-4.5 items-center justify-center rounded-full">
-                    <span class="badge badge-success size-3 rounded-full p-0"></span>
-                  </span>
-                </div>
-                <div class="timeline-end hover:bg-base-200/50 mb-0 ms-1 w-full rounded-lg p-4 pt-1">
-                  <div
-                    class="text-base-content mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
-                    解析成功
-                    <span class="text-base-content/50 text-sm font-normal">今すぐ</span>
-                  </div>
-                  <p class="mb-2">AIによる画像解析が完了しました。</p>
-                  <!-- 解析中のアニメーション -->
-                  <div class="flex items-center gap-1 mb-3">
-                    <span class="text-sm text-warning font-medium">解析中</span>
-                    <div class="flex gap-1">
-                      <span class="w-1.5 h-1.5 bg-warning rounded-full animate-pulse" id="dot-1"></span>
-                      <span class="w-1.5 h-1.5 bg-warning rounded-full animate-pulse" id="dot-2"></span>
-                      <span class="w-1.5 h-1.5 bg-warning rounded-full animate-pulse" id="dot-3"></span>
-                    </div>
-                  </div>
-                  <!-- 進捗バー -->
-                  <div class="flex items-center gap-x-3 whitespace-nowrap mb-2">
-                    <div class="progress h-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
-                      id="analysis-progress">
-                      <div class="progress-bar progress-success transition-all duration-500" style="width: 0%"
-                        id="analysis-progress-bar"></div>
-                    </div>
-                    <span class="text-base-content mb-0.5 text-sm">
-                      <span id="analysis-progress-value">0</span>%
-                    </span>
-                  </div>
-                  <div class="flex items-center gap-2" id="analysis-status-container">
-                    <span class="icon-[tabler--brain] text-warning size-5 ml-8"></span>
-                    <span class="text-sm text-warning font-medium">解析中</span>
-                  </div>
-                </div>
-                <hr />
-              </li>
-              <!-- /Hoverable timeline item 2-->
-              <!-- Hoverable timeline item 3 (初期状態では非表示) -->
-              <li id="timeline-item-3" class="hidden">
-                <hr />
-                <div class="timeline-middle">
-                  <span class="bg-info/20 flex size-4.5 items-center rounded-full">
-                    <span class="badge badge-info size-3 rounded-full p-0"></span>
-                  </span>
-                </div>
-                <div class="timeline-end hover:bg-base-200/50 mb-0 ms-1 w-full rounded-lg p-4 pt-1">
-                  <div
-                    class="text-base-content mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
-                    解析完了
-                    <span class="text-base-content/50 text-sm font-normal">今すぐ</span>
-                  </div>
-                  <p class="mb-2">画像のカテゴリー分類が完了しました</p>
-                  <div class="flex items-center gap-2">
-                    <span class="icon-[tabler--brain] text-info size-5"></span>
-                    <span class="text-sm text-info font-medium">完了</span>
-                  </div>
-                </div>
-                <hr />
-              </li>
-              <!-- /Hoverable timeline item 3-->
-            </ul>
-          </div>
-        </div>
-      </div>
-
-
-
-
-      <!-- ファイルアップロード初期化は上部で完了 -->
-
-
-
-
-      <!-- Lodash -->
-      <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
-
-      <!-- Dropzone -->
-      <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
-      <!-- ここで初期化 -->
-      <script>
-        window.addEventListener('load', () => {
-          // Dropzoneが利用可能かチェック
-          if (typeof Dropzone !== 'undefined') {
-            console.log('Dropzone is available, initializing HSFileUpload...');
-            HSFileUpload.getInstance('#file-upload-limit', true);
-          } else {
-            console.error('Dropzone is not available');
-          }
-
-
-
-          // Lodashの動作確認と100%完了処理
-          console.log('=== Lodash動作確認 ===');
-          console.log('typeof _:', typeof _);
-          console.log('_.version:', _.version);
-          console.log('_.find test:', _.find([1, 2, 3], x => x === 2));
-          console.log('_.filter test:', _.filter([1, 2, 3], x => x > 1));
-          console.log('=====================');
-
-
-
-          // 進捗バーの個数をカウントしてタイムライン表示
-          function countProgressBarsAndShowTimeline() {
-            // ファイルプレビューコンテナを確認
-            const previewsContainer = document.querySelector('[data-file-upload-previews]');
-
-            if (previewsContainer && previewsContainer.children.length > 0) {
-              // 進捗バー要素を検索（複数のセレクターを試行）
-              let progressBars = previewsContainer.querySelectorAll('.progress-bar');
-
-              // もし見つからない場合は、幅が100%の要素を直接検索
-              if (progressBars.length === 0) {
-                const allElements = previewsContainer.querySelectorAll('*');
-                progressBars = Array.from(allElements).filter(el => {
-                  const width = el.style.width || getComputedStyle(el).width;
-                  return width === '100%' || width === '100px';
-                });
-              }
-
-              // 進捗バーが100%完了しているかチェック
-              const completedBars = Array.from(progressBars).filter(bar => {
-                const width = bar.style.width || getComputedStyle(bar).width;
-                return width === '100%' || width === '100px';
-              });
-
-              const completedCount = completedBars.length;
-
-              if (completedCount > 0) {
-                console.log('完了した進捗バーの数:', completedCount);
-
-                // 個数に応じて説明文を動的生成
-                let descriptionText = '';
-                if (completedCount === 1) {
-                  descriptionText = '画像ファイルが正常にアップロードされました';
-                } else {
-                  descriptionText = `${completedCount}つの画像ファイルが正常にアップロードされました`;
-                }
-
-                // 1つ目のタイムラインの説明文を更新
-                const timelineDescription = document.getElementById('timeline-description');
-                if (timelineDescription) {
-                  timelineDescription.textContent = descriptionText;
-                  console.log('タイムライン説明文を更新:', descriptionText);
-                }
-
-                // 解析開始ボタンを表示
-                const analysisButton = document.getElementById('analysis-button-container');
-                if (analysisButton) {
-                  analysisButton.classList.remove('hidden');
-                  console.log('Analysis button shown');
-                }
-
-                // 1つ目のタイムラインを表示
-                const timelineContainer = document.getElementById('timeline-container');
-                if (timelineContainer) {
-                  timelineContainer.classList.remove('hidden');
-                  console.log('1つ目のタイムライン表示');
-                }
-
-                // 2つ目と3つ目は非表示のまま
-                const timelineItem2 = document.getElementById('timeline-item-2');
-                const timelineItem3 = document.getElementById('timeline-item-3');
-                if (timelineItem2) timelineItem2.classList.add('hidden');
-                if (timelineItem3) timelineItem3.classList.add('hidden');
-
-                // 一度表示されたらチェックを停止
-                return true;
-              }
-            }
-
-            return false;
-          }
-
-
-
-          // 解析開始ボタンのクリックイベント（一時的に無効化）
-          // document.addEventListener('click', (e) => {
-          //   if (e.target.id === 'start-analysis-btn') {
-          //     // モーダル表示
-          //     if (confirm('画像解析を開始しますか？')) {
-          //       console.log('Analysis started!');
-
-          //       // 2つ目のタイムラインを表示
-          //       const timelineItem2 = document.getElementById('timeline-item-2');
-          //       if (timelineItem2) {
-          //         timelineItem2.classList.remove('hidden');
-          //         timelineItem2.style.display = ''; // display: noneを解除
-          //         console.log('Timeline item 2 shown');
-
-          //       // 解析中のアニメーション開始
-          //       startAnalysisAnimation();
-
-          //       // 進捗バー開始（15秒で100%）
-          //       startAnalysisProgress();
-
-          //       // 15秒後に3つ目のタイムラインを表示
-          //       setTimeout(() => {
-          //         const timelineItem3 = document.getElementById('timeline-item-3');
-          //         if (timelineItem3) {
-          //           timelineItem3.classList.remove('hidden');
-          //           timelineItem3.style.display = ''; // display: noneを解除
-          //           console.log('Timeline item 3 shown (15秒後)');
-          //         }
-          //       }, 15000); // 15秒後
-          //     }
-          //   }
-          // });
-
-          // 定期的に進捗バーをチェック（500ms間隔）
-          setInterval(() => {
-            countProgressBarsAndShowTimeline();
-          }, 500); // 500ms間隔でチェック
-
-          // エラーハンドリング
-          window.addEventListener('error', function (e) {
-            console.error('Global error:', e.error);
-            showUploadError('予期しないエラーが発生しました');
-          });
-
-          // 未処理のPromise拒否をキャッチ
-          window.addEventListener('unhandledrejection', function (e) {
-            console.error('Unhandled promise rejection:', e.reason);
-            showUploadError('アップロード処理でエラーが発生しました');
-          });
-
-          // アップロードエラーを表示
-          function showUploadError(errorMessage) {
-            // 成功タイムラインを非表示
-            const successTimeline = document.getElementById('timeline-item-1-success');
-            if (successTimeline) {
-              successTimeline.classList.add('hidden');
-            }
-
-            // エラータイムラインを表示
-            const errorTimeline = document.getElementById('timeline-item-1-error');
-            if (errorTimeline) {
-              errorTimeline.classList.remove('hidden');
-            }
-
-            // エラーメッセージを更新
-            const errorDescription = document.getElementById('timeline-error-description');
-            if (errorDescription) {
-              errorDescription.textContent = errorMessage;
-            }
-
-            // タイムラインコンテナを表示
-            const timelineContainer = document.getElementById('timeline-container');
-            if (timelineContainer) {
-              timelineContainer.classList.remove('hidden');
-            }
-
-            console.log('Upload error displayed:', errorMessage);
-          }
-
-          // 初期状態で2つ目と3つ目のタイムラインを強制的に非表示
-          function forceHideTimelineItems() {
-            const timelineItem2 = document.getElementById('timeline-item-2');
-            const timelineItem3 = document.getElementById('timeline-item-3');
-
-            if (timelineItem2) {
-              timelineItem2.classList.add('hidden');
-              timelineItem2.style.display = 'none'; // 強制的に非表示
-            }
-            if (timelineItem3) {
-              timelineItem3.classList.add('hidden');
-              timelineItem3.style.display = 'none'; // 強制的に非表示
-            }
-
-            console.log('2つ目と3つ目のタイムラインを強制非表示');
-          }
-
-          // ページ読み込み完了後に強制非表示
-          setTimeout(forceHideTimelineItems, 100);
-
-          // 解析中のアニメーション制御
-          function startAnalysisAnimation() {
-            const dots = [
-              document.getElementById('dot-1'),
-              document.getElementById('dot-2'),
-              document.getElementById('dot-3')
-            ];
-
-            let currentDot = 0;
-
-            // 3点が順番に点灯するアニメーション
-            const animationInterval = setInterval(() => {
-              // 前の点を消す
-              dots.forEach((dot, index) => {
-                if (index === currentDot) {
-                  dot.classList.add('animate-pulse');
-                  dot.classList.remove('opacity-50');
-                } else {
-                  dot.classList.remove('animate-pulse');
-                  dot.classList.add('opacity-50');
-                }
-              });
-
-              // 次の点に移動
-              currentDot = (currentDot + 1) % 3;
-            }, 500); // 500ms間隔で点灯
-
-            // 15秒後にアニメーション停止
-            setTimeout(() => {
-              clearInterval(animationInterval);
-              // 全ての点を点灯状態に
-              dots.forEach(dot => {
-                dot.classList.add('animate-pulse');
-                dot.classList.remove('opacity-50');
-              });
-            }, 15000);
-          }
-
-          // 解析進捗バー制御
-          function startAnalysisProgress() {
-            const progressBar = document.getElementById('analysis-progress-bar');
-            const progressValue = document.getElementById('analysis-progress-value');
-            const analysisText = document.querySelector('#timeline-item-2 p.mb-2');
-            const analysisStatus = document.querySelector('#timeline-item-2 .text-warning.font-medium');
-
-            let progress = 0;
-            const targetProgress = 100;
-            const duration = 15000; // 15秒
-            const interval = 100; // 100ms間隔で更新
-            const increment = (targetProgress * interval) / duration;
-
-            const progressInterval = setInterval(() => {
-              progress += increment;
-              if (progress >= targetProgress) {
-                progress = targetProgress;
-                clearInterval(progressInterval);
-
-                // 100%になったらテキストを変更
-                if (analysisText) {
-                  analysisText.textContent = '解析成功';
-                }
-                if (analysisStatus) {
-                  analysisStatus.textContent = '解析成功';
-                  analysisStatus.className = 'text-sm text-success font-medium';
-                }
-
-                // 「解析中...」の「...」を削除
-                const analysisStatusText = document.querySelector('#timeline-item-2 .text-warning.font-medium');
-                if (analysisStatusText) {
-                  analysisStatusText.textContent = '解析中';
-                }
-
-                // 進捗バーの下のアイコン＋「解析中...」を非表示
-                const statusContainer = document.getElementById('analysis-status-container');
-                if (statusContainer) {
-                  statusContainer.style.display = 'none';
-                }
-              }
-
-              progressBar.style.width = progress + '%';
-              progressBar.setAttribute('aria-valuenow', Math.round(progress));
-
-              // パーセンテージ表示を更新
-              if (progressValue) {
-                progressValue.textContent = Math.round(progress);
-              }
-            }, interval);
-          }
-
-
-        });
-
-        // モデル選択時の動的表示機能
-        document.addEventListener('DOMContentLoaded', function () {
-          const modelSelector = document.getElementById('model-selector');
-          const modelDescription = document.getElementById('model-description');
-
-          if (modelSelector && modelDescription) {
-            modelSelector.addEventListener('change', function () {
-              const selectedValue = this.value;
-              let description = '';
-
-              switch (selectedValue) {
-                case 'resnet50':
-                  description = '深層学習の代表的なモデル。高精度な画像分類が可能で、一般的な画像認識タスクに最適です。ImageNetデータセットで学習済みで、1000クラスの分類に対応しています。';
-                  break;
-                case 'efficientnet':
-                  description = '軽量で高速な処理が特徴。モバイルデバイスやリアルタイム処理に適しています。パラメータ数を抑えながら、高い精度を維持する設計になっています。';
-                  break;
-                case 'mobilenet':
-                  description = 'モバイル最適化された軽量モデル。バッテリー消費を抑えながら、十分な精度を提供します。スマートフォンやタブレットでの使用に最適です。';
-                  break;
-                case 'vgg16':
-                  description = '高精度・詳細分析に特化したモデル。深い層構造により、複雑な画像パターンの認識が得意です。ただし、処理時間は他のモデルより長くなります。';
-                  break;
-                case 'custom':
-                  description = '特定用途に特化したカスタムモデル。特定の画像タイプや解析目的に最適化されており、専門的なタスクに高い精度を発揮します。';
-                  break;
-                default:
-                  description = 'モデルを選択すると、ここに詳細な説明が表示されます。';
-              }
-
-              modelDescription.textContent = description;
-            });
-          }
-
-          // モーダルの解析開始ボタンのクリックイベント
-          const modalStartAnalysisBtn = document.getElementById('modal-start-analysis-btn');
-          if (modalStartAnalysisBtn) {
-            modalStartAnalysisBtn.addEventListener('click', function () {
-              console.log('Modal start analysis button clicked!');
-
-              // 元々の解析開始ロジックを実行
-              console.log('Analysis started from modal!');
-
-              // 2つ目のタイムラインを表示
-              const timelineItem2 = document.getElementById('timeline-item-2');
-              console.log('Timeline item 2 found:', timelineItem2);
-
-              if (timelineItem2) {
-                timelineItem2.classList.remove('hidden');
-                timelineItem2.style.display = ''; // display: noneを解除
-                console.log('Timeline item 2 shown');
-
-                // 解析中のアニメーション開始
-                console.log('Starting analysis animation...');
-                if (typeof startAnalysisAnimation === 'function') {
-                  startAnalysisAnimation();
-                  console.log('Analysis animation started');
-                } else {
-                  console.error('startAnalysisAnimation function not found');
-                }
-
-                // 進捗バー開始（15秒で100%）
-                console.log('Starting analysis progress...');
-                if (typeof startAnalysisProgress === 'function') {
-                  startAnalysisProgress();
-                  console.log('Analysis progress started');
-                } else {
-                  console.error('startAnalysisProgress function not found');
-                }
-
-                // 15秒後に3つ目のタイムラインを表示
-                setTimeout(() => {
-                  const timelineItem3 = document.getElementById('timeline-item-3');
-                  console.log('Timeline item 3 found:', timelineItem3);
-                  if (timelineItem3) {
-                    timelineItem3.classList.remove('hidden');
-                    timelineItem3.style.display = ''; // display: noneを解除
-                    console.log('Timeline item 3 shown (15秒後)');
-                  }
-                }, 15000); // 15秒後
-              } else {
-                console.error('Timeline item 2 not found');
-              }
-
-              // モーダルを閉じる（FlyonUIのシステムを使用）
-              const modal = document.getElementById('slide-down-animated-modal');
-              if (modal) {
-                // 一時的にdata-overlay属性を変更してモーダルを閉じる
-                const closeButton = modal.querySelector('[data-overlay="#slide-down-animated-modal"]');
-                if (closeButton) {
-                  closeButton.click();
-                  console.log('Modal closed');
-                } else {
-                  console.error('Close button not found');
-                }
-              }
-            });
-          } else {
-            console.error('Modal start analysis button not found');
-          }
-        });
-      </script>
-
-      <!-- ページ下部の余白 -->
-      <div class="h-16"></div>
-
-      <!-- Image Detail Modal -->
-      <div id="slide-down-animated-modal"
-        class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden" role="dialog" tabindex="-1">
-        <div class="modal-dialog overlay-open:mt-12 overlay-open:duration-300 transition-all ease-out">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h3 class="modal-title">画像解析モデル選択</h3>
-              <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
-                data-overlay="#slide-down-animated-modal">
-                <span class="icon-[tabler--x] size-4"></span>
-              </button>
-            </div>
-            <div class="modal-body">
-              <div class="flex flex-col gap-6">
-                <!-- 説明文 -->
-                <div class="text-center">
-                  <p class="text-base text-gray-600 mb-2">
-                    アップロードされた画像を解析するための機械学習モデルを選択してください。
-                  </p>
-                  <p class="text-sm text-gray-500">
-                    各モデルは異なる特徴を持ち、画像の種類や解析目的に応じて最適なものを選択できます。
-                  </p>
-                </div>
-
-                <!-- モデル選択 -->
-                <div class="space-y-3">
-                  <div class="form-control">
-                    <label class="label">
-                      <span class="label-text font-semibold">解析モデル</span>
-                    </label>
-                    <select class="select select-bordered w-full" id="model-selector">
-                      <option value="">モデルを選択してください</option>
-                      <option value="resnet50">ResNet-50 v2.1 (汎用画像分類)</option>
-                      <option value="efficientnet">EfficientNet-B0 (軽量・高速)</option>
-                      <option value="mobilenet">MobileNet v2 (モバイル最適化)</option>
-                      <option value="vgg16">VGG-16 (高精度・詳細分析)</option>
-                      <option value="custom">カスタムモデル (特定用途特化)</option>
-                    </select>
-                  </div>
-
-                  <!-- モデル詳細説明 -->
-                  <div class="bg-base-200 rounded-lg p-4">
-                    <h4 class="font-semibold text-sm mb-2">選択されたモデルの特徴</h4>
-                    <p class="text-sm text-gray-600" id="model-description">
-                      モデルを選択すると、ここに詳細な説明が表示されます。
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="modal-footer">
-              <div class="flex justify-end gap-3">
-                <button type="button" class="btn btn-soft btn-secondary" data-overlay="#slide-down-animated-modal">
-                  キャンセル
-                </button>
-                <button type="button" class="btn btn-primary" id="modal-start-analysis-btn">
-                  <span class="icon-[tabler--player-play] size-5 mr-2"></span>
-                  解析開始
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-  </body>
-
-</html>
+  /* アイコン分の左余白(ms-2 など)を打ち消し */
+  #timeline-container .timeline-end {
+    margin-left: 0 !important;
+  }
+
+  /* 最初と以降で付いている m-3 も詰めたければ以下(任意) */
+  /* #timeline-container .timeline-end.ms-2.m-3 { margin: 0 0 1rem 0 !important; } */
+</style>
+{% endblock %}

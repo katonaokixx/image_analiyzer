@@ -1,6 +1,6 @@
 // Test function to check if modal exists
 function testModal() {
-  const modal = document.getElementById('image-detail-modal');
+  const modal = document.getElementById('slide-down-animated-modal');
   console.log('Modal element:', modal);
   console.log('Modal HTML:', modal ? modal.outerHTML : 'Not found');
 }
@@ -8,7 +8,7 @@ function testModal() {
 // Test function for preview modal
 function testOpenModal() {
   console.log('=== Preview Modal Test ===');
-  const previewModal = document.getElementById('slide-up-animated-modal');
+  const previewModal = document.getElementById('slide-down-animated-modal');
   console.log('Preview modal element:', previewModal);
   console.log('Preview modal classes before:', previewModal.className);
   console.log('Preview modal HTML:', previewModal.outerHTML);
@@ -40,14 +40,18 @@ function testOpenModal() {
 // Test function for image detail modal
 function testImageModal() {
   console.log('=== Image Detail Modal Test ===');
-  const imageModal = document.getElementById('image-detail-modal');
+  const imageModal = document.getElementById('slide-down-animated-modal');
   console.log('Image modal element:', imageModal);
-  console.log('Image modal classes:', imageModal.className);
-  console.log('Image modal HTML:', imageModal.outerHTML);
+  if (imageModal) {
+    console.log('Image modal classes:', imageModal.className);
+    console.log('Image modal HTML:', imageModal.outerHTML);
+  } else {
+    console.log('Image modal not found');
+  }
 
   // Test if FlyonUI can find this modal
   const flyonuiButton = document.createElement('button');
-  flyonuiButton.setAttribute('data-overlay', '#image-detail-modal');
+  flyonuiButton.setAttribute('data-overlay', '#slide-down-animated-modal');
   flyonuiButton.style.display = 'none';
   document.body.appendChild(flyonuiButton);
 
