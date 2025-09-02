@@ -254,3 +254,88 @@ class AnalysisResult(models.Model):
     
     def __str__(self):
         return f"{self.image.filename} - {self.label} ({self.confidence}%)"
+
+
+class TimelineLog(models.Model):
+    """タイムラインログ管理テーブル"""
+    
+    image = models.OneToOneField(
+        Image,
+        on_delete=models.CASCADE,
+        verbose_name='画像',
+        related_name='timeline_log'
+    )
+    
+    upload_started_at = models.DateTimeField(
+        verbose_name='アップロード開始時刻',
+        null=True,
+        blank=True
+    )
+    
+    upload_completed_at = models.DateTimeField(
+        verbose_name='アップロード完了時刻',
+        null=True,
+        blank=True
+    )
+    
+    analysis_started_at = models.DateTimeField(
+        verbose_name='解析開始時刻',
+        null=True,
+        blank=True
+    )
+    
+    analysis_completed_at = models.DateTimeField(
+        verbose_name='解析完了時刻',
+        null=True,
+        blank=True
+    )
+    
+    model_used = models.CharField(
+        max_length=50,
+        verbose_name='使用モデル',
+        blank=True,
+        null=True
+    )
+    
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='作成日時'
+    )
+    
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='更新日時'
+    )
+    
+    class Meta:
+        db_table = 'timeline_logs'
+        verbose_name = 'タイムラインログ'
+        verbose_name_plural = 'タイムラインログ'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.image.filename} - Timeline"
+    
+    @property
+    def upload_duration(self):
+        """アップロード所要時間（秒）"""
+        if self.upload_started_at and self.upload_completed_at:
+            delta = self.upload_completed_at - self.upload_started_at
+            return delta.total_seconds()
+        return None
+    
+    @property
+    def analysis_duration(self):
+        """解析所要時間（秒）"""
+        if self.analysis_started_at and self.analysis_completed_at:
+            delta = self.analysis_completed_at - self.analysis_started_at
+            return delta.total_seconds()
+        return None
+    
+    @property
+    def total_duration(self):
+        """総所要時間（秒）"""
+        if self.upload_started_at and self.analysis_completed_at:
+            delta = self.analysis_completed_at - self.upload_started_at
+            return delta.total_seconds()
+        return None

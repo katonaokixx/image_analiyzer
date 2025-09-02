@@ -15,7 +15,9 @@
 
   <body>
     <!-- navbarブロック -->
+    {% block navbar %}
     {% include 'includes/navbar.html' %}
+    {% endblock %}
 
     <!-- メインコンテンツ -->
     {% block content %}{% endblock %}

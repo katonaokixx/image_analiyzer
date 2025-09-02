@@ -4,7 +4,8 @@ import numpy as np
 from PIL import Image
 from typing import List, Dict, Tuple, Optional
 from django.conf import settings
-from .models import Image as ImageModel, MLModel, AnalysisResult, ProgressLog
+from .models import Image as ImageModel, MLModel, AnalysisResult, ProgressLog, TimelineLog
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -327,6 +328,14 @@ class ImageAnalysisService:
             image.status = 'success'
             image.save()
             
+            # タイムライン記録を更新（解析完了時刻）
+            timeline_log, created = TimelineLog.objects.get_or_create(
+                image=image,
+                defaults={}
+            )
+            timeline_log.analysis_completed_at = timezone.now()
+            timeline_log.save()
+            
             logger.info(f"画像 {image.filename} の解析が完了しました")
             
         except Exception as e:
@@ -414,6 +423,14 @@ class ImageAnalysisService:
                     # 画像のステータスを完了に更新
                     image.status = 'success'
                     image.save()
+                    
+                    # タイムライン記録を更新（解析完了時刻）
+                    timeline_log, created = TimelineLog.objects.get_or_create(
+                        image=image,
+                        defaults={}
+                    )
+                    timeline_log.analysis_completed_at = timezone.now()
+                    timeline_log.save()
                     
                     logger.info(f"画像 {image.filename} の解析が完了しました")
                     

@@ -112,8 +112,8 @@
     <div class="flex flex-col flex-wrap gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
       <!-- Left side: Search -->
       <div class="select-floating w-80">
-        <input class="input" list="datalistOptions" id="exampleDataList" placeholder="Type to search..." />
-        <label class="select-floating-label" for="selectFloating">Search</label>
+        <input class="input" list="datalistOptions" id="exampleDataList" placeholder="ファイル名で検索..." />
+        <label class="select-floating-label" for="selectFloating">検索</label>
       </div>
       <!-- Right side: Date Sort and Status Filter -->
       <div class="flex flex-col sm:flex-row gap-4">
@@ -200,15 +200,17 @@
             <td>{{ image.upload_date|date:"Y-m-d H:i" }}</td>
             <td>
               {% if image.status == 'success' %}
-              <span class="badge badge-outline border-dashed badge-success me-2">解析成功</span>
+              <span class="badge badge-outline border-dashed badge-success me-2 cursor-pointer" title="クリックしてタイムラインを確認"
+                data-overlay="#timeline-modal">解析成功</span>
               {% elif image.status == 'analyzing' %}
-              <span class="badge badge-outline border-dashed badge-info me-2 cursor-pointer" title="クリックして進捗を確認"
-                data-overlay="#analysis-progress-modal">解析中</span>
+              <span class="badge badge-outline border-dashed badge-info me-2 cursor-pointer" title="クリックしてタイムラインを確認"
+                data-overlay="#timeline-modal">解析中</span>
               {% elif image.status == 'preparing' %}
-              <span class="badge badge-outline border-dashed badge-secondary me-2 cursor-pointer" title="クリックして解析を開始"
-                data-overlay="#model-selection-modal">準備中</span>
+              <span class="badge badge-outline border-dashed badge-secondary me-2 cursor-pointer"
+                title="クリックしてタイムラインを確認" data-overlay="#timeline-modal">準備中</span>
               {% elif image.status == 'failed' %}
-              <span class="badge badge-outline border-dashed badge-error me-2">失敗</span>
+              <span class="badge badge-outline border-dashed badge-error me-2 cursor-pointer" title="クリックしてタイムラインを確認"
+                data-overlay="#timeline-modal">失敗</span>
               {% endif %}
             </td>
             <td>
@@ -271,7 +273,8 @@
 <!-- Error Log Modal -->
 <div id="slide-down-animated-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden"
   role="dialog" tabindex="-1">
-  <div class="modal-dialog overlay-open:mt-12 overlay-open:duration-300 transition-all ease-out">
+  <div
+    class="modal-dialog fixed top-8 left-1/2 transform -translate-x-1/2 overlay-open:duration-300 transition-all ease-out">
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">画像詳細</h3>
@@ -322,50 +325,102 @@
   </div>
 </div>
 
-<!-- モデル選択モーダル -->
-<div id="model-selection-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden"
-  role="dialog" tabindex="-1">
+<!-- タイムライン表示モーダル -->
+<div id="timeline-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden" role="dialog"
+  tabindex="-1">
   <div
     class="modal-dialog overlay-open:mt-4 sm:overlay-open:mt-8 lg:overlay-open:mt-12 overlay-open:duration-300 transition-all ease-out max-w-sm sm:max-w-md lg:max-w-lg">
     <div class="modal-content">
       <div class="modal-header p-4 sm:p-6">
-        <h3 class="modal-title text-lg sm:text-xl">画像解析モデル選択</h3>
+        <h3 class="modal-title text-lg sm:text-xl">解析タイムライン</h3>
         <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
-          data-overlay="#model-selection-modal">
+          data-overlay="#timeline-modal">
           <span class="icon-[tabler--x] size-4"></span>
         </button>
       </div>
       <div class="modal-body p-4 sm:p-6">
         <div class="flex flex-col gap-4 sm:gap-6">
+          <!-- 画像情報 -->
           <div class="text-center">
-            <p class="text-sm sm:text-base text-gray-600 mb-2">アップロードされた画像を解析するための機械学習モデルを選択してください。</p>
-            <p class="text-xs sm:text-sm text-gray-500">各モデルは異なる特徴を持ち、解析目的に応じて最適なものを選択できます。</p>
+            <h4 class="font-semibold text-sm sm:text-base mb-2" id="timeline-filename">ファイル名</h4>
+            <p class="text-xs sm:text-sm text-gray-500" id="timeline-status">ステータス</p>
           </div>
-          <div class="space-y-3">
-            <div class="form-control">
-              <label class="label"><span class="label-text font-semibold text-sm sm:text-base">解析モデル</span></label>
-              <select class="select select-bordered w-full text-sm sm:text-base" id="model-selector">
-                <option value="">モデルを選択してください</option>
-                <option value="resnet50">ResNet-50 v2.1 (汎用画像分類)</option>
-                <option value="efficientnet">EfficientNet-B0 (軽量・高速)</option>
-                <option value="mobilenet">MobileNet v2 (モバイル最適化)</option>
-                <option value="vgg16">VGG-16 (高精度・詳細分析)</option>
-                <option value="custom">カスタムモデル (特定用途特化)</option>
-              </select>
+
+          <!-- 進捗バー（解析中の場合のみ表示） -->
+          <div id="timeline-progress-section" class="hidden">
+            <div class="flex items-center gap-x-3 whitespace-nowrap mb-4">
+              <div class="progress h-2 flex-1" id="timeline-progress">
+                <div class="progress-bar progress-info transition-all duration-500" style="width:0%"
+                  id="timeline-progress-bar"></div>
+              </div>
+              <span class="text-base-content mb-0.5 text-sm">
+                <span id="timeline-progress-value">0</span>%
+              </span>
             </div>
-            <div class="bg-base-200 rounded-lg p-3 sm:p-4">
-              <h4 class="font-semibold text-xs sm:text-sm mb-2">選択されたモデルの特徴</h4>
-              <p class="text-xs sm:text-sm text-gray-600" id="model-description">モデルを選択すると、ここに詳細な説明が表示されます。</p>
+            <div class="text-center">
+              <span class="text-xs text-gray-600" id="timeline-progress-description">解析中...</span>
+            </div>
+          </div>
+
+          <!-- タイムライン表示 -->
+          <div class="space-y-4" id="timeline-content">
+            <div class="flex items-center gap-3">
+              <div class="flex-shrink-0">
+                <div class="w-8 h-8 bg-success rounded-full flex items-center justify-center">
+                  <span class="icon-[tabler--upload] text-success-content size-4"></span>
+                </div>
+              </div>
+              <div class="flex-1">
+                <div class="flex justify-between items-center">
+                  <span class="text-sm font-medium">ファイルアップロード</span>
+                  <span class="text-xs text-gray-500" id="upload-time">-</span>
+                </div>
+                <div class="text-xs text-gray-600" id="upload-duration">所要時間: -</div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <div class="flex-shrink-0">
+                <div class="w-8 h-8 bg-warning rounded-full flex items-center justify-center">
+                  <span class="icon-[tabler--brain] text-warning-content size-4"></span>
+                </div>
+              </div>
+              <div class="flex-1">
+                <div class="flex justify-between items-center">
+                  <span class="text-sm font-medium">解析開始</span>
+                  <span class="text-xs text-gray-500" id="analysis-start-time">-</span>
+                </div>
+                <div class="text-xs text-gray-600" id="model-used">使用モデル: -</div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <div class="flex-shrink-0">
+                <div class="w-8 h-8 bg-info rounded-full flex items-center justify-center">
+                  <span class="icon-[tabler--check] text-info-content size-4"></span>
+                </div>
+              </div>
+              <div class="flex-1">
+                <div class="flex justify-between items-center">
+                  <span class="text-sm font-medium">解析完了</span>
+                  <span class="text-xs text-gray-500" id="analysis-end-time">-</span>
+                </div>
+                <div class="text-xs text-gray-600" id="analysis-duration">所要時間: -</div>
+              </div>
+            </div>
+
+            <div class="border-t pt-3">
+              <div class="flex justify-between items-center">
+                <span class="text-sm font-semibold">総所要時間</span>
+                <span class="text-sm font-semibold text-primary" id="total-duration">-</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
       <div class="modal-footer">
         <div class="flex justify-end gap-3">
-          <button type="button" class="btn btn-soft btn-secondary" data-overlay="#model-selection-modal">キャンセル</button>
-          <button type="button" class="btn btn-primary" id="modal-start-analysis-btn">
-            <span class="icon-[tabler--player-play] size-5 mr-2"></span>解析開始
-          </button>
+          <button type="button" class="btn btn-soft btn-secondary" data-overlay="#timeline-modal">閉じる</button>
         </div>
       </div>
     </div>
@@ -1011,20 +1066,20 @@
       newBadge = document.createElement('span');
       newBadge.className = 'badge badge-outline border-dashed badge-success me-2 cursor-pointer';
       newBadge.textContent = '解析成功';
-      newBadge.title = 'クリックして結果を確認';
-      newBadge.setAttribute('data-overlay', '#slide-down-animated-modal');
+      newBadge.title = 'クリックしてタイムラインを確認';
+      newBadge.setAttribute('data-overlay', '#timeline-modal');
     } else if (status === 'failed') {
       newBadge = document.createElement('span');
       newBadge.className = 'badge badge-outline border-dashed badge-error me-2 cursor-pointer';
       newBadge.textContent = '失敗';
-      newBadge.title = 'クリックしてエラーログを確認';
-      newBadge.setAttribute('data-overlay', '#error-log-modal');
+      newBadge.title = 'クリックしてタイムラインを確認';
+      newBadge.setAttribute('data-overlay', '#timeline-modal');
     } else if (status === 'analyzing') {
       newBadge = document.createElement('span');
       newBadge.className = 'badge badge-outline border-dashed badge-info me-2 cursor-pointer';
       newBadge.textContent = '解析中';
-      newBadge.title = 'クリックして進捗を確認';
-      newBadge.setAttribute('data-overlay', '#analysis-progress-modal');
+      newBadge.title = 'クリックしてタイムラインを確認';
+      newBadge.setAttribute('data-overlay', '#timeline-modal');
     }
 
     if (newBadge) {
@@ -1093,6 +1148,414 @@
     console.error('CSRFトークンが見つかりません');
     return '';
   }
+
+  // Function to reset all filters
+  function resetAllFilters() {
+    console.log('Resetting all filters...');
+
+    // Reset search input
+    const searchInput = document.getElementById('exampleDataList');
+    if (searchInput) {
+      searchInput.value = '';
+    }
+
+    // Reset date sort
+    const dateSort = document.getElementById('dateSort');
+    if (dateSort) {
+      dateSort.selectedIndex = 0; // Select first option
+    }
+
+    // Reset status filter
+    const statusFilter = document.getElementById('selectFloating');
+    if (statusFilter) {
+      statusFilter.selectedIndex = 0; // Select first option
+    }
+
+    // Reset label filter
+    const labelFilter = document.getElementById('labelFilter');
+    if (labelFilter) {
+      labelFilter.selectedIndex = 0; // Select first option
+    }
+
+    // Reset confidence filter
+    const confidenceFilter = document.getElementById('confidenceFilter');
+    if (confidenceFilter) {
+      confidenceFilter.selectedIndex = 0; // Select first option
+    }
+
+    // Apply filters after reset
+    applyFilters();
+    console.log('All filters have been reset');
+  }
+
+  // Function to apply filters
+  function applyFilters() {
+    const searchTerm = document.getElementById('exampleDataList').value.toLowerCase();
+    const statusFilter = document.getElementById('selectFloating').value;
+    const labelFilter = document.getElementById('labelFilter').value;
+    const confidenceFilter = document.getElementById('confidenceFilter').value;
+    const dateSort = document.getElementById('dateSort').value;
+
+    console.log('フィルター適用:', { searchTerm, statusFilter, labelFilter, confidenceFilter, dateSort });
+
+    const rows = document.querySelectorAll('tbody tr[data-image-id]');
+    console.log('見つかった行数:', rows.length);
+    let visibleCount = 0;
+
+    // First, collect all rows and their data for sorting
+    const rowData = [];
+    rows.forEach(row => {
+      let showRow = true;
+
+      // Search filter
+      if (searchTerm) {
+        const filename = row.querySelector('.font-medium').textContent.toLowerCase();
+        if (!filename.includes(searchTerm)) {
+          showRow = false;
+        }
+      }
+
+      // Status filter
+      if (statusFilter !== 'すべて') {
+        const statusBadge = row.querySelector('.badge');
+        const statusText = statusBadge.textContent.trim();
+        if (statusFilter === '解析成功' && statusText !== '解析成功') showRow = false;
+        if (statusFilter === '解析中' && statusText !== '解析中') showRow = false;
+        if (statusFilter === '準備中' && statusText !== '準備中') showRow = false;
+        if (statusFilter === '失敗' && statusText !== '失敗') showRow = false;
+      }
+
+      if (showRow) {
+        // Get upload date for sorting
+        const uploadDateText = row.querySelector('td:nth-child(2)').textContent.trim();
+        const uploadDate = new Date(uploadDateText);
+
+        rowData.push({
+          row: row,
+          uploadDate: uploadDate,
+          uploadDateText: uploadDateText
+        });
+        visibleCount++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    // Sort by date if needed
+    if (dateSort === '古い順') {
+      console.log('古い順でソート');
+      rowData.sort((a, b) => a.uploadDate - b.uploadDate);
+    } else if (dateSort === '新しい順') {
+      console.log('新しい順でソート');
+      rowData.sort((a, b) => b.uploadDate - a.uploadDate);
+    }
+
+    // Reorder and show rows
+    const tbody = document.querySelector('tbody');
+    if (tbody) {
+      // Remove existing rows
+      rowData.forEach(item => {
+        item.row.remove();
+      });
+
+      // Add rows in sorted order
+      rowData.forEach(item => {
+        item.row.style.display = '';
+        tbody.appendChild(item.row);
+      });
+    }
+
+    console.log('表示される行数:', visibleCount);
+
+    // Show "no results" message if no rows are visible
+    let noResultsRow = tbody.querySelector('.no-results-row');
+
+    console.log('検索結果チェック:', { visibleCount, totalRows: rows.length, hasNoResultsRow: !!noResultsRow });
+
+    if (visibleCount === 0 && rows.length > 0) {
+      console.log('検索結果なしメッセージを表示');
+      if (!noResultsRow) {
+        noResultsRow = document.createElement('tr');
+        noResultsRow.className = 'no-results-row';
+        noResultsRow.innerHTML = `
+          <td colspan="5" class="text-center py-8">
+            <div class="text-gray-500">
+              <span class="icon-[tabler--search] size-8 mx-auto mb-2 block"></span>
+              検索条件に一致する画像が見つかりません
+            </div>
+          </td>
+        `;
+        tbody.appendChild(noResultsRow);
+        console.log('検索結果なしメッセージを追加');
+      }
+      noResultsRow.style.display = '';
+    } else if (noResultsRow) {
+      console.log('検索結果なしメッセージを非表示');
+      noResultsRow.style.display = 'none';
+    }
+  }
+
+  // Add event listeners for filters
+  document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('exampleDataList');
+    const filters = document.querySelectorAll('select');
+
+    // Search input
+    if (searchInput) {
+      searchInput.addEventListener('input', applyFilters);
+    }
+
+    // Filter selects
+    filters.forEach(filter => {
+      filter.addEventListener('change', applyFilters);
+    });
+  });
+
+  // タイムラインデータを取得してモーダルに表示する関数
+  async function loadTimelineModal(imageId) {
+    try {
+      console.log('タイムラインデータを取得中:', imageId);
+
+      const response = await fetch(`/api/timeline/${imageId}/`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      if (!data.ok) {
+        throw new Error(data.error || 'タイムラインデータの取得に失敗');
+      }
+
+      const timeline = data.timeline;
+      console.log('取得したタイムラインデータ:', timeline);
+
+      // モーダルの基本情報を設定
+      document.getElementById('timeline-filename').textContent = timeline.filename || 'ファイル名不明';
+      document.getElementById('timeline-status').textContent = getStatusDisplayName(timeline.status);
+
+      // 進捗バーの表示制御
+      updateProgressSection(timeline.status, imageId);
+
+      // タイムラインデータを設定
+      updateTimelineDisplay(timeline);
+
+    } catch (error) {
+      console.error('タイムライン取得エラー:', error);
+      // エラー時はデフォルト表示
+      document.getElementById('timeline-filename').textContent = 'データ取得エラー';
+      document.getElementById('timeline-status').textContent = 'エラー';
+      resetTimelineDisplay();
+    }
+  }
+
+  // ステータス表示名を取得する関数
+  function getStatusDisplayName(status) {
+    const statusMap = {
+      'preparing': '準備中',
+      'analyzing': '解析中',
+      'success': '解析成功',
+      'failed': '失敗'
+    };
+    return statusMap[status] || status;
+  }
+
+  // 進捗バーセクションの表示制御
+  function updateProgressSection(status, imageId) {
+    const progressSection = document.getElementById('timeline-progress-section');
+
+    if (status === 'analyzing') {
+      // 解析中の場合は進捗バーを表示
+      progressSection.classList.remove('hidden');
+      startTimelineProgressMonitoring(imageId);
+    } else {
+      // 解析中以外の場合は進捗バーを非表示
+      progressSection.classList.add('hidden');
+      stopTimelineProgressMonitoring();
+    }
+  }
+
+  // タイムライン進捗監視の変数
+  let timelineProgressInterval = null;
+
+  // タイムライン進捗監視を開始
+  function startTimelineProgressMonitoring(imageId) {
+    // 既存の監視を停止
+    stopTimelineProgressMonitoring();
+
+    console.log('タイムライン進捗監視開始:', imageId);
+
+    timelineProgressInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/analysis/progress/?image_id=${imageId}`);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        if (data.ok) {
+          updateTimelineProgress(data);
+
+          // 100%に達したら監視を停止
+          if (data.progress >= 100) {
+            stopTimelineProgressMonitoring();
+            // タイムラインデータを再取得して更新
+            loadTimelineModal(imageId);
+          }
+        }
+      } catch (error) {
+        console.error('タイムライン進捗取得エラー:', error);
+      }
+    }, 1000);
+  }
+
+  // タイムライン進捗監視を停止
+  function stopTimelineProgressMonitoring() {
+    if (timelineProgressInterval) {
+      clearInterval(timelineProgressInterval);
+      timelineProgressInterval = null;
+      console.log('タイムライン進捗監視停止');
+    }
+  }
+
+  // タイムライン進捗バーを更新
+  function updateTimelineProgress(data) {
+    const progressBar = document.getElementById('timeline-progress-bar');
+    const progressValue = document.getElementById('timeline-progress-value');
+    const progressDescription = document.getElementById('timeline-progress-description');
+
+    if (progressBar && progressValue) {
+      progressBar.style.width = `${data.progress}%`;
+      progressValue.textContent = Math.round(data.progress);
+
+      // 進捗に応じてバーの色を変更
+      progressBar.classList.remove('progress-info', 'progress-success');
+      if (data.progress >= 100) {
+        progressBar.classList.add('progress-success');
+      } else {
+        progressBar.classList.add('progress-info');
+      }
+    }
+
+    if (progressDescription && data.description) {
+      progressDescription.textContent = data.description;
+    }
+  }
+
+  // タイムライン表示を更新する関数
+  function updateTimelineDisplay(timeline) {
+    // アップロード時刻
+    if (timeline.upload_completed_at) {
+      const uploadTime = new Date(timeline.upload_completed_at);
+      document.getElementById('upload-time').textContent = formatDateTime(uploadTime);
+
+      if (timeline.upload_duration) {
+        document.getElementById('upload-duration').textContent = `所要時間: ${formatDuration(timeline.upload_duration)}`;
+      }
+    } else {
+      document.getElementById('upload-time').textContent = '-';
+      document.getElementById('upload-duration').textContent = '所要時間: -';
+    }
+
+    // 解析開始時刻
+    if (timeline.analysis_started_at) {
+      const analysisStartTime = new Date(timeline.analysis_started_at);
+      document.getElementById('analysis-start-time').textContent = formatDateTime(analysisStartTime);
+      document.getElementById('model-used').textContent = `使用モデル: ${timeline.model_used || '-'}`;
+    } else {
+      document.getElementById('analysis-start-time').textContent = '-';
+      document.getElementById('model-used').textContent = '使用モデル: -';
+    }
+
+    // 解析完了時刻
+    if (timeline.analysis_completed_at) {
+      const analysisEndTime = new Date(timeline.analysis_completed_at);
+      document.getElementById('analysis-end-time').textContent = formatDateTime(analysisEndTime);
+
+      if (timeline.analysis_duration) {
+        document.getElementById('analysis-duration').textContent = `所要時間: ${formatDuration(timeline.analysis_duration)}`;
+      }
+    } else {
+      document.getElementById('analysis-end-time').textContent = '-';
+      document.getElementById('analysis-duration').textContent = '所要時間: -';
+    }
+
+    // 総所要時間
+    if (timeline.total_duration) {
+      document.getElementById('total-duration').textContent = formatDuration(timeline.total_duration);
+    } else {
+      document.getElementById('total-duration').textContent = '-';
+    }
+  }
+
+  // タイムライン表示をリセットする関数
+  function resetTimelineDisplay() {
+    document.getElementById('upload-time').textContent = '-';
+    document.getElementById('upload-duration').textContent = '所要時間: -';
+    document.getElementById('analysis-start-time').textContent = '-';
+    document.getElementById('model-used').textContent = '使用モデル: -';
+    document.getElementById('analysis-end-time').textContent = '-';
+    document.getElementById('analysis-duration').textContent = '所要時間: -';
+    document.getElementById('total-duration').textContent = '-';
+  }
+
+  // 日時をフォーマットする関数
+  function formatDateTime(date) {
+    return date.toLocaleString('ja-JP', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  }
+
+  // 所要時間をフォーマットする関数
+  function formatDuration(seconds) {
+    if (seconds < 60) {
+      return `${seconds.toFixed(1)}秒`;
+    } else if (seconds < 3600) {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = (seconds % 60).toFixed(1);
+      return `${minutes}分${remainingSeconds}秒`;
+    } else {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      return `${hours}時間${minutes}分`;
+    }
+  }
+
+  // バッジクリック時にタイムラインモーダルを開く機能を追加
+  document.addEventListener('click', function (event) {
+    const badge = event.target;
+    if (badge.classList.contains('badge') && badge.getAttribute('data-overlay') === '#timeline-modal') {
+      const row = badge.closest('tr');
+      const imageId = row ? row.getAttribute('data-image-id') : null;
+      if (imageId) {
+        console.log('タイムラインモーダルを開く、画像ID:', imageId);
+        loadTimelineModal(imageId);
+      }
+    }
+  });
+
+  // タイムラインモーダルが閉じられた時に進捗監視を停止
+  document.addEventListener('DOMContentLoaded', function () {
+    const timelineModal = document.getElementById('timeline-modal');
+    if (timelineModal) {
+      // FlyonUIのモーダルイベントを監視
+      timelineModal.addEventListener('hidden.bs.modal', function () {
+        stopTimelineProgressMonitoring();
+      });
+
+      // 閉じるボタンクリック時も監視停止
+      const closeButtons = timelineModal.querySelectorAll('[data-overlay="#timeline-modal"]');
+      closeButtons.forEach(button => {
+        button.addEventListener('click', function () {
+          stopTimelineProgressMonitoring();
+        });
+      });
+    }
+  });
 </script>
 {% endblock %}
 

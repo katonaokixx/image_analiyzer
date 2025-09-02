@@ -1,926 +1,919 @@
-<!doctype html>
-<html data-theme="shadcn">
+{% extends 'base.html' %}
+{% load static %}
 
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FlyonUI Test</title>
-    <link href="./output.css" rel="stylesheet">
-  </head>
+{% block title %}管理者用画像一覧 - 画像解析アプリ{% endblock %}
 
-  <body>
+{% block navbar %}
+{% include 'includes/admin_navbar.html' %}
+{% endblock %}
 
-    <nav class="navbar">
-      <div class="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 lg:flex lg:items-center lg:gap-2 lg:px-8">
-        <div class="navbar-start items-center justify-between max-lg:w-full">
-          <a class="text-base-content flex items-center gap-3 text-xl font-bold lg:hidden" href="#">
-            <img src="https://cdn.flyonui.com/fy-assets/logo/logo.png" class="size-8" alt="brand-logo" />
-            画像解析アプリ
-          </a>
+{% block content %}
+{% csrf_token %}
 
-          <div class="flex items-center lg:hidden">
-            <span
-              class="icon-[tabler--search] hover:text-primary text-base-content active:text-primary me-6 size-5 cursor-pointer"></span>
-            <button type="button" class="collapse-toggle btn btn-outline btn-secondary btn-square"
-              data-collapse="#navbar-block-5" aria-controls="navbar-block-5" aria-label="Toggle navigation">
-              <span class="icon-[tabler--menu-2] collapse-open:hidden size-5.5"></span>
-              <span class="icon-[tabler--x] collapse-open:block hidden size-5.5"></span>
-            </button>
-          </div>
-        </div>
-        <div id="navbar-block-5"
-          class="lg:navbar-center transition-height collapse hidden grow overflow-hidden duration-300 lg:flex">
-          <div
-            class="text-base-content flex gap-6 text-base font-medium max-lg:mt-4 max-lg:flex-col lg:items-center lg:gap-16">
-            <a href="#" class="hover:text-primary">images</a>
-            <a href="#" class="hover:text-primary">Products</a>
-            <a class="text-base-content flex items-center gap-3 text-xl font-bold max-lg:hidden" href="#">
-              <img src="https://cdn.flyonui.com/fy-assets/logo/logo.png" class="size-8" alt="brand-logo" />
-              画像解析アプリ
-            </a>
-            <a href="#" class="hover:text-primary">About Us</a>
-            <a href="#" class="hover:text-primary">Contacts</a>
-          </div>
-        </div>
-        <div class="navbar-end max-lg:hidden">
-          <span
-            class="icon-[tabler--search] hover:text-primary active:text-primary text-base-content size-5 cursor-pointer"></span>
-        </div>
-      </div>
-    </nav>
-
-    <div class="container mx-auto px-2 py-0">
-      <div class="bg-base-100 py-4 sm:py-8 lg:py-12">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div class="mb-6 space-y-3 text-center sm:mb-8 lg:mb-12">
-            <h2 class="text-base-content text-2xl font-semibold md:text-3xl lg:text-4xl">
-              <span class="relative z-1 font-bold">
-                管理者用
-                <span
-                  class="from-primary absolute start-0 bottom-1 -z-1 h-0.5 w-full bg-gradient-to-r to-transparent to-80%"
-                  aria-hidden="true"></span>
-              </span>
-              画像一覧ページ
-            </h2>
-            <p class="text-base-content/80 text-xl">
-              Explore our gallery to learn more about our amazing products and their features.
-            </p>
-            <div class="group flex items-center justify-center gap-2 pt-2 pb-2"
-              style="padding-top: 8px !important; padding-bottom: 8px !important;">
-              <a href="image.upload.html" class="link link-animated link-primary font-normal">ログアウト</a>
+<div class="pt-16 py-8 sm:py-16 lg:py-24">
+  <div class="container mx-auto px-2 py-0">
+    <div class="bg-base-100 py-4 sm:py-8 lg:py-12">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="mb-6 space-y-3 text-center sm:mb-8 lg:mb-12">
+          <h2 class="text-base-content text-2xl font-semibold md:text-3xl lg:text-4xl">
+            <span class="relative z-1 font-bold">
+              管理者用
               <span
-                class="icon-[tabler--chevron-right] text-primary size-5 shrink-0 transition-transform group-hover:translate-x-1 rtl:rotate-180"></span>
-            </div>
+                class="from-primary absolute start-0 bottom-1 -z-1 h-0.5 w-full bg-gradient-to-r to-transparent to-80%"
+                aria-hidden="true"></span>
+            </span>
+            画像一覧ページ
+          </h2>
+          <p class="text-base-content/80 text-xl">
+            全ユーザーの画像解析状況を管理できます。アップロードされた画像の一覧、解析進捗、結果を確認できます。
+          </p>
+          <div class="group flex items-center justify-center gap-2 pt-2 pb-2"
+            style="padding-top: 8px !important; padding-bottom: 8px !important;">
+            <a href="image.upload.html" class="link link-animated link-primary font-normal">ログアウト</a>
+            <span
+              class="icon-[tabler--chevron-right] text-primary size-5 shrink-0 transition-transform group-hover:translate-x-1 rtl:rotate-180"></span>
           </div>
         </div>
       </div>
     </div>
-    <!-- テーブルセクション -->
-    <div class="container mx-auto px-4 py-4">
-      <div class="bg-base-100 rounded-xl shadow-sm p-6">
-        <!-- Filter Bar -->
-        <div class="flex flex-col flex-wrap gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-          <!-- Left side: Search -->
-          <div class="select-floating w-80">
-            <input class="input" list="datalistOptions" id="exampleDataList" placeholder="Type to search..." />
-            <label class="select-floating-label" for="selectFloating">Search</label>
-          </div>
-          <!-- Right side: Date Sort and Status Filter -->
-          <div class="flex flex-col sm:flex-row gap-4">
-            <div class="select-floating w-40">
-              <select class="select" aria-label="Date sort" id="dateSort">
-                <option>新しい順</option>
-                <option>古い順</option>
-              </select>
-              <label class="select-floating-label" for="dateSort">日順ソート</label>
-            </div>
-
-            <div class="select-floating w-40">
-              <select class="select" aria-label="Select floating label" id="selectFloating">
-                <option>すべて</option>
-                <option>解析成功</option>
-                <option>解析中</option>
-                <option>準備中</option>
-                <option>失敗</option>
-              </select>
-              <label class="select-floating-label" for="selectFloating">ステータス</label>
-            </div>
-
-            <div class="select-floating w-40">
-              <select class="select" aria-label="User filter" id="userFilter">
-                <option>すべて</option>
-                <option>user_001</option>
-                <option>user_002</option>
-                <option>user_003</option>
-                <option>user_004</option>
-              </select>
-              <label class="select-floating-label" for="userFilter">ユーザー名</label>
-            </div>
+  </div>
 
 
-
-            <div class="select-floating w-40">
-              <select class="select" aria-label="Model filter" id="modelFilter">
-                <option>すべて</option>
-                <option>ResNet-50 v2.1</option>
-                <option>ResNet-101 v2.0</option>
-                <option>EfficientNet-B0</option>
-              </select>
-              <label class="select-floating-label" for="modelFilter">使用モデル</label>
-            </div>
-
-            <button type="button" class="btn btn-soft btn-sm btn-circle" onclick="resetAllFilters()" title="フィルターをリセット">
-              <span class="icon-[tabler--refresh] size-4"></span>
-            </button>
-          </div>
+</div>
+<!-- テーブルセクション -->
+<div class="container mx-auto px-4 py-4">
+  <div class="bg-base-100 rounded-xl shadow-sm p-6">
+    <!-- Filter Bar -->
+    <div class="flex flex-col flex-wrap gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+      <!-- Left side: Search -->
+      <div class="select-floating w-80">
+        <input class="input" list="datalistOptions" id="exampleDataList" placeholder="ファイル名で検索..." />
+        <label class="select-floating-label" for="selectFloating">検索</label>
+      </div>
+      <!-- Right side: Date Sort and Status Filter -->
+      <div class="flex flex-col sm:flex-row gap-4">
+        <div class="select-floating w-40">
+          <select class="select" aria-label="Date sort" id="dateSort">
+            <option>新しい順</option>
+            <option>古い順</option>
+          </select>
+          <label class="select-floating-label" for="dateSort">日順ソート</label>
         </div>
 
-        <!-- Table -->
-        <div class="overflow-x-auto max-w-6xl mx-auto">
-          <table class="table w-full [&_tr:nth-child(even)]:bg-base-200">
-            <thead>
-              <tr>
-                <th>ユーザー名</th>
-                <th>サムネイル画像</th>
-                <th>アップロード日時</th>
-                <th>ステータス</th>
-                <th>エラーログ</th>
-                <th>解析開始日時</th>
-                <th>解析終了日時</th>
-                <th>使用した学習モデル</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- row 1 -->
-              <tr>
-                <td>
-                  <span class="font-medium">user_001</span>
-                </td>
-                <td>
-                  <div class="flex items-center gap-3">
-                    <div class="avatar cursor-pointer" data-overlay="#slide-down-animated-modal">
-                      <div class="bg-base-content/10 h-10 w-10 rounded-md">
-                        <img src="https://cdn.flyonui.com/fy-assets/components/table/product-2.png" />
-                      </div>
-                    </div>
-                    <div>
-                      <div class="text-sm opacity-50">画像ファイル</div>
-                      <div class="font-medium">sample_image_001.jpg</div>
+        <div class="select-floating w-40">
+          <select class="select" aria-label="Select floating label" id="selectFloating">
+            <option>すべて</option>
+            <option>解析成功</option>
+            <option>解析中</option>
+            <option>準備中</option>
+            <option>失敗</option>
+          </select>
+          <label class="select-floating-label" for="selectFloating">ステータス</label>
+        </div>
+
+        <div class="select-floating w-40">
+          <select class="select" aria-label="User filter" id="userFilter">
+            <option>すべて</option>
+            <option>user_001</option>
+            <option>user_002</option>
+            <option>user_003</option>
+            <option>user_004</option>
+          </select>
+          <label class="select-floating-label" for="userFilter">ユーザー名</label>
+        </div>
+
+
+
+        <div class="select-floating w-40">
+          <select class="select" aria-label="Model filter" id="modelFilter">
+            <option>すべて</option>
+            <option>ResNet-50</option>
+            <option>EfficientNet-B0</option>
+            <option>MobileNet v2</option>
+            <option>VGG-16</option>
+            <option>Custom</option>
+          </select>
+          <label class="select-floating-label" for="modelFilter">使用モデル</label>
+        </div>
+
+        <div class="select-floating w-40">
+          <select class="select" aria-label="Label filter" id="labelFilter">
+            <option>すべて</option>
+            <option>犬</option>
+            <option>屋外</option>
+            <option>公園</option>
+            <option>風景</option>
+            <option>人物</option>
+          </select>
+          <label class="select-floating-label" for="labelFilter">ラベル</label>
+        </div>
+
+        <div class="select-floating w-40">
+          <select class="select" aria-label="Confidence filter" id="confidenceFilter">
+            <option>すべて</option>
+            <option>90%以上</option>
+            <option>80-89%</option>
+            <option>70-79%</option>
+            <option>60-69%</option>
+            <option>60%未満</option>
+          </select>
+          <label class="select-floating-label" for="confidenceFilter">信頼度</label>
+        </div>
+
+        <button type="button" class="btn btn-soft btn-sm btn-circle" onclick="resetAllFilters()" title="フィルターをリセット">
+          <span class="icon-[tabler--refresh] size-4"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto max-w-6xl mx-auto">
+      <table class="table w-full [&_tr:nth-child(even)]:bg-base-200">
+        <thead>
+          <tr>
+            <th>ユーザー名</th>
+            <th>サムネイル画像</th>
+            <th>アップロード日時</th>
+            <th>ステータス</th>
+            <th>エラーログ</th>
+            <th>解析開始日時</th>
+            <th>解析終了日時</th>
+            <th>使用した学習モデル</th>
+            <th>機械学習によってつけられたラベル</th>
+            <th>信頼度</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if has_data %}
+          {% for image in images %}
+          <tr data-image-id="{{ image.id }}">
+            <td>
+              <span class="font-medium">user_001</span>
+            </td>
+            <td>
+              <div class="flex items-center gap-3">
+                <div class="avatar cursor-pointer" data-overlay="#slide-down-animated-modal">
+                  <div class="bg-base-content/10 h-10 w-10 rounded-md">
+                    <div class="image-placeholder-small" data-src="{{ image.thumbnail_url }}">
+                      <div class="skeleton h-full w-full animate-pulse"></div>
                     </div>
                   </div>
-                </td>
-                <td>2024-01-15 10:30</td>
-                <td>
-                  <span class="badge badge-outline border-dashed badge-success me-2">
-                    解析成功
-                  </span>
-                </td>
-                <td>
-                  <span class="text-sm text-gray-500">-</span>
-                </td>
-                <td>2024-01-15 10:35</td>
-                <td>2024-01-15 10:40</td>
-                <td>
-                  <span class="badge badge-info">ResNet-50 v2.1</span>
-                </td>
-              </tr>
-              <!-- row 2 -->
-              <tr>
-                <td>
-                  <span class="font-medium">user_002</span>
-                </td>
-                <td>
-                  <div class="flex items-center gap-3">
-                    <div class="avatar cursor-pointer" data-overlay="#slide-down-animated-modal">
-                      <div class="bg-base-content/10 h-10 w-10 rounded-md">
-                        <img src="https://cdn.flyonui.com/fy-assets/components/table/product-1.png"
-                          alt="product image" />
-                      </div>
-                    </div>
-                    <div>
-                      <div class="text-sm opacity-50">画像ファイル</div>
-                      <div class="font-medium">sample_image_002.png</div>
-                    </div>
-                  </div>
-                </td>
-                <td>2024-01-15 10:25</td>
-                <td>
-                  <span class="badge badge-outline border-dashed badge-error me-2">
-                    失敗（ファイル形式エラー）
-                  </span>
-                </td>
-                <td>
-                  <button type="button" class="btn btn-error btn-sm" aria-haspopup="dialog" aria-expanded="false"
-                    aria-controls="error-log-modal" data-overlay="#error-log-modal">エラー詳細</button>
-                </td>
-                <td>2024-01-15 10:26</td>
-                <td>2024-01-15 10:26</td>
-                <td>
-                  <span class="badge badge-info">ResNet-50 v2.1</span>
-                </td>
-              </tr>
-              <!-- row 3 -->
-              <tr>
-                <td>
-                  <span class="font-medium">user_003</span>
-                </td>
-                <td>
-                  <div class="flex items-center gap-3">
-                    <div class="avatar cursor-pointer" data-overlay="#slide-down-animated-modal">
-                      <div class="bg-base-content/15 h-10 w-10 rounded-md">
-                        <img src="https://cdn.flyonui.com/fy-assets/components/table/product-19.png"
-                          alt="product image" />
-                      </div>
-                    </div>
-                    <div>
-                      <div class="text-sm opacity-50">画像ファイル</div>
-                      <div class="font-medium">sample_image_003.jpg</div>
-                    </div>
-                  </div>
-                </td>
-                <td>2024-01-15 10:20</td>
-                <td>
-                  <span class="badge badge-outline border-dashed badge-info me-2">
-                    解析中
-                  </span>
-                </td>
-                <td>
-                  <span class="text-sm text-gray-500">-</span>
-                </td>
-                <td>2024-01-15 10:22</td>
-                <td>
-                  <span class="text-sm text-gray-500">-</span>
-                </td>
-                <td>
-                  <span class="badge badge-info">ResNet-50 v2.1</span>
-                </td>
-              </tr>
-              <!-- row 4 -->
-              <tr>
-                <td>
-                  <span class="font-medium">user_004</span>
-                </td>
-                <td>
-                  <div class="flex items-center gap-3">
-                    <div class="avatar cursor-pointer" data-overlay="#slide-down-animated-modal">
-                      <div class="bg-base-content/15 h-10 w-10 rounded-md">
-                        <img src="https://cdn.flyonui.com/fy-assets/components/table/product-5.png"
-                          alt="product image" />
-                      </div>
-                    </div>
-                    <div>
-                      <div class="text-sm opacity-50">画像ファイル</div>
-                      <div class="font-medium">sample_image_004.jpg</div>
-                    </div>
-                  </div>
-                </td>
-                <td>2024-01-15 10:15</td>
-                <td>
-                  <span class="badge badge-outline border-dashed badge-secondary me-2">
-                    準備中（あと2枚目）
-                  </span>
-                </td>
-                <td>
-                  <span class="text-sm text-gray-500">-</span>
-                </td>
-                <td>
-                  <span class="text-sm text-gray-500">-</span>
-                </td>
-                <td>
-                  <span class="text-sm text-gray-500">-</span>
-                </td>
-                <td>
-                  <span class="badge badge-info">ResNet-50 v2.1</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- 他の行は省略 -->
-      </div>
-
-      <!-- Pagination -->
-      <div class="flex flex-wrap items-center justify-between gap-2 py-4">
-        <div class="text-sm text-base-content/80">
-          Showing <span class="font-semibold">1-4</span> of <span class="font-semibold">20</span> images
-        </div>
-        <nav class="join">
-          <button class="btn btn-soft btn-square join-item"><span
-              class="icon-[tabler--chevron-left] size-5"></span></button>
-          <button class="btn btn-soft join-item btn-square" aria-current="page">1</button>
-          <button class="btn btn-soft join-item btn-square">2</button>
-          <button class="btn btn-soft join-item btn-square">3</button>
-          <button class="btn btn-soft btn-square join-item"><span
-              class="icon-[tabler--chevron-right] size-5"></span></button>
-        </nav>
-      </div>
+                </div>
+                <div>
+                  <div class="text-sm opacity-50">画像ファイル</div>
+                  <div class="font-medium">{{ image.filename }}</div>
+                </div>
+              </div>
+            </td>
+            <td>{{ image.upload_date|date:"Y-m-d H:i" }}</td>
+            <td>
+              {% if image.status == 'success' %}
+              <span class="badge badge-outline border-dashed badge-success me-2 cursor-pointer" title="クリックしてタイムラインを確認"
+                data-overlay="#timeline-modal">解析成功</span>
+              {% elif image.status == 'analyzing' %}
+              <span class="badge badge-outline border-dashed badge-info me-2 cursor-pointer" title="クリックしてタイムラインを確認"
+                data-overlay="#timeline-modal">解析中</span>
+              {% elif image.status == 'preparing' %}
+              <span class="badge badge-outline border-dashed badge-secondary me-2 cursor-pointer"
+                title="クリックしてタイムラインを確認" data-overlay="#timeline-modal">準備中</span>
+              {% elif image.status == 'failed' %}
+              <span class="badge badge-outline border-dashed badge-error me-2 cursor-pointer" title="クリックしてタイムラインを確認"
+                data-overlay="#timeline-modal">失敗</span>
+              {% else %}
+              <span class="badge badge-outline border-dashed badge-secondary me-2">
+                準備中
+              </span>
+              {% endif %}
+            </td>
+            <td>
+              {% if image.status == 'failed' %}
+              <button type="button" class="btn btn-error btn-sm" aria-haspopup="dialog" aria-expanded="false"
+                aria-controls="error-log-modal" data-overlay="#error-log-modal">エラー詳細</button>
+              {% else %}
+              <span class="text-sm text-gray-500">-</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if image.timeline_log.analysis_started_at %}
+              {{ image.timeline_log.analysis_started_at|date:"Y-m-d H:i" }}
+              {% else %}
+              <span class="text-sm text-gray-500">-</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if image.timeline_log.analysis_completed_at %}
+              {{ image.timeline_log.analysis_completed_at|date:"Y-m-d H:i" }}
+              {% else %}
+              <span class="text-sm text-gray-500">-</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if image.timeline_log.model_used %}
+              <span class="badge badge-info">{{ image.timeline_log.model_used }}</span>
+              {% else %}
+              <span class="text-sm text-gray-500">-</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if image.analysis_results.exists %}
+              {% for result in image.analysis_results.all %}
+              <span class="badge badge-primary">{{ result.label }}</span>
+              {% endfor %}
+              {% else %}
+              <span class="text-sm text-gray-500">-</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if image.analysis_results.exists %}
+              {% for result in image.analysis_results.all %}
+              <span class="badge badge-success">{{ result.confidence }}%</span>
+              {% endfor %}
+              {% else %}
+              <span class="text-sm text-gray-500">-</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          {% else %}
+          <tr>
+            <td colspan="10" class="text-center py-8">
+              <div class="text-gray-500">
+                <span class="icon-[tabler--photo] size-8 mx-auto mb-2 block"></span>
+                画像データがありません
+              </div>
+            </td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
     </div>
 
+    <!-- 他の行は省略 -->
+  </div>
+
+  <!-- Pagination -->
+  <div class="flex flex-wrap items-center justify-between gap-2 py-4">
+    <div class="text-sm text-base-content/80">
+      {% if has_data %}
+      <span class="font-semibold">{{ images|length }}</span> 件の画像を表示中
+      {% else %}
+      画像データがありません
+      {% endif %}
+    </div>
+    {% if has_data and images|length > 10 %}
+    <nav class="join">
+      <button class="btn btn-soft btn-square join-item" disabled>
+        <span class="icon-[tabler--chevron-left] size-5"></span>
+      </button>
+      <button class="btn btn-soft join-item btn-square" aria-current="page">1</button>
+      <button class="btn btn-soft btn-square join-item" disabled>
+        <span class="icon-[tabler--chevron-right] size-5"></span>
+      </button>
+    </nav>
+    {% endif %}
+  </div>
+</div>
 
 
-    <!-- Error Log Modal -->
-    <div id="slide-down-animated-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden"
-      role="dialog" tabindex="-1">
-      <div class="modal-dialog overlay-open:mt-12 overlay-open:duration-300 transition-all ease-out">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3 class="modal-title">画像詳細</h3>
-            <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
-              data-overlay="#slide-down-animated-modal">
-              <span class="icon-[tabler--x] size-4"></span>
-            </button>
+
+<!-- Image Detail Modal -->
+<div id="slide-down-animated-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden"
+  role="dialog" tabindex="-1">
+  <div
+    class="modal-dialog fixed top-8 left-1/2 transform -translate-x-1/2 overlay-open:duration-300 transition-all ease-out max-w-sm sm:max-w-md lg:max-w-lg">
+    <div class="modal-content max-h-[90vh] overflow-y-auto">
+      <div class="modal-header">
+        <h3 class="modal-title">画像詳細</h3>
+        <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
+          data-overlay="#slide-down-animated-modal">
+          <span class="icon-[tabler--x] size-4"></span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="flex flex-col gap-4">
+          <!-- Image -->
+          <div class="flex justify-center">
+            <img id="modal-image" src="" alt=""
+              class="rounded-lg shadow-lg max-w-full h-auto max-h-96 object-contain" />
           </div>
-          <div class="modal-body">
-            <div class="flex flex-col gap-4">
-              <!-- Image -->
-              <div class="flex justify-center">
-                <img src="https://cdn.flyonui.com/fy-assets/components/table/product-2.png" alt="画像"
-                  class="max-w-full h-auto rounded-lg shadow-lg" />
-              </div>
 
-              <!-- Image Details -->
-              <div class="grid grid-cols-1 gap-3">
-                <div class="flex justify-between items-center">
-                  <span class="font-semibold">ファイル名:</span>
-                  <span class="text-sm text-gray-600">sample_image_001.jpg</span>
+          <!-- Image Details -->
+          <div class="grid grid-cols-1 gap-3">
+            <div class="flex justify-between items-center">
+              <span class="font-semibold">ファイル名:</span>
+              <span id="modal-filename" class="text-sm text-gray-600"></span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="font-semibold">ユーザー名:</span>
+              <span id="modal-username" class="text-sm text-gray-600"></span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="font-semibold">アップロード日時:</span>
+              <span id="modal-upload-time" class="text-sm text-gray-600"></span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="font-semibold">ステータス:</span>
+              <span id="modal-status-badge" class="badge badge-outline border-dashed me-2"></span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="font-semibold">解析開始日時:</span>
+              <span id="modal-analysis-start" class="text-sm text-gray-600"></span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="font-semibold">解析終了日時:</span>
+              <span id="modal-analysis-end" class="text-sm text-gray-600"></span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="font-semibold">使用した学習モデル:</span>
+              <span id="modal-model" class="text-sm text-gray-600"></span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="font-semibold">機械学習によってつけられたラベル:</span>
+              <div id="modal-labels" class="flex flex-wrap gap-1"></div>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="font-semibold">信頼度:</span>
+              <span id="modal-confidence" class="badge"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-soft btn-secondary" data-overlay="#slide-down-animated-modal">
+          閉じる
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- タイムライン表示モーダル -->
+<div id="timeline-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden" role="dialog"
+  tabindex="-1">
+  <div
+    class="modal-dialog overlay-open:mt-4 sm:overlay-open:mt-8 lg:overlay-open:mt-12 overlay-open:duration-300 transition-all ease-out max-w-sm sm:max-w-md lg:max-w-lg">
+    <div class="modal-content">
+      <div class="modal-header p-4 sm:p-6">
+        <h3 class="modal-title text-lg sm:text-xl">解析タイムライン</h3>
+        <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
+          data-overlay="#timeline-modal">
+          <span class="icon-[tabler--x] size-4"></span>
+        </button>
+      </div>
+      <div class="modal-body p-4 sm:p-6">
+        <div class="flex flex-col gap-4 sm:gap-6">
+          <!-- 画像情報 -->
+          <div class="text-center">
+            <h4 class="font-semibold text-sm sm:text-base mb-2" id="timeline-filename">ファイル名</h4>
+            <p class="text-xs sm:text-sm text-gray-500" id="timeline-status">ステータス</p>
+          </div>
+
+          <!-- 進捗バー（解析中の場合のみ表示） -->
+          <div id="timeline-progress-section" class="hidden">
+            <div class="flex items-center gap-x-3 whitespace-nowrap mb-4">
+              <div class="progress h-2 flex-1" id="timeline-progress">
+                <div class="progress-bar progress-info transition-all duration-500" style="width:0%"
+                  id="timeline-progress-bar"></div>
+              </div>
+              <span class="text-base-content mb-0.5 text-sm">
+                <span id="timeline-progress-value">0</span>%
+              </span>
+            </div>
+            <div class="text-center">
+              <span class="text-xs text-gray-600" id="timeline-progress-description">解析中...</span>
+            </div>
+          </div>
+
+          <!-- タイムライン表示 -->
+          <div class="space-y-4" id="timeline-content">
+            <div class="flex items-center gap-3">
+              <div class="flex-shrink-0">
+                <div class="w-8 h-8 bg-success rounded-full flex items-center justify-center">
+                  <span class="icon-[tabler--upload] text-success-content size-4"></span>
                 </div>
+              </div>
+              <div class="flex-1">
                 <div class="flex justify-between items-center">
-                  <span class="font-semibold">ユーザー名:</span>
-                  <span class="text-sm text-gray-600">user_001</span>
+                  <span class="text-sm font-medium">ファイルアップロード</span>
+                  <span class="text-xs text-gray-500" id="upload-time">-</span>
                 </div>
+                <div class="text-xs text-gray-600" id="upload-duration">所要時間: -</div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <div class="flex-shrink-0">
+                <div class="w-8 h-8 bg-warning rounded-full flex items-center justify-center">
+                  <span class="icon-[tabler--brain] text-warning-content size-4"></span>
+                </div>
+              </div>
+              <div class="flex-1">
                 <div class="flex justify-between items-center">
-                  <span class="font-semibold">アップロード日時:</span>
-                  <span class="text-sm text-gray-600">2024-01-15 10:30</span>
+                  <span class="text-sm font-medium">解析開始</span>
+                  <span class="text-xs text-gray-500" id="analysis-start-time">-</span>
                 </div>
+                <div class="text-xs text-gray-600" id="model-used">使用モデル: -</div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <div class="flex-shrink-0">
+                <div class="w-8 h-8 bg-info rounded-full flex items-center justify-center">
+                  <span class="icon-[tabler--check] text-info-content size-4"></span>
+                </div>
+              </div>
+              <div class="flex-1">
                 <div class="flex justify-between items-center">
-                  <span class="font-semibold">ステータス:</span>
-                  <span class="badge badge-outline border-dashed badge-success me-2">解析成功</span>
+                  <span class="text-sm font-medium">解析完了</span>
+                  <span class="text-xs text-gray-500" id="analysis-end-time">-</span>
                 </div>
-                <div class="flex justify-between items-center">
-                  <span class="font-semibold">解析開始日時:</span>
-                  <span class="text-sm text-gray-600">2024-01-15 10:35</span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="font-semibold">解析終了日時:</span>
-                  <span class="text-sm text-gray-600">2024-01-15 10:40</span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="font-semibold">使用した学習モデル:</span>
-                  <span class="badge badge-info">ResNet-50 v2.1</span>
-                </div>
+                <div class="text-xs text-gray-600" id="analysis-duration">所要時間: -</div>
+              </div>
+            </div>
+
+            <div class="border-t pt-3">
+              <div class="flex justify-between items-center">
+                <span class="text-sm font-semibold">総所要時間</span>
+                <span class="text-sm font-semibold text-primary" id="total-duration">-</span>
               </div>
             </div>
           </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-soft btn-secondary" data-overlay="#slide-down-animated-modal">
-              閉じる
-            </button>
-          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="flex justify-end gap-3">
+          <button type="button" class="btn btn-soft btn-secondary" data-overlay="#timeline-modal">閉じる</button>
         </div>
       </div>
     </div>
+  </div>
+</div>
 
-    <!-- Error Log Modal -->
-    <div id="error-log-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden"
-      role="dialog" tabindex="-1">
-      <div class="modal-dialog overlay-open:mt-12 overlay-open:duration-300 transition-all ease-out">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3 class="modal-title">エラーログ詳細</h3>
-            <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
-              data-overlay="#error-log-modal">
-              <span class="icon-[tabler--x] size-4"></span>
-            </button>
-          </div>
-          <div class="modal-body">
-            <div class="flex flex-col gap-4">
-              <!-- Error Details -->
-              <div class="grid grid-cols-1 gap-3">
-                <div class="flex justify-between items-center">
-                  <span class="font-semibold">ファイル名:</span>
-                  <span class="text-sm text-gray-600">sample_image_001.jpg</span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="font-semibold">ユーザー名:</span>
-                  <span class="text-sm text-gray-600">user_001</span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="font-semibold">アップロード日時:</span>
-                  <span class="text-sm text-gray-600">2024-01-15 10:30</span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="font-semibold">ステータス:</span>
-                  <span class="badge badge-outline border-dashed badge-error me-2">失敗</span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="font-semibold">エラーログ:</span>
-                  <div class="text-sm text-gray-600 max-w-xs text-right">
-                    ファイル形式がサポートされていません。PNGファイルは現在サポートされていません。
-                  </div>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="font-semibold">エラー発生日時:</span>
-                  <span class="text-sm text-gray-600">2024-01-15 10:35</span>
-                </div>
+<!-- Error Log Modal -->
+<div id="error-log-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden" role="dialog"
+  tabindex="-1">
+  <div class="modal-dialog overlay-open:mt-12 overlay-open:duration-300 transition-all ease-out">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">エラーログ詳細</h3>
+        <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
+          data-overlay="#error-log-modal">
+          <span class="icon-[tabler--x] size-4"></span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="flex flex-col gap-4">
+          <!-- Error Details -->
+          <div class="grid grid-cols-1 gap-3">
+            <div class="flex justify-between items-center">
+              <span class="font-semibold">ファイル名:</span>
+              <span class="text-sm text-gray-600">sample_image_001.jpg</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="font-semibold">ユーザー名:</span>
+              <span class="text-sm text-gray-600">user_001</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="font-semibold">アップロード日時:</span>
+              <span class="text-sm text-gray-600">2024-01-15 10:30</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="font-semibold">ステータス:</span>
+              <span class="badge badge-outline border-dashed badge-error me-2">失敗</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="font-semibold">エラーログ:</span>
+              <div class="text-sm text-gray-600 max-w-xs text-right">
+                ファイル形式がサポートされていません。PNGファイルは現在サポートされていません。
               </div>
             </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-soft btn-secondary" data-overlay="#error-log-modal">
-              閉じる
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Image Detail Modal (Temporary test with same content as preview) -->
-    <div id="image-detail-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden"
-      role="dialog" tabindex="-1">
-      <div
-        class="overlay-animation-target modal-dialog overlay-open:mt-4 overlay-open:duration-300 mt-12 transition-all ease-out">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3 class="modal-title">Dialog Title</h3>
-            <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
-              data-overlay="#image-detail-modal" id="modal-close-x">
-              <span class="icon-[tabler--x] size-4"></span>
-            </button>
-          </div>
-          <div class="modal-body">
-            <div class="flex flex-col gap-4">
-              <!-- Image -->
-              <div class="flex justify-center">
-                <img id="modal-image" src="" alt="画像" class="max-w-full h-auto rounded-lg shadow-lg" />
-              </div>
-
-              <!-- Image Details -->
-              <div class="grid grid-cols-1 gap-3">
-                <div class="flex justify-between items-center">
-                  <span class="font-semibold">ファイル名:</span>
-                  <span id="modal-filename" class="text-sm text-gray-600"></span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="font-semibold">ユーザー名:</span>
-                  <span id="modal-username" class="text-sm text-gray-600"></span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="font-semibold">アップロード日時:</span>
-                  <span id="modal-upload-time" class="text-sm text-gray-600"></span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="font-semibold">ステータス:</span>
-                  <span id="modal-status-badge" class="badge badge-outline border-dashed me-2"></span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="font-semibold">解析開始日時:</span>
-                  <span id="modal-start-time" class="text-sm text-gray-600"></span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="font-semibold">解析終了日時:</span>
-                  <span id="modal-end-time" class="text-sm text-gray-600"></span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="font-semibold">使用した学習モデル:</span>
-                  <span id="modal-model" class="badge badge-info"></span>
-                </div>
-              </div>
+            <div class="flex justify-between items-center">
+              <span class="font-semibold">エラー発生日時:</span>
+              <span class="text-sm text-gray-600">2024-01-15 10:35</span>
             </div>
           </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-soft btn-secondary" data-overlay="#image-detail-modal"
-              id="modal-close-button">
-              閉じる
-            </button>
-          </div>
         </div>
       </div>
-    </div>
-
-
-
-    <div id="slide-up-animated-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden"
-      role="dialog" tabindex="-1">
-      <div
-        class="overlay-animation-target modal-dialog overlay-open:mt-4 overlay-open:duration-300 mt-12 transition-all ease-out">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3 class="modal-title">Dialog Title</h3>
-            <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
-              data-overlay="#slide-up-animated-modal">
-              <span class="icon-[tabler--x] size-4"></span>
-            </button>
-          </div>
-          <div class="modal-body">
-            This is some placeholder content to show the scrolling behavior for modals. Instead of repeating the text in
-            the
-            modal, we use an inline style to set a minimum height, thereby extending the length of the overall modal and
-            demonstrating the overflow scrolling. When content becomes longer than the height of the viewport, scrolling
-            will move the modal as needed.
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-soft btn-secondary" data-overlay="#slide-up-animated-modal">
-              Close
-            </button>
-            <button type="button" class="btn btn-primary">Save changes</button>
-          </div>
-        </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-soft btn-secondary" data-overlay="#error-log-modal">
+          閉じる
+        </button>
       </div>
     </div>
+  </div>
+</div>
 
-    <div class="cursor-pointer" data-overlay="#slide-down-animated-modal">
-      <div class="bg-base-content/10 h-10 w-10 rounded-md">
-        <img src="https://cdn.flyonui.com/fy-assets/components/table/product-2.png" alt="サンプル画像" />
-      </div>
-    </div>
+{% endblock %}
 
-    <script src="./node_modules/flyonui/flyonui.js"></script>
-    <script src="./node_modules/flyonui/dist/accordion.js"></script>
+{% block extra_css %}
+<style>
+  .table tbody tr:nth-child(even) {
+    background-color: #f3f4f6;
+  }
 
-    <style>
-      .table tbody tr:nth-child(even) {
-        background-color: #f3f4f6;
-      }
-    </style>
+  .image-placeholder-small {
+    background: linear-gradient(135deg, #f3f4f6 25%, transparent 25%),
+      linear-gradient(225deg, #f3f4f6 25%, transparent 25%),
+      linear-gradient(45deg, #f3f4f6 25%, transparent 25%),
+      linear-gradient(315deg, #f3f4f6 25%, transparent 25%);
+    background-position: 5px 0, 5px 0, 0 0, 0 0;
+    background-size: 10px 10px;
+    background-color: #f9fafb;
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
 
-    <script>
-      function openImageModal(filename, imageSrc, uploadTime, status, username, startTime, endTime, model) {
-        console.log('openImageModal called with:', { filename, imageSrc, uploadTime, status, username, startTime, endTime, model });
+  /* 小さいプレースホルダーが画像読み込み済みの時のスタイル */
+  .image-placeholder-small[style*="background-image"],
+  .image-placeholder-small.image-loaded {
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+  }
 
-        // Set modal content
-        document.getElementById('modal-filename').textContent = filename;
-        document.getElementById('modal-image').src = imageSrc;
-        document.getElementById('modal-username').textContent = username;
-        document.getElementById('modal-upload-time').textContent = startTime;
+  .image-placeholder-small[style*="background-image"] .skeleton,
+  .image-placeholder-small.image-loaded .skeleton {
+    display: none !important;
+  }
+</style>
+{% endblock %}
 
-        // Set status with appropriate badge styling
-        const statusBadge = document.getElementById('modal-status-badge');
-        statusBadge.textContent = status;
+{% block extra_js %}
+<script>
+  // Function to reset all filters
+  function resetAllFilters() {
+    console.log('Resetting all filters...');
 
-        // Remove existing badge classes
-        statusBadge.className = 'badge badge-outline border-dashed me-2';
+    // Reset search input
+    const searchInput = document.getElementById('exampleDataList');
+    if (searchInput) {
+      searchInput.value = '';
+    }
 
-        // Add appropriate badge color based on status
-        if (status.includes('解析成功')) {
-          statusBadge.classList.add('badge-success');
-        } else if (status.includes('失敗')) {
-          statusBadge.classList.add('badge-error');
-        } else if (status.includes('解析中')) {
-          statusBadge.classList.add('badge-info');
-        } else if (status.includes('準備中')) {
-          statusBadge.classList.add('badge-secondary');
+    // Reset date sort
+    const dateSort = document.getElementById('dateSort');
+    if (dateSort) {
+      dateSort.selectedIndex = 0; // Select first option
+    }
+
+    // Reset status filter
+    const statusFilter = document.getElementById('selectFloating');
+    if (statusFilter) {
+      statusFilter.selectedIndex = 0; // Select first option
+    }
+
+    // Reset user filter
+    const userFilter = document.getElementById('userFilter');
+    if (userFilter) {
+      userFilter.selectedIndex = 0; // Select first option
+    }
+
+    // Reset model filter
+    const modelFilter = document.getElementById('modelFilter');
+    if (modelFilter) {
+      modelFilter.selectedIndex = 0; // Select first option
+    }
+
+    // Reset label filter
+    const labelFilter = document.getElementById('labelFilter');
+    if (labelFilter) {
+      labelFilter.selectedIndex = 0; // Select first option
+    }
+
+    // Reset confidence filter
+    const confidenceFilter = document.getElementById('confidenceFilter');
+    if (confidenceFilter) {
+      confidenceFilter.selectedIndex = 0; // Select first option
+    }
+
+    // Apply filters after reset
+    applyFilters();
+    console.log('All filters have been reset');
+  }
+
+  // Function to apply filters
+  function applyFilters() {
+    const searchTerm = document.getElementById('exampleDataList').value.toLowerCase();
+    const statusFilter = document.getElementById('selectFloating').value;
+    const userFilter = document.getElementById('userFilter').value;
+    const modelFilter = document.getElementById('modelFilter').value;
+    const labelFilter = document.getElementById('labelFilter').value;
+    const confidenceFilter = document.getElementById('confidenceFilter').value;
+    const dateSort = document.getElementById('dateSort').value;
+
+    const rows = document.querySelectorAll('tbody tr[data-image-id]');
+    let visibleCount = 0;
+
+    // First, collect all rows and their data for sorting
+    const rowData = [];
+    rows.forEach(row => {
+      let showRow = true;
+
+      // Search filter
+      if (searchTerm) {
+        const filename = row.querySelector('.font-medium').textContent.toLowerCase();
+        if (!filename.includes(searchTerm)) {
+          showRow = false;
         }
+      }
 
-        // Set start time and end time
-        document.getElementById('modal-start-time').textContent = startTime;
-        document.getElementById('modal-end-time').textContent = endTime;
+      // Status filter
+      if (statusFilter !== 'すべて') {
+        const statusBadge = row.querySelector('.badge');
+        const statusText = statusBadge.textContent.trim();
+        if (statusFilter === '解析成功' && statusText !== '解析成功') showRow = false;
+        if (statusFilter === '解析中' && statusText !== '解析中') showRow = false;
+        if (statusFilter === '準備中' && statusText !== '準備中') showRow = false;
+        if (statusFilter === '失敗' && statusText !== '失敗') showRow = false;
+      }
 
-        // Set model with badge styling
-        const modelBadge = document.getElementById('modal-model');
-        modelBadge.textContent = model;
-        modelBadge.className = 'badge badge-info';
+      // User filter
+      if (userFilter !== 'すべて') {
+        const username = row.querySelector('td:first-child .font-medium').textContent.trim();
+        if (username !== userFilter) showRow = false;
+      }
 
-        console.log('Modal content set, attempting to open modal...');
-
-        // Open modal using the same method as preview modal
-        const modal = document.getElementById('image-detail-modal');
-        console.log('Modal element found:', modal);
-
-        // Try to use FlyonUI's overlay system first
-        const existingButton = document.querySelector('button[data-overlay="#image-detail-modal"]');
-        if (existingButton) {
-          console.log('Using existing button with data-overlay');
-          existingButton.click();
+      // Model filter
+      if (modelFilter !== 'すべて') {
+        const modelBadge = row.querySelector('td:last-child .badge');
+        if (modelBadge) {
+          const modelText = modelBadge.textContent.trim();
+          if (modelText !== modelFilter) showRow = false;
         } else {
-          console.log('No existing button found, creating temporary one');
-          // Fallback: create a temporary button
-          const triggerButton = document.createElement('button');
-          triggerButton.setAttribute('data-overlay', '#image-detail-modal');
-          triggerButton.style.display = 'none';
-          document.body.appendChild(triggerButton);
-          triggerButton.click();
-          document.body.removeChild(triggerButton);
-        }
-
-        // Also try manual opening as backup after a short delay
-        setTimeout(() => {
-          console.log('Also trying manual modal opening...');
-          modal.classList.remove('hidden');
-          modal.style.display = 'block';
-          modal.style.opacity = '1';
-          modal.style.visibility = 'visible';
-        }, 50);
-
-        console.log('Modal opened using FlyonUI system - should have background overlay');
-
-        // Wait for FlyonUI to process the overlay trigger
-        setTimeout(() => {
-          console.log('Modal should now be visible with same state as preview modal');
-
-          // If FlyonUI didn't handle it properly, manually set the modal state
-          if (modal.classList.contains('hidden')) {
-            console.log('FlyonUI didn\'t open modal, manually opening...');
-            modal.classList.remove('hidden');
-            modal.style.display = 'block';
-            modal.style.opacity = '1';
-            modal.style.visibility = 'visible';
-          }
-
-          // Log detailed state after setting
-          console.log('Modal classes after setting:', modal.className);
-          console.log('Modal computed styles after setting:', {
-            display: window.getComputedStyle(modal).display,
-            opacity: window.getComputedStyle(modal).opacity,
-            visibility: window.getComputedStyle(modal).visibility,
-            zIndex: window.getComputedStyle(modal).zIndex
-          });
-
-          // Check if modal is actually visible
-          const rect = modal.getBoundingClientRect();
-          console.log('Modal bounding rect:', rect);
-          console.log('Modal is visible:', rect.width > 0 && rect.height > 0);
-        }, 100); // Give FlyonUI time to process
-
-        // Also check multiple times to see the transition
-        for (let i = 1; i <= 5; i++) {
-          setTimeout(() => {
-            console.log(`Modal state after ${i * 200}ms:`, {
-              classes: modal.className,
-              display: window.getComputedStyle(modal).display,
-              opacity: window.getComputedStyle(modal).opacity,
-              hidden: modal.classList.contains('hidden')
-            });
-          }, i * 200);
+          showRow = false;
         }
       }
 
-      function closeImageModal() {
-        console.log('closeImageModal called');
-        const modal = document.getElementById('image-detail-modal');
-        console.log('Modal element found for closing:', modal);
-        console.log('Modal classes before closing:', modal.className);
+      if (showRow) {
+        // Get upload date for sorting (3rd column in admin table)
+        const uploadDateText = row.querySelector('td:nth-child(3)').textContent.trim();
+        const uploadDate = new Date(uploadDateText);
 
-        modal.classList.add('hidden');
-        modal.classList.remove('overlay-open');
-        modal.style.display = 'none';
-        modal.style.opacity = '0';
-        modal.style.visibility = 'hidden';
-
-        console.log('Modal classes after closing:', modal.className);
-        console.log('Modal should now be hidden');
+        rowData.push({
+          row: row,
+          uploadDate: uploadDate,
+          uploadDateText: uploadDateText
+        });
+        visibleCount++;
+      } else {
+        row.style.display = 'none';
       }
+    });
 
+    // Sort by date if needed
+    if (dateSort === '古い順') {
+      console.log('古い順でソート');
+      rowData.sort((a, b) => a.uploadDate - b.uploadDate);
+    } else if (dateSort === '新しい順') {
+      console.log('新しい順でソート');
+      rowData.sort((a, b) => b.uploadDate - a.uploadDate);
+    }
 
-
-      function logCloseButtonClick(buttonType) {
-        console.log(`=== ${buttonType} Clicked ===`);
-        console.log('Button clicked at:', new Date().toISOString());
-
-        // Check if data-overlay attribute is present to determine which modal to close
-        const button = event.target.closest('button');
-        const dataOverlay = button.getAttribute('data-overlay');
-        console.log('Button data-overlay attribute:', dataOverlay);
-
-        // Determine which modal to close based on data-overlay attribute
-        let modal;
-        if (dataOverlay === '#error-log-modal') {
-          modal = document.getElementById('error-log-modal');
-          console.log('Closing error log modal');
-        } else if (dataOverlay === '#image-detail-modal') {
-          modal = document.getElementById('image-detail-modal');
-          console.log('Closing image detail modal');
-        } else {
-          console.log('Unknown modal, cannot close');
-          return;
-        }
-
-        console.log('Modal element found:', modal);
-        console.log('Modal classes before click:', modal.className);
-        console.log('Modal computed styles before click:', {
-          display: window.getComputedStyle(modal).display,
-          opacity: window.getComputedStyle(modal).opacity,
-          visibility: window.getComputedStyle(modal).visibility,
-          zIndex: window.getComputedStyle(modal).zIndex
-        });
-
-        // Log the event details
-        console.log('Event type:', event.type);
-        console.log('Event target:', event.target);
-        console.log('Event currentTarget:', event.currentTarget);
-
-        // Manually close the modal since FlyonUI is not working properly
-        console.log('Manually closing modal...');
-        modal.classList.add('hidden');
-        modal.style.display = 'none';
-        modal.style.opacity = '0';
-        modal.style.visibility = 'hidden';
-
-        // Also remove any background overlays that might be blocking clicks
-        const overlays = document.querySelectorAll('.overlay:not(#image-detail-modal)');
-        overlays.forEach(overlay => {
-          if (overlay.style.display !== 'none') {
-            console.log('Removing background overlay:', overlay);
-            overlay.style.display = 'none';
-            overlay.style.opacity = '0';
-            overlay.style.visibility = 'hidden';
-          }
-        });
-
-        // Also try to remove any FlyonUI overlay elements
-        const flyonuiOverlays = document.querySelectorAll('[data-overlay-backdrop]');
-        flyonuiOverlays.forEach(overlay => {
-          console.log('Removing FlyonUI backdrop overlay:', overlay);
-          overlay.remove();
-        });
-
-        // Remove the 4 additional overlay elements that are causing the gray background
-        const extraOverlays = document.querySelectorAll('div.overlay.modal:not(#image-detail-modal)');
-        console.log('Found extra overlays:', extraOverlays.length);
-        extraOverlays.forEach((overlay, index) => {
-          console.log(`Removing extra overlay ${index + 1}:`, overlay);
-          overlay.remove();
-        });
-
-        // Also try to remove any elements with 'open' and 'opened' classes that might be blocking
-        const openElements = document.querySelectorAll('.open.opened:not(#image-detail-modal)');
-        openElements.forEach(element => {
-          console.log('Removing open/opened element:', element);
-          element.remove();
-        });
-
-        // Safe overlay removal: Only remove specific overlay elements
-        const safeOverlays = document.querySelectorAll('div.overlay.modal:not(#image-detail-modal)');
-        safeOverlays.forEach((overlay, index) => {
-          console.log(`Removing safe overlay ${index + 1}:`, overlay);
-          overlay.remove();
-        });
-
-        // Also remove any backdrop elements
-        const backdrops = document.querySelectorAll('[class*="backdrop"], [class*="overlay-backdrop"]');
-        backdrops.forEach(backdrop => {
-          console.log('Removing backdrop:', backdrop);
-          backdrop.remove();
-        });
-
-        // Also try to reset body and html styles that might be blocking
-        document.body.style.overflow = '';
-        document.body.style.pointerEvents = '';
-        document.documentElement.style.overflow = '';
-        document.documentElement.style.pointerEvents = '';
-
-        console.log('Modal and background overlays manually closed');
-
-        // Wait a bit and check modal state after manual closing
-        setTimeout(() => {
-          console.log(`Modal state 100ms after ${buttonType} click:`, {
-            classes: modal.className,
-            display: window.getComputedStyle(modal).display,
-            opacity: window.getComputedStyle(modal).opacity,
-            visibility: window.getComputedStyle(modal).visibility,
-            hidden: modal.classList.contains('hidden')
-          });
-        }, 100);
-
-        setTimeout(() => {
-          console.log(`Modal state 500ms after ${buttonType} click:`, {
-            classes: modal.className,
-            display: window.getComputedStyle(modal).display,
-            opacity: window.getComputedStyle(modal).opacity,
-            visibility: window.getComputedStyle(modal).visibility,
-            hidden: modal.classList.contains('hidden')
-          });
-        }, 500);
-      }
-
-      // Test function to check if modal exists
-      function testModal() {
-        const modal = document.getElementById('image-detail-modal');
-        console.log('Modal element:', modal);
-        console.log('Modal HTML:', modal ? modal.outerHTML : 'Not found');
-      }
-
-      // Test function for preview modal
-      function testOpenModal() {
-        console.log('=== Preview Modal Test ===');
-        const previewModal = document.getElementById('slide-up-animated-modal');
-        console.log('Preview modal element:', previewModal);
-        console.log('Preview modal classes before:', previewModal.className);
-        console.log('Preview modal HTML:', previewModal.outerHTML);
-
-        // Check state immediately after click
-        console.log('Preview modal classes immediately after click:', previewModal.className);
-
-        // Check multiple times to see the transition
-        for (let i = 1; i <= 10; i++) {
-          setTimeout(() => {
-            console.log(`Preview modal classes after ${i * 50}ms:`, previewModal.className);
-            const rect = previewModal.getBoundingClientRect();
-            console.log(`Preview modal bounding rect after ${i * 50}ms:`, rect);
-          }, i * 50);
-        }
-
-        // Final check after longer delay
-        setTimeout(() => {
-          console.log('Preview modal final state:', previewModal.className);
-          console.log('Preview modal final computed styles:', {
-            display: window.getComputedStyle(previewModal).display,
-            opacity: window.getComputedStyle(previewModal).opacity,
-            visibility: window.getComputedStyle(previewModal).visibility,
-            zIndex: window.getComputedStyle(previewModal).zIndex
-          });
-        }, 1000);
-      }
-
-      // Test function for image detail modal
-      function testImageModal() {
-        console.log('=== Image Detail Modal Test ===');
-        const imageModal = document.getElementById('image-detail-modal');
-        console.log('Image modal element:', imageModal);
-        console.log('Image modal classes:', imageModal.className);
-        console.log('Image modal HTML:', imageModal.outerHTML);
-
-        // Test if FlyonUI can find this modal
-        const flyonuiButton = document.createElement('button');
-        flyonuiButton.setAttribute('data-overlay', '#image-detail-modal');
-        flyonuiButton.style.display = 'none';
-        document.body.appendChild(flyonuiButton);
-
-        console.log('Test button created with data-overlay:', flyonuiButton.getAttribute('data-overlay'));
-
-        // Try to trigger the modal
-        flyonuiButton.click();
-
-        // Clean up
-        document.body.removeChild(flyonuiButton);
-
-        console.log('Image modal test completed');
-      }
-
-      // Call test function when page loads
-      window.addEventListener('load', function () {
-        console.log('Page loaded, testing modal...');
-        testModal();
-        testImageModal();
-
-        // Add event listeners for close buttons
-        const closeXButton = document.getElementById('modal-close-x');
-        const closeButton = document.getElementById('modal-close-button');
-
-        if (closeXButton) {
-          closeXButton.addEventListener('click', function () {
-            logCloseButtonClick('X button');
-          });
-        }
-
-        if (closeButton) {
-          closeButton.addEventListener('click', function () {
-            logCloseButtonClick('Close button');
-          });
-        }
-
-
+    // Reorder and show rows
+    const tbody = document.querySelector('tbody');
+    if (tbody) {
+      // Remove existing rows
+      rowData.forEach(item => {
+        item.row.remove();
       });
 
-      // Function to reset all filters
-      function resetAllFilters() {
-        console.log('Resetting all filters...');
+      // Add rows in sorted order
+      rowData.forEach(item => {
+        item.row.style.display = '';
+        tbody.appendChild(item.row);
+      });
+    }
 
-        // Reset search input
-        const searchInput = document.getElementById('exampleDataList');
-        if (searchInput) {
-          searchInput.value = '';
-        }
+    // Update pagination info
+    const paginationInfo = document.querySelector('.text-sm.text-base-content\\/80');
+    if (paginationInfo) {
+      paginationInfo.innerHTML = `<span class="font-semibold">${visibleCount}</span> 件の画像を表示中`;
+    }
 
-        // Reset date sort
-        const dateSort = document.getElementById('dateSort');
-        if (dateSort) {
-          dateSort.selectedIndex = 0; // Select first option
-        }
+    // Show "no results" message if no rows are visible
+    let noResultsRow = tbody.querySelector('.no-results-row');
 
-        // Reset status filter
-        const statusFilter = document.getElementById('selectFloating');
-        if (statusFilter) {
-          statusFilter.selectedIndex = 0; // Select first option
-        }
+    console.log('検索結果チェック:', { visibleCount, totalRows: rows.length, hasNoResultsRow: !!noResultsRow });
 
-        // Reset user filter
-        const userFilter = document.getElementById('userFilter');
-        if (userFilter) {
-          userFilter.selectedIndex = 0; // Select first option
-        }
-
-
-
-        // Reset model filter
-        const modelFilter = document.getElementById('modelFilter');
-        if (modelFilter) {
-          modelFilter.selectedIndex = 0; // Select first option
-        }
-
-        console.log('All filters have been reset');
+    if (visibleCount === 0 && rows.length > 0) {
+      console.log('検索結果なしメッセージを表示');
+      if (!noResultsRow) {
+        noResultsRow = document.createElement('tr');
+        noResultsRow.className = 'no-results-row';
+        noResultsRow.innerHTML = `
+          <td colspan="8" class="text-center py-8">
+            <div class="text-gray-500">
+              <span class="icon-[tabler--search] size-8 mx-auto mb-2 block"></span>
+              検索条件に一致する画像が見つかりません
+            </div>
+          </td>
+        `;
+        tbody.appendChild(noResultsRow);
+        console.log('検索結果なしメッセージを追加');
       }
-    </script>
-  </body>
+      noResultsRow.style.display = '';
+    } else if (noResultsRow) {
+      console.log('検索結果なしメッセージを非表示');
+      noResultsRow.style.display = 'none';
+    }
+  }
 
-</html>
+  // Add event listeners for filters
+  document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('exampleDataList');
+    const filters = document.querySelectorAll('select');
+
+    // Search input
+    if (searchInput) {
+      searchInput.addEventListener('input', applyFilters);
+    }
+
+    // Filter selects
+    filters.forEach(filter => {
+      filter.addEventListener('change', applyFilters);
+    });
+  });
+
+  // モーダルに画像データを設定する関数
+  function openImageModal(filename, imageSrc, uploadTime, username, status, analysisStart, analysisEnd, model, labels, confidence) {
+    // モーダルの内容を設定
+    document.getElementById('modal-filename').textContent = filename;
+    document.getElementById('modal-image').src = imageSrc;
+    document.getElementById('modal-image').alt = filename;
+    document.getElementById('modal-upload-time').textContent = uploadTime;
+    document.getElementById('modal-username').textContent = username;
+    // ステータスバッジの設定
+    const statusBadge = document.getElementById('modal-status-badge');
+    console.log('Status value:', status); // デバッグ用
+    statusBadge.textContent = status;
+
+    // ステータスに応じてバッジの色を設定
+    if (status === '解析成功') {
+      statusBadge.className = 'badge badge-outline border-dashed badge-success me-2';
+      console.log('Set success badge'); // デバッグ用
+    } else if (status === '解析中') {
+      statusBadge.className = 'badge badge-outline border-dashed badge-info me-2';
+      console.log('Set info badge'); // デバッグ用
+    } else if (status === '準備中') {
+      statusBadge.className = 'badge badge-outline border-dashed badge-secondary me-2';
+      console.log('Set secondary badge'); // デバッグ用
+    } else if (status === '失敗') {
+      statusBadge.className = 'badge badge-outline border-dashed badge-error me-2';
+      console.log('Set error badge'); // デバッグ用
+    } else {
+      statusBadge.className = 'badge badge-outline border-dashed me-2';
+      console.log('Set default badge, status was:', status); // デバッグ用
+    }
+    document.getElementById('modal-analysis-start').textContent = analysisStart;
+    document.getElementById('modal-analysis-end').textContent = analysisEnd;
+    document.getElementById('modal-model').textContent = model;
+
+    // ラベル
+    const labelsContainer = document.getElementById('modal-labels');
+    labelsContainer.innerHTML = '';
+    if (labels && labels.length > 0) {
+      labels.forEach(label => {
+        const badge = document.createElement('span');
+        badge.className = 'badge badge-primary';
+        badge.textContent = label;
+        labelsContainer.appendChild(badge);
+      });
+    } else {
+      labelsContainer.innerHTML = '<span class="text-sm text-gray-500">ラベルなし</span>';
+    }
+
+    // 信頼度
+    const confidenceBadge = document.getElementById('modal-confidence');
+    if (confidence && confidence !== '-') {
+      confidenceBadge.textContent = confidence;
+      confidenceBadge.className = 'badge';
+
+      // 信頼度に応じて色を設定
+      const confidenceValue = parseFloat(confidence.replace('%', ''));
+      if (confidenceValue >= 80) {
+        confidenceBadge.classList.add('badge-success');
+      } else if (confidenceValue >= 60) {
+        confidenceBadge.classList.add('badge-warning');
+      } else {
+        confidenceBadge.classList.add('badge-error');
+      }
+    } else {
+      confidenceBadge.textContent = '-';
+      confidenceBadge.className = 'badge badge-outline';
+    }
+  }
+
+  // 画像読み込み処理
+  function loadImages() {
+    const placeholders = document.querySelectorAll('.image-placeholder-small[data-src]');
+    placeholders.forEach(placeholder => {
+      const src = placeholder.dataset.src;
+      if (src) {
+        const img = new Image();
+        img.onload = function () {
+          placeholder.style.backgroundImage = `url(${src})`;
+          placeholder.classList.add('image-loaded');
+        };
+        img.onerror = function () {
+          console.log('Failed to load image:', src);
+        };
+        img.src = src;
+      }
+    });
+  }
+
+  // テーブルのサムネイル画像クリックイベント
+  document.addEventListener('DOMContentLoaded', function () {
+    // 画像読み込みを開始
+    loadImages();
+    const avatarElements = document.querySelectorAll('.avatar[data-overlay="#slide-down-animated-modal"]');
+
+    avatarElements.forEach(avatar => {
+      avatar.addEventListener('click', function () {
+        const row = this.closest('tr');
+        if (row) {
+          const username = row.querySelector('td:nth-child(1) .font-medium')?.textContent || '';
+          const filename = row.querySelector('td:nth-child(2) .font-medium')?.textContent || '';
+          const uploadTime = row.querySelector('td:nth-child(3)')?.textContent || '';
+          const status = row.querySelector('td:nth-child(4) .badge')?.textContent?.trim() || '';
+          const analysisStart = row.querySelector('td:nth-child(6)')?.textContent || '-';
+          const analysisEnd = row.querySelector('td:nth-child(7)')?.textContent || '-';
+          const model = row.querySelector('td:nth-child(8) .badge')?.textContent || '-';
+          const labels = Array.from(row.querySelectorAll('td:nth-child(9) .badge')).map(badge => badge.textContent);
+          const confidence = row.querySelector('td:nth-child(10) .badge')?.textContent || '-';
+
+          // 画像URLを取得（サムネイルから）
+          const thumbnailImg = row.querySelector('.image-placeholder-small');
+          const imageSrc = thumbnailImg ? thumbnailImg.dataset.src : '';
+
+          // モーダルを開く
+          openImageModal(filename, imageSrc, uploadTime, username, status, analysisStart, analysisEnd, model, labels, confidence);
+        }
+      });
+    });
+
+    // タイムラインモーダル関連のイベント処理
+    document.addEventListener('click', function (event) {
+      // タイムラインモーダルを開くバッジがクリックされた場合
+      if (event.target.getAttribute('data-overlay') === '#timeline-modal') {
+        const row = event.target.closest('tr');
+        const imageId = row ? row.getAttribute('data-image-id') : null;
+        console.log('タイムラインバッジクリック、画像ID:', imageId);
+
+        if (imageId) {
+          openTimelineModal(imageId);
+        }
+      }
+    });
+
+    // タイムラインモーダルを開く関数
+    function openTimelineModal(imageId) {
+      // 画像データを取得
+      const row = document.querySelector(`tr[data-image-id="${imageId}"]`);
+      if (!row) return;
+
+      const filename = row.querySelector('td:nth-child(2) .font-medium')?.textContent || '';
+      const status = row.querySelector('td:nth-child(4) .badge')?.textContent?.trim() || '';
+      const uploadTime = row.querySelector('td:nth-child(3)')?.textContent || '';
+      const analysisStart = row.querySelector('td:nth-child(6)')?.textContent || '-';
+      const analysisEnd = row.querySelector('td:nth-child(7)')?.textContent || '-';
+      const model = row.querySelector('td:nth-child(8) .badge')?.textContent || '-';
+
+      // モーダルにデータを設定
+      document.getElementById('timeline-filename').textContent = filename;
+      document.getElementById('timeline-status').textContent = status;
+      document.getElementById('upload-time').textContent = uploadTime;
+      document.getElementById('analysis-start-time').textContent = analysisStart;
+      document.getElementById('analysis-end-time').textContent = analysisEnd;
+      document.getElementById('model-used').textContent = `使用モデル: ${model}`;
+
+      // 進捗バーの表示制御
+      const progressSection = document.getElementById('timeline-progress-section');
+      if (status === '解析中') {
+        progressSection.classList.remove('hidden');
+        // 進捗バーの更新（ダミーデータ）
+        updateProgressBar(75); // 例: 75%の進捗
+      } else {
+        progressSection.classList.add('hidden');
+      }
+
+      // 所要時間の計算（ダミーデータ）
+      document.getElementById('upload-duration').textContent = '所要時間: 2秒';
+      document.getElementById('analysis-duration').textContent = '所要時間: 15秒';
+      document.getElementById('total-duration').textContent = '17秒';
+    }
+
+    // 進捗バー更新関数
+    function updateProgressBar(percentage) {
+      const progressBar = document.getElementById('timeline-progress-bar');
+      const progressValue = document.getElementById('timeline-progress-value');
+
+      if (progressBar && progressValue) {
+        progressBar.style.width = `${percentage}%`;
+        progressValue.textContent = percentage;
+      }
+    }
+  });
+</script>
+{% endblock %}

@@ -8,7 +8,8 @@ from django.shortcuts import render
 from django.views.decorators.http import require_POST, require_GET
 from django.views.decorators.csrf import csrf_protect
 
-from .models import Image, MLModel, ProgressLog
+from .models import Image, MLModel, ProgressLog, TimelineLog
+from django.utils import timezone
 from .services import analysis_service
 
 ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif'}
@@ -18,6 +19,14 @@ MAX_BYTES = MAX_MB * 1024 * 1024
 def user_image_table(request: HttpRequest):
     images = Image.objects.order_by('-upload_date')
     return render(request, 'main/user_image_table.html', {
+        'images': images,
+        'has_data': images.exists(),
+    })
+
+def admin_image_table(request: HttpRequest):
+    """管理者用画像テーブル"""
+    images = Image.objects.order_by('-upload_date')
+    return render(request, 'admin/admin_image_table.html', {
         'images': images,
         'has_data': images.exists(),
     })
@@ -55,6 +64,19 @@ def api_form_upload(request: HttpRequest):
     saved = []
     for f in valid_files:
         img = save_file_and_create_image(f)
+        
+        # タイムラインログの作成・更新
+        timeline_log, created = TimelineLog.objects.get_or_create(
+            image=img,
+            defaults={
+                'upload_started_at': timezone.now(),
+                'upload_completed_at': timezone.now()
+            }
+        )
+        if not created:
+            timeline_log.upload_completed_at = timezone.now()
+            timeline_log.save()
+        
         saved.append(img)
     
     return JsonResponse({
@@ -91,6 +113,16 @@ def api_start_analysis(request: HttpRequest):
         if not images.exists():
             return JsonResponse({'ok': False, 'error': '解析対象の画像が見つかりません'}, status=400)
     
+    # 解析開始時のタイムライン記録
+    for image in images:
+        timeline_log, created = TimelineLog.objects.get_or_create(
+            image=image,
+            defaults={}
+        )
+        timeline_log.analysis_started_at = timezone.now()
+        timeline_log.model_used = model_name
+        timeline_log.save()
+
     # バックグラウンドで解析を実行
     def run_analysis():
         try:
@@ -228,6 +260,79 @@ def api_update_status(request: HttpRequest):
             'ok': False,
             'error': f'ステータス更新エラー: {str(e)}'
         })
+
+
+@require_GET
+def api_get_timeline(request: HttpRequest, image_id: int):
+    """画像のタイムラインデータを取得するAPI"""
+    try:
+        image = Image.objects.get(id=image_id)
+        
+        # タイムラインログを取得（存在しない場合は作成）
+        timeline_log, created = TimelineLog.objects.get_or_create(
+            image=image,
+            defaults={}
+        )
+        
+        # タイムラインデータを構築
+        timeline_data = {
+            'image_id': image.id,
+            'filename': image.filename,
+            'status': image.status,
+            'upload_started_at': timeline_log.upload_started_at.isoformat() if timeline_log.upload_started_at else None,
+            'upload_completed_at': timeline_log.upload_completed_at.isoformat() if timeline_log.upload_completed_at else None,
+            'analysis_started_at': timeline_log.analysis_started_at.isoformat() if timeline_log.analysis_started_at else None,
+            'analysis_completed_at': timeline_log.analysis_completed_at.isoformat() if timeline_log.analysis_completed_at else None,
+            'model_used': timeline_log.model_used,
+            'upload_duration': timeline_log.upload_duration,
+            'analysis_duration': timeline_log.analysis_duration,
+            'total_duration': timeline_log.total_duration,
+        }
+        
+        return JsonResponse({
+            'ok': True,
+            'timeline': timeline_data
+        })
+        
+    except Image.DoesNotExist:
+        return JsonResponse({
+            'ok': False,
+            'error': '画像が見つかりません'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'ok': False,
+            'error': f'タイムライン取得エラー: {str(e)}'
+        }, status=500)
+
+
+def save_file_and_create_image(uploaded_file):
+    """アップロードされたファイルを保存してImageモデルを作成"""
+    from django.core.files.storage import default_storage
+    
+    # ファイル保存ディレクトリを準備
+    upload_dir = os.path.join(settings.MEDIA_ROOT, 'images')
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # ファイル名を安全にする
+    filename = uploaded_file.name
+    name, ext = os.path.splitext(filename)
+    safe_filename = secure_unique_filename(upload_dir, name, ext)
+    
+    # ファイルを保存
+    file_path = os.path.join(upload_dir, safe_filename)
+    with open(file_path, 'wb+') as destination:
+        for chunk in uploaded_file.chunks():
+            destination.write(chunk)
+    
+    # Imageモデルを作成
+    image = Image.objects.create(
+        filename=safe_filename,
+        file_path=file_path,
+        status='preparing'
+    )
+    
+    return image
 
 def secure_unique_filename(directory: str, base: str, ext: str) -> str:
     name = f"{base}{ext}"
