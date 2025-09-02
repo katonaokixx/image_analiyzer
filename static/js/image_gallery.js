@@ -1,6 +1,5 @@
 // 画像ギャラリーの遅延読み込みとエラーハンドリング
 window.addEventListener('load', () => {
-  console.log('[image_gallery.js] 初期化開始');
 
   // 画像プレースホルダーの遅延読み込み
   function loadImagePlaceholders() {
@@ -20,32 +19,26 @@ window.addEventListener('load', () => {
         placeholder.style.backgroundPosition = 'center';
         placeholder.style.backgroundRepeat = 'no-repeat';
 
-        // プレースホルダーコンテンツを非表示
-        const content = placeholder.querySelector('.placeholder-content, .placeholder-content-small, .placeholder-content-modal');
-        if (content) {
-          content.style.display = 'none';
+        // スケルトンローダーを非表示
+        const skeleton = placeholder.querySelector('.skeleton');
+        if (skeleton) {
+          skeleton.style.display = 'none';
         }
 
-        console.log('[画像読み込み成功]', imageSrc);
+        // クラスを追加してCSSセレクターで確実にスタイル適用
+        placeholder.classList.add('image-loaded');
+
+
       };
 
       img.onerror = () => {
         // 読み込み失敗：エラー表示
-        const content = placeholder.querySelector('.placeholder-content, .placeholder-content-small, .placeholder-content-modal');
-        if (content) {
-          const icon = content.querySelector('span[class*="icon-"]');
-          const text = content.querySelector('p');
-
-          if (icon) {
-            icon.className = 'icon-[tabler--photo-x] size-16 text-error';
-          }
-          if (text) {
-            text.textContent = '画像を読み込めませんでした';
-            text.className = 'text-sm mt-2 text-error';
-          }
+        const skeleton = placeholder.querySelector('.skeleton');
+        if (skeleton) {
+          skeleton.innerHTML = '<div class="flex items-center justify-center h-full text-error"><span class="icon-[tabler--photo-x] size-8"></span></div>';
         }
 
-        console.warn('[画像読み込み失敗]', imageSrc);
+
       };
 
       // 画像読み込み開始
@@ -89,32 +82,24 @@ window.addEventListener('load', () => {
       placeholder.style.backgroundPosition = 'center';
       placeholder.style.backgroundRepeat = 'no-repeat';
 
-      // プレースホルダーコンテンツを非表示
-      const content = placeholder.querySelector('.placeholder-content, .placeholder-content-small, .placeholder-content-modal');
-      if (content) {
-        content.style.display = 'none';
+      // スケルトンローダーを非表示
+      const skeleton = placeholder.querySelector('.skeleton');
+      if (skeleton) {
+        skeleton.style.display = 'none';
       }
 
-      console.log('[遅延読み込み成功]', imageSrc);
+      // クラスを追加してCSSセレクターで確実にスタイル適用
+      placeholder.classList.add('image-loaded');
+
+
     };
 
     img.onerror = () => {
       // 読み込み失敗
-      const content = placeholder.querySelector('.placeholder-content, .placeholder-content-small, .placeholder-content-modal');
-      if (content) {
-        const icon = content.querySelector('span[class*="icon-"]');
-        const text = content.querySelector('p');
-
-        if (icon) {
-          icon.className = 'icon-[tabler--photo-x] size-16 text-error';
-        }
-        if (text) {
-          text.textContent = '画像を読み込めませんでした';
-          text.className = 'text-sm mt-2 text-error';
-        }
+      const skeleton = placeholder.querySelector('.skeleton');
+      if (skeleton) {
+        skeleton.innerHTML = '<div class="flex items-center justify-center h-full text-error"><span class="icon-[tabler--photo-x] size-8"></span></div>';
       }
-
-      console.warn('[遅延読み込み失敗]', imageSrc);
     };
 
     img.src = imageSrc;
@@ -128,5 +113,5 @@ window.addEventListener('load', () => {
     loadImagePlaceholders();
   }
 
-  console.log('[image_gallery.js] 初期化完了');
+
 });

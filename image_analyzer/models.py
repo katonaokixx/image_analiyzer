@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 import os
+import urllib.parse
 
 # Create your models here.
 
@@ -137,7 +138,9 @@ class Image(models.Model):
         if self.file_path:
             # 絶対パスから相対パスに変換
             relative_path = os.path.relpath(self.file_path, settings.MEDIA_ROOT)
-            return f"{settings.MEDIA_URL}{relative_path}"
+            # ファイル名をURLエンコード
+            encoded_path = urllib.parse.quote(relative_path, safe='/')
+            return f"{settings.MEDIA_URL}{encoded_path}"
         return None
     
     @property
@@ -146,7 +149,9 @@ class Image(models.Model):
         if self.thumbnail_path:
             # 絶対パスから相対パスに変換
             relative_path = os.path.relpath(self.thumbnail_path, settings.MEDIA_ROOT)
-            return f"{settings.MEDIA_URL}{relative_path}"
+            # ファイル名をURLエンコード
+            encoded_path = urllib.parse.quote(relative_path, safe='/')
+            return f"{settings.MEDIA_URL}{encoded_path}"
         return self.file_url  # サムネイルがない場合は元画像を使用
 
 

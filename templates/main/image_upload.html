@@ -4,12 +4,12 @@
 {% block title %}画像アップロード - 画像解析アプリ{% endblock %}
 
 {% block content %}
-<div class="pt-8 mb-8">
-  <div class="card max-w-5xl !max-w-5xl w-full mx-auto" style="max-width:1024px!important;width:100%;">
+<div class="pt-8 mb-8 px-4 sm:px-6 lg:px-8">
+  <div class="card max-w-5xl w-full mx-auto">
     <div class="card-header">
-      <h5 class="card-title">画像アップロード</h5>
+      <h5 class="card-title text-lg sm:text-xl">画像アップロード</h5>
     </div>
-    <div class="card-body">
+    <div class="card-body p-4 sm:p-6">
 
       <!-- CSRFトークン -->
       {% csrf_token %}
@@ -82,15 +82,18 @@
         <!-- ドロップ領域 -->
         <div
           class="bg-base-200/60 rounded-box flex flex-col justify-center border-2 border-base-content/20 border-dashed">
-          <div class="text-center cursor-pointer p-12" data-file-upload-trigger="">
-            <p class="text-base-content/50 mb-3 text-sm">1MB以下のファイルを選択してください。（最大5枚、合計5MBまで）</p>
+          <div class="text-center cursor-pointer p-6 sm:p-8 lg:p-12" data-file-upload-trigger="">
+            <p class="text-base-content/50 mb-3 text-xs sm:text-sm">1MB以下のファイルを選択してください。（最大5枚、合計5MBまで）</p>
             <button class="btn btn-soft btn-sm btn-primary text-nowrap">
-              <span class="icon-[tabler--file-upload] size-4.5 shrink-0"></span> ドラッグ&ドロップでアップロード
+              <span class="icon-[tabler--file-upload] size-4 sm:size-4.5 shrink-0"></span>
+              <span class="hidden sm:inline">ドラッグ&ドロップでアップロード</span>
+              <span class="sm:hidden">アップロード</span>
             </button>
             <p class="text-base-content/50 my-2 text-xs">または</p>
-            <p class="link link-animated link-primary font-medium text-sm">ファイルを選択</p>
+            <p class="link link-animated link-primary font-medium text-xs sm:text-sm">ファイルを選択</p>
           </div>
-          <div class="mx-12 mb-8 space-y-2 empty:m-0" data-file-upload-previews=""></div>
+          <div class="mx-4 sm:mx-8 lg:mx-12 mb-4 sm:mb-6 lg:mb-8 space-y-2 empty:m-0" data-file-upload-previews="">
+          </div>
         </div>
 
         <!-- アップロード開始ボタン -->
@@ -111,8 +114,9 @@
         <!-- 戻るリンク -->
         <div class="group flex items-center justify-center gap-2 pt-4 pb-4">
           <span
-            class="icon-[tabler--chevron-left] text-primary size-5 shrink-0 transition-transform group-hover:-translate-x-1 rtl:rotate-180"></span>
-          <a href="{% url 'user_image_table' %}" class="link link-animated link-primary font-normal">画像一覧へ</a>
+            class="icon-[tabler--chevron-left] text-primary size-4 sm:size-5 shrink-0 transition-transform group-hover:-translate-x-1 rtl:rotate-180"></span>
+          <a href="{% url 'user_image_table' %}"
+            class="link link-animated link-primary font-normal text-sm sm:text-base">画像一覧へ</a>
         </div>
 
         <!-- タイムライン -->
@@ -126,16 +130,16 @@
                 <span class="icon-[tabler--check] text-success-content size-3.5" id="timeline-badge-1"></span>
               </span>
             </div>
-            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-4 pt-1 bg-success/5 border border-success/20">
+            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-success/5 border border-success/20">
               <div
                 class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
-                ファイルアップロード完了
-                <span class="text-base-content/50 text-sm font-normal">今すぐ</span>
+                <span class="text-sm sm:text-base">ファイルアップロード完了</span>
+                <span class="text-base-content/50 text-xs sm:text-sm font-normal">今すぐ</span>
               </div>
-              <p id="timeline-description" class="mb-2">ファイルのアップロードに成功しました</p>
+              <p id="timeline-description" class="mb-2 text-xs sm:text-sm">ファイルのアップロードに成功しました</p>
               <div class="flex items-center gap-2">
-                <span class="icon-[tabler--check-circle] text-success size-5"></span>
-                <span class="text-sm text-success font-medium">アップロード成功</span>
+                <span class="icon-[tabler--check-circle] text-success size-4 sm:size-5"></span>
+                <span class="text-xs sm:text-sm text-success font-medium">アップロード成功</span>
               </div>
             </div>
             <hr class="bg-success" />
@@ -149,16 +153,16 @@
                 <span class="icon-[tabler--alert-triangle] text-error-content size-3.5"></span>
               </span>
             </div>
-            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-4 pt-1 border border-error/30 bg-error/5">
+            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 border border-error/30 bg-error/5">
               <div
                 class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
-                ファイルアップロード失敗
-                <span class="text-base-content/50 text-sm font-normal">今すぐ</span>
+                <span class="text-sm sm:text-base">ファイルアップロード失敗</span>
+                <span class="text-base-content/50 text-xs sm:text-sm font-normal">今すぐ</span>
               </div>
-              <p id="timeline-error-description" class="mb-2">ファイルのアップロードに失敗しました</p>
+              <p id="timeline-error-description" class="mb-2 text-xs sm:text-sm">ファイルのアップロードに失敗しました</p>
               <div class="flex items-center gap-2">
-                <span class="icon-[tabler--alert-circle] text-error size-5"></span>
-                <span class="text-sm text-error font-medium">アップロード失敗</span>
+                <span class="icon-[tabler--alert-circle] text-error size-4 sm:size-5"></span>
+                <span class="text-xs sm:text-sm text-error font-medium">アップロード失敗</span>
               </div>
             </div>
             <hr class="bg-error" />
@@ -172,31 +176,32 @@
                 <span class="icon-[tabler--player-play] text-warning-content size-3.5"></span>
               </span>
             </div>
-            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-4 pt-1">
+            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1">
               <div
                 class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
-                解析開始
-                <span class="text-base-content/50 text-sm font-normal">今すぐ</span>
+                <span class="text-sm sm:text-base">解析開始</span>
+                <span class="text-base-content/50 text-xs sm:text-sm font-normal">今すぐ</span>
               </div>
-              <p class="mb-2">AIによる画像解析を開始しました。</p>
+              <p class="mb-2 text-xs sm:text-sm">AIによる画像解析を開始しました。</p>
               <div class="flex items-center gap-1 mb-3">
-                <span class="text-sm text-warning font-medium">解析中</span>
+                <span class="text-xs sm:text-sm text-warning font-medium">解析中</span>
                 <div class="flex gap-1">
-                  <span class="w-1.5 h-1.5 bg-warning rounded-full animate-pulse"></span>
-                  <span class="w-1.5 h-1.5 bg-warning rounded-full animate-pulse"></span>
-                  <span class="w-1.5 h-1.5 bg-warning rounded-full animate-pulse"></span>
+                  <span class="w-1 sm:w-1.5 h-1 sm:h-1.5 bg-warning rounded-full animate-pulse"></span>
+                  <span class="w-1 sm:w-1.5 h-1 sm:h-1.5 bg-warning rounded-full animate-pulse"></span>
+                  <span class="w-1 sm:w-1.5 h-1 sm:h-1.5 bg-warning rounded-full animate-pulse"></span>
                 </div>
               </div>
-              <div class="flex items-center gap-x-3 whitespace-nowrap mb-2">
-                <div class="progress h-2" id="analysis-progress">
+              <div class="flex items-center gap-x-2 sm:gap-x-3 whitespace-nowrap mb-2">
+                <div class="progress h-1.5 sm:h-2 flex-1" id="analysis-progress">
                   <div class="progress-bar progress-success transition-all duration-500" style="width:0%"
                     id="analysis-progress-bar"></div>
                 </div>
-                <span class="text-base-content mb-0.5 text-sm"><span id="analysis-progress-value">0</span>%</span>
+                <span class="text-base-content mb-0.5 text-xs sm:text-sm"><span
+                    id="analysis-progress-value">0</span>%</span>
               </div>
               <div class="flex items-center gap-2" id="analysis-status-container">
-                <span class="icon-[tabler--brain] text-warning size-5"></span>
-                <span class="text-sm text-warning font-medium">解析中</span>
+                <span class="icon-[tabler--brain] text-warning size-4 sm:size-5"></span>
+                <span class="text-xs sm:text-sm text-warning font-medium">解析中</span>
               </div>
             </div>
             <hr class="bg-warning" />
@@ -210,16 +215,16 @@
                 <span class="icon-[tabler--check] text-info-content size-3.5"></span>
               </span>
             </div>
-            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-4 pt-1">
+            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1">
               <div
                 class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
-                解析完了
-                <span class="text-base-content/50 text-sm font-normal">今すぐ</span>
+                <span class="text-sm sm:text-base">解析完了</span>
+                <span class="text-base-content/50 text-xs sm:text-sm font-normal">今すぐ</span>
               </div>
-              <p class="mb-2">画像のカテゴリー分類が完了しました</p>
+              <p class="mb-2 text-xs sm:text-sm">画像のカテゴリー分類が完了しました</p>
               <div class="flex items-center gap-2">
-                <span class="icon-[tabler--brain] text-info size-5"></span>
-                <span class="text-sm text-info font-medium">完了</span>
+                <span class="icon-[tabler--brain] text-info size-4 sm:size-5"></span>
+                <span class="text-xs sm:text-sm text-info font-medium">完了</span>
               </div>
             </div>
             <hr class="bg-info" />
@@ -237,25 +242,26 @@
 <!-- モデル選択モーダル -->
 <div id="slide-down-animated-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden"
   role="dialog" tabindex="-1">
-  <div class="modal-dialog overlay-open:mt-12 overlay-open:duration-300 transition-all ease-out">
+  <div
+    class="modal-dialog overlay-open:mt-4 sm:overlay-open:mt-8 lg:overlay-open:mt-12 overlay-open:duration-300 transition-all ease-out max-w-sm sm:max-w-md lg:max-w-lg">
     <div class="modal-content">
-      <div class="modal-header">
-        <h3 class="modal-title">画像解析モデル選択</h3>
+      <div class="modal-header p-4 sm:p-6">
+        <h3 class="modal-title text-lg sm:text-xl">画像解析モデル選択</h3>
         <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
           data-overlay="#slide-down-animated-modal">
           <span class="icon-[tabler--x] size-4"></span>
         </button>
       </div>
-      <div class="modal-body">
-        <div class="flex flex-col gap-6">
+      <div class="modal-body p-4 sm:p-6">
+        <div class="flex flex-col gap-4 sm:gap-6">
           <div class="text-center">
-            <p class="text-base text-gray-600 mb-2">アップロードされた画像を解析するための機械学習モデルを選択してください。</p>
-            <p class="text-sm text-gray-500">各モデルは異なる特徴を持ち、解析目的に応じて最適なものを選択できます。</p>
+            <p class="text-sm sm:text-base text-gray-600 mb-2">アップロードされた画像を解析するための機械学習モデルを選択してください。</p>
+            <p class="text-xs sm:text-sm text-gray-500">各モデルは異なる特徴を持ち、解析目的に応じて最適なものを選択できます。</p>
           </div>
           <div class="space-y-3">
             <div class="form-control">
-              <label class="label"><span class="label-text font-semibold">解析モデル</span></label>
-              <select class="select select-bordered w-full" id="model-selector">
+              <label class="label"><span class="label-text font-semibold text-sm sm:text-base">解析モデル</span></label>
+              <select class="select select-bordered w-full text-sm sm:text-base" id="model-selector">
                 <option value="">モデルを選択してください</option>
                 <option value="resnet50">ResNet-50 v2.1 (汎用画像分類)</option>
                 <option value="efficientnet">EfficientNet-B0 (軽量・高速)</option>
@@ -264,9 +270,9 @@
                 <option value="custom">カスタムモデル (特定用途特化)</option>
               </select>
             </div>
-            <div class="bg-base-200 rounded-lg p-4">
-              <h4 class="font-semibold text-sm mb-2">選択されたモデルの特徴</h4>
-              <p class="text-sm text-gray-600" id="model-description">モデルを選択すると、ここに詳細な説明が表示されます。</p>
+            <div class="bg-base-200 rounded-lg p-3 sm:p-4">
+              <h4 class="font-semibold text-xs sm:text-sm mb-2">選択されたモデルの特徴</h4>
+              <p class="text-xs sm:text-sm text-gray-600" id="model-description">モデルを選択すると、ここに詳細な説明が表示されます。</p>
             </div>
           </div>
         </div>
