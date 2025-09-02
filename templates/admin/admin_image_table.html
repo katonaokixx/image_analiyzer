@@ -255,20 +255,41 @@
   <div class="flex flex-wrap items-center justify-between gap-2 py-4">
     <div class="text-sm text-base-content/80">
       {% if has_data %}
-      <span class="font-semibold">{{ images|length }}</span> 件の画像を表示中
+      Showing <span class="font-semibold">{{ page_obj.start_index }}-{{ page_obj.end_index }}</span> of
+      <span class="font-semibold">{{ page_obj.paginator.count }}</span> images
       {% else %}
       画像データがありません
       {% endif %}
     </div>
-    {% if has_data and images|length > 10 %}
+    {% if has_data and page_obj.has_other_pages %}
     <nav class="join">
+      {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}" class="btn btn-soft btn-square join-item">
+        <span class="icon-[tabler--chevron-left] size-5"></span>
+      </a>
+      {% else %}
       <button class="btn btn-soft btn-square join-item" disabled>
         <span class="icon-[tabler--chevron-left] size-5"></span>
       </button>
-      <button class="btn btn-soft join-item btn-square" aria-current="page">1</button>
-      <button class="btn btn-soft btn-square join-item" disabled>
-        <span class="icon-[tabler--chevron-right] size-5"></span>
-      </button>
+      {% endif %}
+
+      {% for num in page_obj.paginator.page_range %}
+      {% if page_obj.number == num %}
+      <button class="btn btn-soft join-item btn-square" aria-current="page">{{ num }}</button>
+      {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %} <a href="?page={{ num }}"
+        class="btn btn-soft join-item btn-square">{{ num }}</a>
+        {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="btn btn-soft btn-square join-item">
+          <span class="icon-[tabler--chevron-right] size-5"></span>
+        </a>
+        {% else %}
+        <button class="btn btn-soft btn-square join-item" disabled>
+          <span class="icon-[tabler--chevron-right] size-5"></span>
+        </button>
+        {% endif %}
     </nav>
     {% endif %}
   </div>

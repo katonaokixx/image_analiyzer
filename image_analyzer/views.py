@@ -7,6 +7,7 @@ from django.http import JsonResponse, HttpRequest
 from django.shortcuts import render
 from django.views.decorators.http import require_POST, require_GET
 from django.views.decorators.csrf import csrf_protect
+from django.core.paginator import Paginator
 
 from .models import Image, MLModel, ProgressLog, TimelineLog
 from django.utils import timezone
@@ -18,16 +19,30 @@ MAX_BYTES = MAX_MB * 1024 * 1024
 
 def user_image_table(request: HttpRequest):
     images = Image.objects.order_by('-upload_date')
+    
+    # ページネーション設定
+    paginator = Paginator(images, 10)  # 10件/ページ
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
     return render(request, 'main/user_image_table.html', {
-        'images': images,
+        'images': page_obj,  # ページネーションされたオブジェクト
+        'page_obj': page_obj,  # ページネーション情報
         'has_data': images.exists(),
     })
 
 def admin_image_table(request: HttpRequest):
     """管理者用画像テーブル"""
     images = Image.objects.order_by('-upload_date')
+    
+    # ページネーション設定
+    paginator = Paginator(images, 10)  # 10件/ページ
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
     return render(request, 'admin/admin_image_table.html', {
-        'images': images,
+        'images': page_obj,  # ページネーションされたオブジェクト
+        'page_obj': page_obj,  # ページネーション情報
         'has_data': images.exists(),
     })
 
