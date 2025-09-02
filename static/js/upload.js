@@ -1,4 +1,67 @@
+
+
 // ファイルアップロード関連のJavaScript
+let progressIntervalId = null; // グローバルスコープで定義
+let uploadEl = null; // グローバルスコープで定義
+
+// 進捗監視関数をグローバルスコープで定義
+function startProgressWatcher() {
+  return setInterval(checkUploadProgress, 50);
+}
+
+function stopProgressWatcher() {
+  if (progressIntervalId) {
+    clearInterval(progressIntervalId);
+    progressIntervalId = null;
+    console.log('=== 進捗監視停止 ===');
+  }
+}
+
+function checkUploadProgress() {
+  // より広範囲で進捗バーを検索
+  const bars = document.querySelectorAll('[data-file-upload-progress-bar-pane]');
+  if (bars.length === 0) return;
+
+  bars.forEach((bar, idx) => {
+    const raw = bar.style.width || getComputedStyle(bar).width;
+    const pct = normalizePercent(raw);
+    if (raw !== bar.dataset.lastRaw) {
+      console.log(`progress[${idx}] ${pct.toFixed(1)}%`);
+      bar.dataset.lastRaw = raw;
+
+      // 進捗％表示を更新
+      const progressValue = bar.closest('[data-file-upload-preview]')?.querySelector('[data-file-upload-progress-value]');
+      if (progressValue) {
+        progressValue.textContent = Math.round(pct);
+      }
+    }
+  });
+}
+
+function normalizePercent(widthStr) {
+  if (!widthStr) return 0;
+
+  // %表記の場合
+  if (widthStr.endsWith('%')) {
+    const match = widthStr.match(/(\d+(?:\.\d+)?)/);
+    return match ? parseFloat(match[1]) : 0;
+  }
+
+  // px表記の場合
+  if (widthStr.endsWith('px')) {
+    const px = parseFloat(widthStr);
+    const parent = document.querySelector('[data-file-upload-progress-bar-pane]')?.parentElement;
+    if (parent && parent.offsetWidth > 0) {
+      return (px / parent.offsetWidth) * 100;
+    }
+    return 0;
+  }
+
+  // 数字のみの場合
+  const match = widthStr.match(/(\d+(?:\.\d+)?)/);
+  return match ? parseFloat(match[1]) : 0;
+}
+
 window.addEventListener('load', () => {
   console.log('=== ファイルアップロード初期化開始 ===');
 
@@ -57,7 +120,7 @@ window.addEventListener('load', () => {
     return;
   }
 
-  const uploadEl = document.querySelector('#file-upload-limit');
+  uploadEl = document.querySelector('#file-upload-limit');
   if (!uploadEl) {
     console.error('#file-upload-limit 要素が見つかりません。初期化中断');
     return;
@@ -121,17 +184,27 @@ window.addEventListener('load', () => {
   emitter.on('addedfile', (file) => {
     console.log('=== addedfile ===', file && file.name);
     if (!firstFileAddedAt) firstFileAddedAt = Date.now();
-            showUploadButton();
-            checkFilesAndUpdateButton();
-    if (!uploadInProgress && !window.uploadSuccessShown) {
-      setUploadBtn(START_TEXT, false);
+    showUploadButton();
+    function checkFilesAndUpdateButton() {
+      const previews = uploadEl.querySelectorAll('[data-file-upload-preview]');
+      const c = document.getElementById('upload-button-container');
+      if (!c) return;
+
+      // uploadInProgress または 成功表示中 は非表示にしない
+      if (uploadInProgress || window.uploadSuccessShown) {
+        c.classList.remove('hidden');
+        return;
+      }
+
+      if (previews.length === 0) c.classList.add('hidden');
+      else c.classList.remove('hidden');
     }
-        });
+  });
 
   emitter.on('removedfile', (file) => {
     console.log('=== removedfile ===', file && file.name);
-          checkFilesAndUpdateButton();
-        });
+    checkFilesAndUpdateButton();
+  });
 
   emitter.on('error', (file, msg) => {
     console.warn('=== Dropzone error ===', file && file.name, msg);
@@ -139,6 +212,9 @@ window.addEventListener('load', () => {
     showUploadError(typeof msg === 'string' ? msg : 'アップロードに失敗しました');
     uploadInProgress = false;
     setUploadBtn(RETRY_TEXT, false);
+
+    // エラー時に進捗監視を停止
+    stopProgressWatcher();
   });
 
   // 個別成功 (集計のみ)
@@ -150,7 +226,6 @@ window.addEventListener('load', () => {
   // キュー完了 (集計表示に一本化)
   emitter.on('queuecomplete', () => {
     console.log('=== queuecomplete ===');
-    stopProgressWatcher();
     uploadInProgress = false;
 
     const succeededInBatch = batchSuccessCount;
@@ -160,7 +235,6 @@ window.addEventListener('load', () => {
       totalUploadedFiles += succeededInBatch;
       sessionUploadCount += succeededInBatch;
 
-      // 累積表示メッセージ
       let msg;
       if (sessionUploadCount === 1) {
         msg = '1件のファイルをアップロードしました。';
@@ -168,21 +242,19 @@ window.addEventListener('load', () => {
         msg = `合計${sessionUploadCount}件のファイルをアップロードしました。`;
       }
 
-      showUploadSuccess(msg, true); // 強制上書き
+      showUploadSuccess(msg, true);
 
-      // 成功したファイルをクリア（重複アップロード防止）
-      dz.removeAllFiles(true); // true = 成功したファイルも削除
+      // 成功ファイルは削除せず、プレビューと進捗バーを残す
+      // dz.removeAllFiles(true); // 進捗バーを残すためにコメントアウト
     } else if (failedInBatch > 0) {
       showUploadError('ファイルのアップロードに失敗しました');
     }
 
-    if (failedInBatch > 0 && succeededInBatch === 0) {
-      setUploadBtn(RETRY_TEXT, false);
-    } else {
-      setUploadBtn(START_TEXT, false);
-    }
-
+    setUploadBtn(START_TEXT, false);
     currentBatchFiles = [];
+
+    // アップロード完了時に進捗監視を停止
+    stopProgressWatcher();
   });
 
   // 手動開始ボタン
@@ -190,29 +262,18 @@ window.addEventListener('load', () => {
 
   // DOM変更監視 (サブ保険)
   const observer = new MutationObserver(() => {
-              checkFilesAndUpdateButton();
+    checkFilesAndUpdateButton();
   });
   observer.observe(uploadEl, { childList: true, subtree: true });
 
-  // 進捗監視開始
-  let progressIntervalId = startProgressWatcher();
-
-  function startProgressWatcher() {
-    return setInterval(checkUploadProgress, 600);
-  }
-  function stopProgressWatcher() {
-    if (progressIntervalId) {
-      clearInterval(progressIntervalId);
-      progressIntervalId = null;
-      console.log('=== 進捗監視停止 ===');
-    }
-  }
+  // 進捗監視はアップロード開始時に開始するため、ここでは開始しない
+  // progressIntervalId = startProgressWatcher();
 
   // XHR フック (多重防止 & 対象URLフィルタ)
   if (!XMLHttpRequest.__uploadHooked) {
     XMLHttpRequest.__uploadHooked = true;
     const origSend = XMLHttpRequest.prototype.send;
-        XMLHttpRequest.prototype.send = function (...args) {
+    XMLHttpRequest.prototype.send = function (...args) {
       const targetUrl = dz.options && dz.options.url;
       // フック対象か判定 (open のとき記録する方式が本来安全だが簡易で)
       this.addEventListener('load', function () {
@@ -228,11 +289,11 @@ window.addEventListener('load', () => {
             showUploadError(data.error);
           } else if (!data) {
             // 非JSON だが 200 → そのまま黙認 (Dropzone が success 判定する)
-              }
-            } else {
-              showUploadError('ファイルのアップロードに失敗しました');
-            }
-          });
+          }
+        } else {
+          showUploadError('ファイルのアップロードに失敗しました');
+        }
+      });
       return origSend.apply(this, args);
     };
   }
@@ -267,11 +328,15 @@ window.addEventListener('load', () => {
       batchSuccessCount = 0;
       batchFailCount = 0;
 
-      if (!progressIntervalId) progressIntervalId = startProgressWatcher();
-
       btn.disabled = true;
       btn.textContent = UPLOADING_TEXT;
       uploadInProgress = true;
+
+      // 進捗監視を開始（既存の監視があれば停止してから開始）
+      if (progressIntervalId) {
+        stopProgressWatcher();
+      }
+      progressIntervalId = startProgressWatcher();
 
       try {
         dz.processQueue();
@@ -283,22 +348,7 @@ window.addEventListener('load', () => {
     });
   }
 
-  function normalizePercent(widthStr) {
-    if (!widthStr) return 0;
-    if (widthStr.endsWith('%')) return parseFloat(widthStr);
-    if (widthStr.endsWith('px')) {
-      // 親幅から換算 (簡易)
-      const parent = uploadEl.querySelector('.progress.h-2');
-      if (parent) {
-        const pw = parent.getBoundingClientRect().width;
-        const val = parseFloat(widthStr);
-        return pw ? (val / pw) * 100 : 0;
-      }
-      return 0;
-    }
-    const num = parseFloat(widthStr);
-    return isNaN(num) ? 0 : num;
-  }
+
 
   function isVisible(el) {
     if (!el) return false;
@@ -319,33 +369,7 @@ window.addEventListener('load', () => {
     return null;
   }
 
-  function checkUploadProgress() {
-    const bars = uploadEl.querySelectorAll('[data-file-upload-progress-bar-pane]');
-    if (bars.length === 0) return;
 
-    bars.forEach((bar, idx) => {
-      const raw = bar.style.width || getComputedStyle(bar).width;
-      const pct = normalizePercent(raw);
-      if (raw !== bar.dataset.lastRaw) {
-        console.log(`progress[${idx}] ${pct.toFixed(1)}%`);
-        bar.dataset.lastRaw = raw;
-      }
-
-      // エラースキャン (猶予後)
-      if (firstFileAddedAt &&
-        Date.now() - firstFileAddedAt > ERROR_SCAN_DELAY_MS &&
-        !window.uploadSuccessShown) {
-        const preview = bar.closest('[data-file-upload-preview]');
-        if (preview) {
-          const errMsg = detectVisibleUploadError(preview);
-          if (errMsg) {
-            console.log('可視化されたエラー検出:', errMsg);
-            showUploadError(errMsg);
-          }
-        }
-      }
-    });
-  }
 
   function showUploadSuccess(message, force = false) {
     if (!force && window.uploadSuccessShown) return;
