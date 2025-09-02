@@ -481,7 +481,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       const modal = document.getElementById('slide-down-animated-modal');
-      if (modal) modal.classList.add('hidden');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('overlay-open');
+        modal.style.display = 'none';
+        modal.style.opacity = '0';
+        modal.style.visibility = 'hidden';
+      }
       startAnalysis(model);
     });
   }
@@ -513,34 +519,102 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function startAnalysis(modelName) {
   console.log('解析開始:', modelName);
+
+  // 解析開始UIを表示
   const item2 = document.getElementById('timeline-item-2');
   if (item2) {
     item2.classList.remove('hidden');
     item2.style.display = 'block';
   }
+
   const animationInterval = startAnalysisAnimation();
   const bar = document.getElementById('analysis-progress-bar');
   const valEl = document.getElementById('analysis-progress-value');
-  let progress = 0;
-  const t = setInterval(() => {
-    progress += Math.random() * 10;
-    if (progress > 100) progress = 100;
-    if (bar) bar.style.width = progress + '%';
-    if (valEl) valEl.textContent = Math.round(progress);
-    if (progress >= 100) {
-      clearInterval(t);
+
+  // 実際のAPI呼び出し
+  fetch('/image_analyzer/api/analysis/start/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': getCSRFToken()
+    },
+    body: new URLSearchParams({
+      'model': modelName
+    })
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.ok) {
+        console.log('解析開始API成功:', data);
+        // 進捗監視を開始
+        monitorAnalysisProgress(bar, valEl, animationInterval);
+      } else {
+        console.error('解析開始API失敗:', data.error);
+        showAnalysisError(data.error || '解析の開始に失敗しました');
+        clearInterval(animationInterval);
+      }
+    })
+    .catch(error => {
+      console.error('解析開始API呼び出しエラー:', error);
+      showAnalysisError('解析の開始に失敗しました');
       clearInterval(animationInterval);
-      setTimeout(() => {
-        const item3 = document.getElementById('timeline-item-3');
-        if (item3) {
-          item3.classList.remove('hidden');
-          item3.style.display = 'block';
+    });
+}
+
+function monitorAnalysisProgress(bar, valEl, animationInterval) {
+  let progress = 0;
+  const progressInterval = setInterval(() => {
+    // 実際の進捗を取得するAPI呼び出し
+    fetch('/image_analyzer/api/analysis/progress/')
+      .then(response => response.json())
+      .then(data => {
+        if (data.ok && data.progress !== undefined) {
+          progress = data.progress;
+          if (bar) bar.style.width = progress + '%';
+          if (valEl) valEl.textContent = Math.round(progress);
+
+          if (progress >= 100) {
+            clearInterval(progressInterval);
+            clearInterval(animationInterval);
+            setTimeout(() => {
+              const item3 = document.getElementById('timeline-item-3');
+              if (item3) {
+                item3.classList.remove('hidden');
+                item3.style.display = 'block';
+              }
+              // 解析完了後にセッションカウンターをリセット
+              if (typeof sessionUploadCount !== 'undefined') {
+                sessionUploadCount = 0;
+              }
+            }, 600);
+          }
         }
-        // 解析完了後にセッションカウンターをリセット
-        if (typeof sessionUploadCount !== 'undefined') {
-          sessionUploadCount = 0;
+      })
+      .catch(error => {
+        console.error('進捗取得エラー:', error);
+        // エラー時は手動で進捗を進める
+        progress += Math.random() * 10;
+        if (progress > 100) progress = 100;
+        if (bar) bar.style.width = progress + '%';
+        if (valEl) valEl.textContent = Math.round(progress);
+
+        if (progress >= 100) {
+          clearInterval(progressInterval);
+          clearInterval(animationInterval);
         }
-      }, 600);
-    }
-  }, 200);
+      });
+  }, 1000); // 1秒ごとに進捗を確認
+}
+
+function showAnalysisError(message) {
+  const errorTimeline = document.getElementById('timeline-item-1-error');
+  const errorDescription = document.getElementById('timeline-error-description');
+  const timelineContainer = document.getElementById('timeline-container');
+
+  if (errorTimeline) {
+    errorTimeline.classList.remove('hidden');
+    errorTimeline.style.display = 'block';
+  }
+  if (errorDescription) errorDescription.textContent = message;
+  if (timelineContainer) timelineContainer.classList.remove('hidden');
 }

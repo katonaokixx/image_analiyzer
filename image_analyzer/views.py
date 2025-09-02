@@ -1,13 +1,15 @@
 from __future__ import annotations
 import os
+import threading
 from django.conf import settings
 from django.db import transaction
 from django.http import JsonResponse, HttpRequest
 from django.shortcuts import render
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_GET
 from django.views.decorators.csrf import csrf_protect
 
-from .models import Image
+from .models import Image, MLModel
+from .services import analysis_service
 
 ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif'}
 MAX_MB = 1
@@ -68,11 +70,66 @@ def api_form_upload(request: HttpRequest):
 @require_POST
 @csrf_protect
 def api_start_analysis(request: HttpRequest):
-    ids = request.POST.getlist('ids[]') or request.POST.getlist('ids')
-    if not ids:
-        return JsonResponse({'ok': False, 'error': 'IDが指定されていません'}, status=400)
-    updated = Image.objects.filter(id__in=ids).update(status='analyzing')
-    return JsonResponse({'ok': True, 'updated': updated})
+    """解析開始API"""
+    model_name = request.POST.get('model')
+    image_id = request.POST.get('image_id')  # 個別画像ID（オプション）
+    
+    if not model_name:
+        return JsonResponse({'ok': False, 'error': 'モデルが指定されていません'}, status=400)
+    
+    # 個別画像解析の場合
+    if image_id:
+        try:
+            image = Image.objects.get(id=image_id, status='preparing')
+        except Image.DoesNotExist:
+            return JsonResponse({'ok': False, 'error': '指定された画像が見つからないか、解析対象ではありません'}, status=400)
+        
+        images = [image]
+    else:
+        # 一括解析の場合（既存の動作）
+        images = Image.objects.filter(status='preparing').order_by('-upload_date')
+        if not images.exists():
+            return JsonResponse({'ok': False, 'error': '解析対象の画像が見つかりません'}, status=400)
+    
+    # バックグラウンドで解析を実行
+    def run_analysis():
+        try:
+            image_ids = [img.id for img in images]
+            result = analysis_service.analyze_images_batch(image_ids, model_name)
+            if not result['success']:
+                print(f"解析エラー: {result['error']}")
+        except Exception as e:
+            print(f"解析実行エラー: {e}")
+    
+    # 別スレッドで解析を実行
+    analysis_thread = threading.Thread(target=run_analysis)
+    analysis_thread.daemon = True
+    analysis_thread.start()
+    
+    return JsonResponse({
+        'ok': True, 
+        'message': '解析を開始しました',
+        'total_images': len(images),
+        'individual': bool(image_id)
+    })
+
+@require_GET
+def api_analysis_progress(request: HttpRequest):
+    """解析進捗取得API"""
+    try:
+        progress_data = analysis_service.get_analysis_progress()
+        return JsonResponse({
+            'ok': True,
+            'progress': progress_data.get('progress', 0),
+            'status': progress_data.get('status', 'unknown'),
+            'current_stage': progress_data.get('current_stage', ''),
+            'description': progress_data.get('description', '')
+        })
+    except Exception as e:
+        return JsonResponse({
+            'ok': False,
+            'error': str(e)
+        }, status=500)
 
 def validate_file(f) -> str | None:
     if f.size > MAX_BYTES:

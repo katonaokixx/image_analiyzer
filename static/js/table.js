@@ -231,4 +231,124 @@ document.addEventListener('DOMContentLoaded', function () {
       applyFilters();
     };
   }
+
+  // 準備中のバッジはFlyonUIの自動表示を使用するため、手動イベントは不要
 });
+
+// 準備中バッジはFlyonUIの自動表示を使用するため、手動イベントは不要
+
+// モデル選択モーダルを表示
+function showModelSelectionModal(imageId) {
+  console.log('=== showModelSelectionModal() called with imageId:', imageId === '');
+
+  // モーダルを取得
+  const modal = document.getElementById('slide-down-animated-modal');
+  if (!modal) {
+    console.error('Model selection modal not found');
+    return;
+  }
+
+  // モーダルを表示
+  modal.classList.remove('hidden');
+  modal.classList.add('overlay-open');
+  modal.style.display = 'block';
+  modal.style.opacity = '1';
+  modal.style.visibility = 'visible';
+
+  console.log('Model selection modal opened');
+
+  // モデル選択時の説明表示
+  const modelSelector = document.getElementById('model-selector');
+  if (modelSelector) {
+    modelSelector.addEventListener('change', function (e) {
+      const selectedModel = e.target.value;
+      const descriptionEl = document.getElementById('model-description');
+      if (!descriptionEl) return;
+
+      const descriptions = {
+        'resnet50': 'ResNet-50 v2.1は、深層学習における代表的な画像分類モデルです。高い精度と汎用性を持ち、様々な画像タスクに適用できます。ImageNetで学習済みで、1000クラスの分類が可能です。',
+        'efficientnet': 'EfficientNet-B0は、効率性を重視した軽量モデルです。少ないパラメータ数で高い性能を実現し、モバイルデバイスやエッジコンピューティングに最適です。高速な推論が可能です。',
+        'mobilenet': 'MobileNet v2は、モバイル環境に特化して設計されたモデルです。軽量で高速な処理が可能で、スマートフォンやタブレットでのリアルタイム画像認識に適しています。',
+        'vgg16': 'VGG-16は、深いネットワーク構造を持つ高精度モデルです。詳細な特徴抽出が得意で、複雑な画像パターンの識別に優れています。計算量は多いですが、高い精度が期待できます。',
+        'custom': 'カスタムモデルは、特定の用途やデータセットに特化して学習されたモデルです。ドメイン固有の特徴を捉えることができ、専門的な画像解析タスクに最適です。'
+      };
+
+      if (selectedModel && descriptions[selectedModel]) {
+        descriptionEl.textContent = descriptions[selectedModel];
+      } else {
+        descriptionEl.textContent = 'モデルを選択すると、ここに詳細な説明が表示されます。';
+      }
+    });
+  }
+
+  // 解析開始ボタンのクリックイベントを設定
+  const startBtn = document.getElementById('modal-start-analysis-btn');
+  if (startBtn) {
+    // 既存のイベントリスナーを削除
+    startBtn.replaceWith(startBtn.cloneNode(true));
+    const newStartBtn = document.getElementById('modal-start-analysis-btn');
+
+    newStartBtn.addEventListener('click', function () {
+      const selector = document.getElementById('model-selector');
+      const model = selector ? selector.value : '';
+
+      if (!model) {
+        alert('モデルを選択してください');
+        return;
+      }
+
+      console.log('Starting analysis for image:', imageId, 'with model:', model);
+
+      // モーダルを閉じる
+      modal.classList.add('hidden');
+      modal.classList.remove('overlay-open');
+      modal.style.display = 'none';
+      modal.style.opacity = '0';
+      modal.style.visibility = 'hidden';
+
+      // 個別画像解析を開始
+      startIndividualAnalysis(imageId, model);
+    });
+  }
+}
+
+// 個別画像解析を開始
+function startIndividualAnalysis(imageId, modelName) {
+  console.log('=== startIndividualAnalysis() called ===', imageId, modelName);
+
+  // 実際のAPI呼び出し
+  fetch('/image_analyzer/api/analysis/start/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': getCSRFToken()
+    },
+    body: new URLSearchParams({
+      'model': modelName,
+      'image_id': imageId  // 個別画像IDを追加
+    })
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.ok) {
+        console.log('Individual analysis started successfully:', data);
+        // ページをリロードしてステータスを更新
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        console.error('Failed to start individual analysis:', data.error);
+        alert('解析の開始に失敗しました: ' + (data.error || '不明なエラー'));
+      }
+    })
+    .catch(error => {
+      console.error('Error starting individual analysis:', error);
+      alert('解析の開始に失敗しました');
+    });
+}
+
+// CSRFトークンを取得する関数
+function getCSRFToken() {
+  const token = document.querySelector('[name=csrfmiddlewaretoken]');
+  return token ? token.value : '';
+}

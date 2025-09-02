@@ -180,7 +180,7 @@
         </thead>
         <tbody>
           {% for image in images %}
-          <tr>
+          <tr data-image-id="{{ image.id }}">
             <td>
               <div class="flex items-center gap-3">
                 <div class="avatar cursor-pointer" data-overlay="#slide-down-animated-modal">
@@ -203,7 +203,8 @@
               {% elif image.status == 'analyzing' %}
               <span class="badge badge-outline border-dashed badge-info me-2">解析中</span>
               {% elif image.status == 'preparing' %}
-              <span class="badge badge-outline border-dashed badge-secondary me-2">準備中</span>
+              <span class="badge badge-outline border-dashed badge-secondary me-2 cursor-pointer"
+                title="クリックして解析を開始">準備中</span>
               {% elif image.status == 'failed' %}
               <span class="badge badge-outline border-dashed badge-error me-2">失敗</span>
               {% endif %}
@@ -415,6 +416,14 @@
 <style>
   .table tbody tr:nth-child(even) {
     background-color: #f3f4f6;
+  }
+
+  /* 準備中バッジのホバー効果 */
+  .badge-secondary.cursor-pointer:hover {
+    background-color: #6b7280 !important;
+    color: white !important;
+    transform: scale(1.05);
+    transition: all 0.2s ease;
   }
 
   /* 画像プレースホルダーのスタイル */
