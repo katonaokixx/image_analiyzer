@@ -2,6 +2,15 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # 認証関連URL
+    path('login/', views.login_view, name='login'),
+    path('signup/', views.signup_view, name='signup'),
+    path('logout/', views.logout_view, name='logout'),
+    path('password-reset/', views.password_reset_request_view, name='password_reset_request'),
+    path('password-reset/confirm/', views.password_reset_confirm_view, name='password_reset_confirm'),
+    path('password-reset/success/', views.password_reset_success_view, name='password_reset_success'),
+    
+    # 既存のURL
     path('', views.user_image_table, name='user_image_table'),
     # 新UI統一: test_upload を image_upload に改名済み。
     path('image_upload/', views.image_upload, name='image_upload'),

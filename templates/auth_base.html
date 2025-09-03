@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html data-theme="shadcn">
+  {% load static %}
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}画像解析アプリ{% endblock %}</title>
+
+    <!-- 既存のCSS（Tailwind CSS + FlyonUI） -->
+    <link href="{% static 'css/output.css' %}" rel="stylesheet">
+
+    {% block extra_css %}{% endblock %}
+  </head>
+
+  <body>
+    <!-- 認証ページ専用：navbarは表示しない -->
+
+    <!-- メインコンテンツ -->
+    {% block content %}{% endblock %}
+
+    <!-- JavaScript -->
+    <!-- 依存関係 -->
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+    <!-- FlyonUI -->
+    <script src="{% static 'js/libs/flyonui.js' %}"></script>
+    <!-- 認証ページ用のJS -->
+    <script src="{% static 'js/libs/accordion.js' %}"></script>
+
+    {% block extra_js %}{% endblock %}
+  </body>
+
+</html>

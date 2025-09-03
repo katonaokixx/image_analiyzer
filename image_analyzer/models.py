@@ -1,9 +1,64 @@
 from django.db import models
 from django.conf import settings
+from django.contrib.auth.models import AbstractUser
+from django.core.validators import MinLengthValidator, RegexValidator, EmailValidator
+from django.utils import timezone
+from datetime import timedelta
 import os
 import urllib.parse
 
 # Create your models here.
+
+class User(AbstractUser):
+    """カスタムユーザーモデル（最小構成）"""
+    
+    # Django標準フィールド（フロントエンド要件に合わせて）
+    username = models.CharField(
+        max_length=20,  # フロントエンド要件: 3-20文字
+        unique=True,
+        validators=[
+            MinLengthValidator(3),
+            RegexValidator(
+                regex=r'^[a-zA-Z0-9_]+$',
+                message='ユーザー名は英数字とアンダースコアのみ使用できます'
+            )
+        ],
+        verbose_name='ユーザー名'
+    )
+    email = models.EmailField(
+        unique=True,
+        validators=[EmailValidator()],
+        verbose_name='メールアドレス'
+    )
+    
+    # 権限管理（フロントエンド要件）
+    is_staff = models.BooleanField(
+        default=False,
+        verbose_name='管理者権限'
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='アカウント有効性'
+    )
+    
+    # タイムスタンプ
+    date_joined = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='登録日時'
+    )
+    last_login = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='最終ログイン'
+    )
+    
+    class Meta:
+        db_table = 'auth_user'
+        verbose_name = 'ユーザー'
+        verbose_name_plural = 'ユーザー'
+    
+    def __str__(self):
+        return f"{self.username} ({self.email})"
 
 class MLModel(models.Model):
     """機械学習モデル管理テーブル"""
@@ -98,6 +153,14 @@ class Image(models.Model):
         default='preparing',
         verbose_name='ステータス'
     )
+    
+    # 新規追加：ユーザー関連付け（一時的にコメントアウト）
+    # user = models.ForeignKey(
+    #     'User',
+    #     on_delete=models.CASCADE,
+    #     verbose_name='アップロードユーザー',
+    #     related_name='uploaded_images'
+    # )
     
     model_used = models.ForeignKey(
         MLModel,
@@ -339,3 +402,34 @@ class TimelineLog(models.Model):
             delta = self.analysis_completed_at - self.upload_started_at
             return delta.total_seconds()
         return None
+
+
+class PasswordResetToken(models.Model):
+    """パスワードリセットトークンモデル"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='password_reset_tokens')
+    token = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    used = models.BooleanField(default=False)
+    
+    class Meta:
+        db_table = 'password_reset_tokens'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"PasswordResetToken for {self.user.username} - {self.created_at}"
+    
+    @property
+    def is_expired(self):
+        """トークンが期限切れかどうか"""
+        expiry_time = self.created_at + timedelta(seconds=getattr(settings, 'PASSWORD_RESET_TIMEOUT', 3600))
+        return timezone.now() > expiry_time
+    
+    @property
+    def is_valid(self):
+        """トークンが有効かどうか"""
+        return not self.used and not self.is_expired
+    
+    def mark_as_used(self):
+        """トークンを使用済みとしてマーク"""
+        self.used = True
+        self.save()

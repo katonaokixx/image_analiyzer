@@ -3,13 +3,21 @@ import os
 import threading
 from django.conf import settings
 from django.db import transaction
-from django.http import JsonResponse, HttpRequest
-from django.shortcuts import render
+from django.http import JsonResponse, HttpRequest, HttpResponseRedirect
+from django.shortcuts import render, redirect
 from django.views.decorators.http import require_POST, require_GET
 from django.views.decorators.csrf import csrf_protect
 from django.core.paginator import Paginator
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.core.mail import send_mail
+from django.utils.crypto import get_random_string
+from django.template.loader import render_to_string
+from django.conf import settings
+from datetime import timedelta
 
-from .models import Image, MLModel, ProgressLog, TimelineLog
+from .models import Image, MLModel, ProgressLog, TimelineLog, PasswordResetToken
 from django.utils import timezone
 from .services import analysis_service
 
@@ -17,7 +25,108 @@ ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif'}
 MAX_MB = 1
 MAX_BYTES = MAX_MB * 1024 * 1024
 
+# 認証関連のビュー
+def login_view(request: HttpRequest):
+    """ログインページ表示"""
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        
+        if email and password:
+            # メールアドレスでユーザーを検索
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            try:
+                user = User.objects.get(email=email)
+                user = authenticate(request, username=user.username, password=password)
+                if user is not None:
+                    login(request, user)
+                    # 管理者の場合は管理者ページへ、一般ユーザーは画像一覧へ
+                    if user.is_staff:
+                        return redirect('admin_image_table')
+                    else:
+                        return redirect('user_image_table')
+                else:
+                    messages.error(request, 'メールアドレスまたはパスワードが正しくありません。')
+            except User.DoesNotExist:
+                messages.error(request, 'メールアドレスまたはパスワードが正しくありません。')
+        else:
+            messages.error(request, 'メールアドレスとパスワードを入力してください。')
+    
+    return render(request, 'auth/login.html')
+
+def signup_view(request: HttpRequest):
+    """サインアップページ表示"""
+    print(f"Signup view called with method: {request.method}")
+    
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        confirm_password = request.POST.get('confirm_password')
+        is_admin = request.POST.get('is_admin') == 'on'
+        
+        print(f"Form data: username={username}, email={email}, is_admin={is_admin}")
+        
+        # バリデーション
+        if not all([username, email, password, confirm_password]):
+            print("Validation failed: missing fields")
+            messages.error(request, 'すべての項目を入力してください。')
+            return render(request, 'auth/signup.html')
+        
+        if password != confirm_password:
+            print("Validation failed: password mismatch")
+            messages.error(request, 'パスワードが一致しません。')
+            return render(request, 'auth/signup.html')
+        
+        if len(password) < 6:
+            print("Validation failed: password too short")
+            messages.error(request, 'パスワードは6文字以上で入力してください。')
+            return render(request, 'auth/signup.html')
+        
+        # ユーザー作成
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        # 重複チェック
+        if User.objects.filter(username=username).exists():
+            print(f"Username already exists: {username}")
+            return render(request, 'auth/signup.html', {'show_duplicate_modal': True, 'duplicate_type': 'username'})
+        
+        if User.objects.filter(email=email).exists():
+            print(f"Email already exists: {email}")
+            return render(request, 'auth/signup.html', {'show_duplicate_modal': True, 'duplicate_type': 'email'})
+        
+        try:
+            print(f"Creating user: {username} with is_staff={is_admin}")
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                is_staff=is_admin
+            )
+            print(f"User created successfully: {user.id}")
+            # 成功時にモーダルを表示するためのフラグを設定
+            return render(request, 'auth/signup.html', {'show_success_modal': True})
+        except Exception as e:
+            print(f"User creation failed: {str(e)}")
+            messages.error(request, f'アカウント作成に失敗しました: {str(e)}')
+    
+    return render(request, 'auth/signup.html')
+
+def logout_view(request: HttpRequest):
+    """ログアウト処理"""
+    logout(request)
+    messages.success(request, 'ログアウトしました。')
+    return redirect('login')
+
 def user_image_table(request: HttpRequest):
+    """一般ユーザー用画像テーブル"""
+    # ログイン認証チェック
+    if not request.user.is_authenticated:
+        messages.error(request, 'ログインが必要です。')
+        return redirect('login')
+    
     images = Image.objects.order_by('-upload_date')
     
     # ページネーション設定
@@ -33,18 +142,40 @@ def user_image_table(request: HttpRequest):
 
 def admin_image_table(request: HttpRequest):
     """管理者用画像テーブル"""
+    # 管理者権限チェック
+    if not request.user.is_authenticated:
+        messages.error(request, 'ログインが必要です。')
+        return redirect('login')
+    
+    if not request.user.is_staff:
+        messages.error(request, '管理者権限が必要です。')
+        return redirect('user_image_table')
+    
     images = Image.objects.order_by('-upload_date')
     
-    # ページネーション設定
-    paginator = Paginator(images, 10)  # 10件/ページ
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    # View All機能のチェック
+    view_all = request.GET.get('view_all', 'false').lower() == 'true'
     
-    return render(request, 'admin/admin_image_table.html', {
-        'images': page_obj,  # ページネーションされたオブジェクト
-        'page_obj': page_obj,  # ページネーション情報
-        'has_data': images.exists(),
-    })
+    if view_all:
+        # 全件表示
+        return render(request, 'admin/admin_image_table.html', {
+            'images': images,
+            'page_obj': None,  # ページネーションなし
+            'has_data': images.exists(),
+            'view_all': True,
+        })
+    else:
+        # ページネーション設定（10件/ページ）
+        paginator = Paginator(images, 10)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        
+        return render(request, 'admin/admin_image_table.html', {
+            'images': page_obj,  # ページネーションされたオブジェクト
+            'page_obj': page_obj,  # ページネーション情報
+            'has_data': images.exists(),
+            'view_all': False,
+        })
 
 @csrf_protect
 def image_upload(request: HttpRequest):
@@ -356,3 +487,124 @@ def secure_unique_filename(directory: str, base: str, ext: str) -> str:
         name = f"{base}_{i}{ext}"
         i += 1
     return name
+
+# パスワードリセット関連のビュー
+def password_reset_request_view(request):
+    """パスワードリセットリクエスト画面"""
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        print(f"Password reset request for email: {email}")
+        
+        # ユーザーが存在するかチェック
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        try:
+            user = User.objects.get(email=email)
+            print(f"User found: {user.username}")
+            
+            # 既存の未使用トークンを無効化
+            PasswordResetToken.objects.filter(user=user, used=False).update(used=True)
+            
+            # 新しいリセットトークンを生成
+            reset_token = get_random_string(32)
+            
+            # データベースにトークンを保存
+            token_obj = PasswordResetToken.objects.create(
+                user=user,
+                token=reset_token
+            )
+            
+            # リセットURLを生成
+            reset_url = request.build_absolute_uri(
+                f"/password-reset/confirm/?token={reset_token}"
+            )
+            
+            # メールテンプレートをレンダリング
+            html_message = render_to_string('emails/password_reset.html', {
+                'username': user.username,
+                'reset_url': reset_url,
+            })
+            
+            # メール送信
+            try:
+                send_mail(
+                    subject='パスワードリセット - 画像解析アプリ',
+                    message=f'パスワードリセットのリンク: {reset_url}',
+                    from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@example.com'),
+                    recipient_list=[email],
+                    html_message=html_message,
+                    fail_silently=False,
+                )
+                print(f"Password reset email sent to: {email}")
+                print(f"Reset URL: {reset_url}")
+                
+                # 成功画面にリダイレクト
+                return redirect('password_reset_success')
+                
+            except Exception as e:
+                print(f"Failed to send email: {e}")
+                messages.error(request, 'メール送信に失敗しました。しばらく時間をおいて再度お試しください。')
+            
+        except User.DoesNotExist:
+            print(f"User not found for email: {email}")
+            # セキュリティのため、ユーザーが存在しない場合でも成功メッセージを表示
+            return redirect('password_reset_success')
+    
+    return render(request, 'auth/send_email_restpass.html')
+
+def password_reset_confirm_view(request):
+    """パスワードリセット確認画面"""
+    # URLパラメータからトークンを取得
+    token = request.GET.get('token')
+    
+    if not token:
+        messages.error(request, '無効なリセットリンクです。')
+        return redirect('password_reset_request')
+    
+    # トークンを検証
+    try:
+        token_obj = PasswordResetToken.objects.get(token=token)
+        
+        if not token_obj.is_valid:
+            if token_obj.used:
+                messages.error(request, 'このリセットリンクは既に使用されています。')
+            elif token_obj.is_expired:
+                messages.error(request, 'リセットリンクの有効期限が切れています。')
+            else:
+                messages.error(request, '無効なリセットリンクです。')
+            return redirect('password_reset_request')
+        
+        user = token_obj.user
+        
+    except PasswordResetToken.DoesNotExist:
+        messages.error(request, '無効なリセットリンクです。')
+        return redirect('password_reset_request')
+    
+    if request.method == 'POST':
+        password = request.POST.get('password')
+        confirm_password = request.POST.get('confirm_password')
+        
+        if password != confirm_password:
+            messages.error(request, 'パスワードが一致しません。')
+            return render(request, 'auth/password_reset.html', {'token': token})
+        
+        if len(password) < 6:
+            messages.error(request, 'パスワードは6文字以上で入力してください。')
+            return render(request, 'auth/password_reset.html', {'token': token})
+        
+        # パスワードを更新
+        user.set_password(password)
+        user.save()
+        
+        # トークンを使用済みとしてマーク
+        token_obj.mark_as_used()
+        
+        messages.success(request, 'パスワードが正常に変更されました。')
+        return render(request, 'auth/password_reset.html', {'token': token, 'show_success_modal': True})
+    
+    return render(request, 'auth/password_reset.html', {'token': token})
+
+def password_reset_success_view(request):
+    """パスワードリセットメール送信完了画面"""
+    return render(request, 'auth/send_succefly_email.html')

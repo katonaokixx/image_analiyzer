@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-ppuf3tj+o5(kv_gs(y$y8n=zb^6kb7-93yqci$dv%ybg9^z_3x
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'testserver']
 
 
 # Application definition
@@ -39,6 +39,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'image_analyzer',
 ]
+
+# カスタムユーザーモデル設定
+AUTH_USER_MODEL = 'image_analyzer.User'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -130,7 +133,16 @@ MEDIA_ROOT = BASE_DIR / 'uploads'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
+# Email settings
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # 開発用: コンソールに出力
+# 本番用の場合は以下の設定を使用:
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'your-email@gmail.com'
+# EMAIL_HOST_PASSWORD = 'your-app-password'
+# DEFAULT_FROM_EMAIL = 'your-email@gmail.com'
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# パスワードリセット設定
+PASSWORD_RESET_TIMEOUT = 3600  # 1時間（秒）
