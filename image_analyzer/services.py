@@ -32,6 +32,7 @@ class AnalysisService:
             self._load_clip()
             
             # モデル読み込み完了
+            logger.info(f"モデル読み込み完了: {list(self.models.keys())}")
             
         except Exception as e:
             logger.error(f"モデル読み込みエラー: {e}")
@@ -228,15 +229,18 @@ class AnalysisService:
             
             internal_model_name = model_mapping.get(model_name, model_name)
             # モデル名マッピング
+            logger.info(f"モデル名マッピング: {model_name} -> {internal_model_name}")
+            logger.info(f"利用可能なモデル: {list(self.models.keys())}")
             
             if internal_model_name not in self.models:
                 available_models = list(self.models.keys())
                 raise ValueError(f"未知のモデル: {model_name} (内部名: {internal_model_name}), 利用可能: {available_models}")
             
             model_info = self.models[internal_model_name]
+            logger.info(f"モデル情報: {model_info}")
             
             if model_info['model'] is None:
-                raise ValueError(f"モデルが読み込まれていません: {model_name}")
+                raise ValueError(f"モデルが読み込まれていません: {internal_model_name}")
             
             # 画像の前処理
             img_array = self.preprocess_image(image_path, model_info['input_size'])
@@ -325,8 +329,9 @@ class AnalysisService:
         return predictions.numpy()
     
     def _predict_clip(self, img_array: np.ndarray, model_info: Dict) -> np.ndarray:
-        """CLIPでの予測"""
+        """CLIPでの予測（アニメ・イラスト検出対応）"""
         import torch
+        import clip
         
         # PIL画像に変換
         pil_image = PILImage.fromarray(img_array[0].astype('uint8'))
@@ -335,10 +340,60 @@ class AnalysisService:
         img_tensor = model_info['preprocess'](pil_image)
         img_tensor = img_tensor.unsqueeze(0)
         
+        # テキストプロンプトを定義（アニメ・イラストを優先）
+        text_prompts = [
+            "anime character illustration",
+            "manga drawing",
+            "cartoon character",
+            "fantasy character",
+            "elf character",
+            "cute anime girl",
+            "anime art style",
+            "illustration drawing",
+            "realistic photograph",
+            "safety equipment helmet",
+            "animal",
+            "building",
+            "car", "vehicle", "automobile", "sports car", "racing car",
+            "person",
+            "nature"
+        ]
+        
         # 予測実行
         with torch.no_grad():
-            outputs = model_info['model'].encode_image(img_tensor)
-            predictions = torch.softmax(outputs, dim=1)
+            # 画像とテキストの埋め込みを取得
+            image_features = model_info['model'].encode_image(img_tensor)
+            text_features = model_info['model'].encode_text(torch.cat([clip.tokenize(prompt) for prompt in text_prompts]))
+            
+            # 類似度を計算
+            similarities = (100.0 * image_features @ text_features.T).softmax(dim=-1)
+            
+            # 1000次元の配列に変換（既存のシステムとの互換性のため）
+            predictions = torch.zeros(1, 1000)
+            
+            # アニメ・イラスト関連のスコアを設定
+            predictions[0][0] = similarities[0][0]  # anime character
+            predictions[0][1] = similarities[0][1]  # manga illustration
+            predictions[0][2] = similarities[0][2]  # cartoon character
+            predictions[0][3] = similarities[0][3]  # fantasy character
+            predictions[0][4] = similarities[0][4]  # elf character
+            predictions[0][5] = similarities[0][5]  # cute anime girl
+            predictions[0][6] = similarities[0][6]  # anime art style
+            predictions[0][7] = similarities[0][7]  # illustration drawing
+            predictions[0][8] = similarities[0][8]  # realistic photo
+            predictions[0][9] = similarities[0][9]  # safety equipment
+            predictions[0][10] = similarities[0][10]  # animal
+            predictions[0][11] = similarities[0][11]  # building
+            predictions[0][12] = similarities[0][12]  # car
+            predictions[0][13] = similarities[0][13]  # vehicle
+            predictions[0][14] = similarities[0][14]  # automobile
+            predictions[0][15] = similarities[0][15]  # sports car
+            predictions[0][16] = similarities[0][16]  # racing car
+            predictions[0][17] = similarities[0][17]  # person
+            predictions[0][18] = similarities[0][18]  # nature
+            
+            # 残りは小さな値で埋める
+            predictions[0][19:] = 0.001
         
         return predictions.numpy()
     
@@ -393,6 +448,30 @@ class AnalysisService:
             98: "red_breasted_merganser", 99: "goose", 100: "black_swan"
         }
         return basic_classes
+    
+    def _get_clip_classes(self) -> Dict[int, str]:
+        """CLIP用のクラス名"""
+        return {
+            0: "anime character illustration",
+            1: "manga drawing", 
+            2: "cartoon character",
+            3: "fantasy character",
+            4: "elf character",
+            5: "cute anime girl",
+            6: "anime art style",
+            7: "illustration drawing",
+            8: "realistic photograph",
+            9: "safety equipment helmet",
+            10: "animal",
+            11: "building",
+            12: "car",
+            13: "vehicle",
+            14: "automobile",
+            15: "sports car",
+            16: "racing car",
+            17: "person",
+            18: "nature"
+        }
     
     def _get_japanese_translation(self, english_name: str) -> str:
         """英語のクラス名を日本語に翻訳"""
@@ -497,12 +576,259 @@ class AnalysisService:
             "drake": "雄のカモ",
             "red_breasted_merganser": "アカハシアイサ",
             "goose": "ガチョウ",
-            "black_swan": "コクチョウ"
+            "black_swan": "コクチョウ",
+            # 追加の翻訳（実際の解析結果で使用されるクラス名）
+            "nematode": "線虫",
+            "letter_opener": "ペーパーナイフ",
+            "letter opener": "ペーパーナイフ",
+            "binder": "バインダー",
+            "poncho": "ポンチョ",
+            "blackstork": "ナベコウ",
+            "black stork": "ナベコウ",
+            "mask": "マスク",
+            "crash_helmet": "ヘルメット",
+            "neck_brace": "首装具",
+            "planetarium": "プラネタリウム",
+            "comic_book": "漫画本",
+            "drilling_platform": "掘削プラットフォーム",
+            "seashore": "海岸",
+            "airliner": "旅客機",
+            "crane": "クレーン",
+            "airship": "飛行船",
+            "soccer_ball": "サッカーボール",
+            "bikini": "ビキニ",
+            "sunscreen": "日焼け止め",
+            "web_site": "ウェブサイト",
+            "lab_coat": "白衣",
+            # 犬関連の翻訳
+            "shiba_inu": "柴犬",
+            "dog": "犬",
+            "puppy": "子犬",
+            "toy_dog": "小型犬",
+            "velvet": "ベルベット",
+            "chow": "チャウチャウ",
+            "Pembroke": "ペンブローク",
+            "Pomeranian": "ポメラニアン",
+            "Chihuahua": "チワワ",
+            "Siberian husky": "シベリアンハスキー",
+            "husky": "ハスキー",
+            "pug": "パグ",
+            "beagle": "ビーグル",
+            "golden_retriever": "ゴールデンレトリバー",
+            "labrador_retriever": "ラブラドールレトリバー",
+            "german_shepherd": "ジャーマンシェパード",
+            "bulldog": "ブルドッグ",
+            "poodle": "プードル",
+            # バイク・安全装備関連
+            "crash_helmet": "ヘルメット",
+            "crash helmet": "ヘルメット",
+            "motor_scooter": "スクーター",
+            "motor scooter": "スクーター",
+            "disk_brake": "ディスクブレーキ",
+            "disk brake": "ディスクブレーキ",
+            "moped": "モペッド",
+            "bulletproof_vest": "防弾チョッキ",
+            "bulletproof vest": "防弾チョッキ",
+            # CLIP用の翻訳
+            "anime character illustration": "アニメキャラクター",
+            "manga drawing": "マンガイラスト",
+            "cartoon character": "カートゥーンキャラクター",
+            "fantasy character": "ファンタジーキャラクター",
+            "elf character": "エルフキャラクター",
+            "cute anime girl": "可愛いアニメ少女",
+            "anime art style": "アニメアートスタイル",
+            "illustration drawing": "イラスト描画",
+            "realistic photograph": "実写写真",
+            "safety equipment helmet": "安全装備",
+            "animal": "動物",
+            "building": "建物",
+            "vehicle": "乗り物",
+            "person": "人",
+            "nature": "自然"
         }
         return translations.get(english_name, english_name)
     
+    def _get_broad_category_mapping(self) -> Dict[str, List[str]]:
+        """大分類カテゴリーのマッピング辞書"""
+        return {
+            '人物': [
+                'person', 'man', 'woman', 'child', 'baby', 'boy', 'girl',
+                'face', 'head', 'portrait', 'selfie', 'people', 'human',
+                'mask', 'wig', 'shower cap', 'hat', 'cap', 'helmet'
+            ],
+            '動物': [
+                'dog', 'cat', 'bird', 'fish', 'horse', 'cow', 'sheep', 'pig',
+                'elephant', 'lion', 'tiger', 'bear', 'wolf', 'fox', 'deer',
+                'rabbit', 'mouse', 'rat', 'hamster', 'squirrel', 'chipmunk',
+                'beaver', 'otter', 'weasel', 'skunk', 'badger', 'raccoon',
+                'panda', 'koala', 'kangaroo', 'monkey', 'ape', 'gorilla',
+                'chimpanzee', 'orangutan', 'lemur', 'sloth', 'anteater',
+                'armadillo', 'hedgehog', 'porcupine', 'platypus', 'echidna'
+            ],
+            '建物': [
+                'house', 'building', 'bridge', 'tower', 'castle', 'palace',
+                'church', 'temple', 'mosque', 'synagogue', 'cathedral',
+                'skyscraper', 'office', 'school', 'hospital', 'library',
+                'museum', 'theater', 'stadium', 'airport', 'station',
+                'hotel', 'restaurant', 'shop', 'store', 'market', 'mall'
+            ],
+            '乗り物': [
+                'car', 'truck', 'bus', 'van', 'motorcycle', 'bicycle',
+                'airplane', 'helicopter', 'boat', 'ship', 'yacht',
+                'train', 'subway', 'tram', 'taxi', 'ambulance', 'fire',
+                'police', 'tank', 'tractor', 'bulldozer', 'crane'
+            ],
+            '自然': [
+                'mountain', 'hill', 'valley', 'forest', 'tree', 'flower',
+                'grass', 'leaf', 'branch', 'root', 'bark', 'wood',
+                'ocean', 'sea', 'lake', 'river', 'stream', 'waterfall',
+                'beach', 'desert', 'canyon', 'cave', 'volcano', 'island',
+                'sky', 'cloud', 'sun', 'moon', 'star', 'rainbow',
+                'snow', 'ice', 'rock', 'stone', 'sand', 'dirt'
+            ],
+            '食べ物': [
+                'food', 'meal', 'dish', 'plate', 'bowl', 'cup', 'glass',
+                'bread', 'cake', 'cookie', 'pie', 'pizza', 'sandwich',
+                'burger', 'hotdog', 'sausage', 'bacon', 'ham', 'chicken',
+                'beef', 'pork', 'fish', 'shrimp', 'lobster', 'crab',
+                'apple', 'banana', 'orange', 'grape', 'strawberry',
+                'vegetable', 'carrot', 'potato', 'tomato', 'onion',
+                'lettuce', 'cabbage', 'broccoli', 'corn', 'pepper'
+            ],
+            'アニメ・イラスト': [
+                'comic book', 'cartoon', 'drawing', 'illustration',
+                'sketch', 'painting', 'artwork', 'manga', 'anime',
+                'book', 'magazine', 'poster', 'print', 'picture', 'image',
+                'envelope', 'paper', 'handkerchief', 'mask', 'towel'
+            ],
+            'テクノロジー': [
+                'computer', 'laptop', 'desktop', 'monitor', 'keyboard',
+                'mouse', 'phone', 'smartphone', 'tablet', 'camera',
+                'television', 'tv', 'radio', 'speaker', 'headphone',
+                'microphone', 'printer', 'scanner', 'router', 'modem',
+                'hardware', 'software', 'gadget', 'device', 'machine'
+            ],
+            'ファッション': [
+                'clothing', 'shirt', 'dress', 'pants', 'jeans', 'skirt',
+                'jacket', 'coat', 'sweater', 'hoodie', 't-shirt',
+                'shoes', 'boots', 'sneakers', 'sandals', 'heels',
+                'gloves', 'scarf', 'tie', 'belt', 'watch', 'jewelry', 
+                'ring', 'necklace', 'earring', 'bracelet', 'bag', 'purse', 'backpack'
+            ],
+            'スポーツ': [
+                'sports', 'game', 'ball', 'football', 'soccer', 'basketball',
+                'tennis', 'baseball', 'golf', 'hockey', 'cricket',
+                'volleyball', 'badminton', 'ping', 'pong', 'rugby',
+                'swimming', 'running', 'cycling', 'skiing', 'skating',
+                'surfing', 'diving', 'boxing', 'wrestling', 'martial',
+                'gym', 'fitness', 'exercise', 'workout', 'training'
+            ]
+        }
+    
+    def _apply_broad_category_classification(self, predictions: np.ndarray, model_name: str) -> List[Dict]:
+        """大分類カテゴリーでの分類"""
+        try:
+            # クラス名を取得
+            if model_name == 'clip':
+                class_names = self._get_clip_classes()
+            else:
+                class_names = self._get_imagenet_classes()
+            
+            # 大分類マッピングを取得
+            category_mapping = self._get_broad_category_mapping()
+            
+            
+            # 各カテゴリーの信頼度を計算
+            category_scores = {}
+            for category, keywords in category_mapping.items():
+                category_confidence = 0.0
+                for idx, class_name in class_names.items():
+                    if any(keyword in class_name.lower() for keyword in keywords):
+                        category_confidence += predictions[0][idx]
+                
+                # 人物とアニメ・イラストを優先（重み付け）
+                if category == '人物':
+                    category_confidence *= 2.0  # 2倍の重み
+                elif category == 'アニメ・イラスト':
+                    category_confidence *= 1.5  # 1.5倍の重み
+                
+                category_scores[category] = category_confidence
+            
+            # 信頼度順にソート
+            sorted_categories = sorted(category_scores.items(), key=lambda x: x[1], reverse=True)
+            
+            # 上位3つのカテゴリーを返す
+            results = []
+            for i, (category, confidence) in enumerate(sorted_categories[:3]):
+                if confidence > 0.001:  # 0.1%以上の信頼度
+                    # 信頼度を10%以上、100%以下に調整
+                    min_confidence = 0.10
+                    max_confidence = 1.00
+                    adjusted_confidence = max(min(confidence, max_confidence), min_confidence)
+                    
+                    results.append({
+                        'label': category,
+                        'confidence': adjusted_confidence * 100,
+                        'rank': i + 1
+                    })
+            
+            return results
+                
+        except Exception as e:
+            logger.error(f"大分類カテゴリー分類エラー: {e}")
+            return []
+    
+    def _apply_rule_based_classification(self, predictions: np.ndarray, model_name: str) -> Optional[Dict]:
+        """ルールベースでアニメ・イラストを検出（後方互換性のため残す）"""
+        try:
+            # アニメ・イラスト関連のImageNetクラスを特定（より厳密に）
+            anime_related_classes = [
+                'comic book', 'cartoon', 'drawing', 'illustration',
+                'sketch', 'painting', 'artwork', 'manga'
+            ]
+            
+            # CLIP用のアニメ・イラスト関連クラス
+            if model_name == 'clip':
+                anime_related_classes.extend([
+                    'anime character illustration', 'manga drawing',
+                    'cartoon character', 'fantasy character', 'elf character'
+                ])
+            
+            # クラス名を取得
+            if model_name == 'clip':
+                class_names = self._get_clip_classes()
+            else:
+                class_names = self._get_imagenet_classes()
+            
+            # アニメ・イラスト関連のクラスのインデックスを特定
+            anime_indices = []
+            for idx, class_name in class_names.items():
+                if any(anime_word in class_name.lower() for anime_word in anime_related_classes):
+                    anime_indices.append(idx)
+            
+            # これらのクラスの信頼度を集計
+            anime_confidence = sum(predictions[0][idx] for idx in anime_indices)
+            
+            # 閾値を超えたらアニメ・イラストとして分類
+            if anime_confidence > 0.001:  # 0.1%以上（CLIPも検出）
+                # アニメ・イラストの信頼度を向上させる（最小10%に設定）
+                min_confidence = 0.10  # 10%
+                adjusted_confidence = max(anime_confidence, min_confidence)
+                
+                return {
+                    'label': 'アニメ・イラスト',
+                    'confidence': adjusted_confidence * 100,
+                    'rank': 1
+                }
+            else:
+                return None
+                
+        except Exception as e:
+            logger.error(f"ルールベース分類エラー: {e}")
+            return None
+    
     def _format_predictions(self, predictions: np.ndarray, model_name: str) -> List[Dict]:
-        """予測結果を整形する"""
+        """予測結果を整形する（大分類カテゴリー使用）"""
         try:
             # フロントエンドのモデル名を内部モデル名にマッピング
             model_mapping = {
@@ -515,11 +841,22 @@ class AnalysisService:
             
             internal_model_name = model_mapping.get(model_name, model_name)
             
-            # ImageNetクラス名を読み込み
-            class_names = self._get_imagenet_classes()
+            # 大分類カテゴリーでの分類を適用
+            broad_category_results = self._apply_broad_category_classification(predictions, internal_model_name)
             
-            # 上位5つの予測結果を取得
-            top_indices = np.argsort(predictions[0])[-5:][::-1]
+            # 結果がある場合はそれを返す
+            if broad_category_results:
+                return broad_category_results
+            
+            # フォールバック: 従来の方法
+            # モデルに応じてクラス名を読み込み
+            if internal_model_name == 'clip':
+                class_names = self._get_clip_classes()
+            else:
+                class_names = self._get_imagenet_classes()
+            
+            # 上位3つの予測結果を取得
+            top_indices = np.argsort(predictions[0])[-3:][::-1]
             
             results = []
             for i, idx in enumerate(top_indices):
@@ -535,9 +872,9 @@ class AnalysisService:
                     'confidence': confidence,
                     'rank': i + 1
                 })
-        
+            
             return results
-    
+        
         except Exception as e:
             logger.error(f"予測結果の整形に失敗: {e}")
             return [{'label': 'Error', 'confidence': 0.0, 'rank': 1}]

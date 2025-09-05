@@ -17,7 +17,7 @@ from django.template.loader import render_to_string
 from django.conf import settings
 from datetime import timedelta
 
-from .models import Image, MLModel, ProgressLog, TimelineLog, PasswordResetToken, AnalysisQueue, User
+from .models import Image, MLModel, ProgressLog, TimelineLog, PasswordResetToken, AnalysisQueue, User, AnalysisResult
 from django.utils import timezone
 from .services import analysis_service
 
@@ -540,12 +540,23 @@ def api_analysis_progress(request: HttpRequest):
                 ).order_by('-timestamp').first()
                 
                 if latest_progress:
+                    # 解析結果を取得
+                    results = AnalysisResult.objects.filter(image=image).order_by('rank')
+                    result_data = []
+                    for result in results:
+                        result_data.append({
+                            'label': result.label,
+                            'confidence': result.confidence,
+                            'rank': result.rank
+                        })
+                    
                     return JsonResponse({
                         'ok': True,
                         'progress': float(latest_progress.progress_percentage),
                         'status': image.status,
                         'current_stage': latest_progress.current_stage,
-                        'description': latest_progress.stage_description
+                        'description': latest_progress.stage_description,
+                        'result': result_data if result_data else None
                     })
                 else:
                     return JsonResponse({
