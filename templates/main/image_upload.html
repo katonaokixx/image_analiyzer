@@ -14,27 +14,50 @@
       <!-- CSRFトークン -->
       {% csrf_token %}
 
-      <!-- 選択された画像の情報表示 -->
+      <!-- 選択された画像のカード表示 -->
       {% if selected_image %}
-      <div class="alert alert-info mb-6">
-        <div class="flex items-center gap-3">
-          <span class="icon-[tabler--info-circle] size-5"></span>
-          <div>
-            <h3 class="font-semibold">選択された画像</h3>
-            <p class="text-sm">画像「{{ selected_image.filename }}」が選択されています。</p>
-            <p class="text-xs text-base-content/70">ステータス:
-              {% if selected_image_status == 'completed' %}
-              <span class="badge badge-success badge-sm">解析成功</span>
-              {% elif selected_image_status == 'analyzing' %}
-              <span class="badge badge-info badge-sm">解析中</span>
-              {% elif selected_image_status == 'uploaded' %}
-              <span class="badge badge-warning badge-sm">アップロード完了</span>
-              {% elif selected_image_status == 'preparing' %}
-              <span class="badge badge-secondary badge-sm">準備中</span>
-              {% elif selected_image_status == 'failed' %}
-              <span class="badge badge-error badge-sm">失敗</span>
-              {% endif %}
-            </p>
+      <div class="mb-6">
+        <h3 class="text-lg font-semibold mb-4">選択された画像</h3>
+        <div class="rounded-box bg-base-100 shadow-base-300/20 p-3 shadow-lg">
+          <div class="mb-1 flex items-center justify-between">
+            <div class="flex items-center gap-x-3">
+              <span
+                class="text-base-content/80 border-base-content/20 flex size-8 items-center justify-center rounded-lg border p-0.5">
+                <img src="{{ selected_image.thumbnail_url }}" alt="{{ selected_image.filename }}"
+                  class="rounded-md w-full h-full object-cover">
+              </span>
+              <div>
+                <p class="text-base-content text-sm font-medium">
+                  <span class="inline-block truncate align-bottom">{{ selected_image.filename }}</span>
+                </p>
+                <p class="text-base-content/50 text-xs">
+                  {% if selected_image_status == 'completed' %}
+                  解析完了
+                  {% elif selected_image_status == 'analyzing' %}
+                  解析中
+                  {% elif selected_image_status == 'uploaded' %}
+                  アップロード完了
+                  {% elif selected_image_status == 'preparing' %}
+                  準備中
+                  {% else %}
+                  {{ selected_image_status }}
+                  {% endif %}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center">
+              <span class="badge badge-success badge-sm">
+                {% if selected_image_status == 'completed' %}
+                解析成功
+                {% elif selected_image_status == 'analyzing' %}
+                解析中
+                {% elif selected_image_status == 'uploaded' %}
+                アップロード完了
+                {% else %}
+                {{ selected_image_status }}
+                {% endif %}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -157,15 +180,10 @@
 
         <!-- タイムライン -->
         <ul id="timeline-container"
-          class="timeline timeline-snap-icon timeline-compact timeline-vertical w-full hidden">
+          class="timeline timeline-snap-icon timeline-compact timeline-vertical w-full {% if selected_image %}block{% else %}hidden{% endif %}">
 
           <!-- アップロード成功 -->
           <li id="timeline-item-1-success" class="hidden">
-            <div class="timeline-middle">
-              <span class="badge badge-success size-4.5 rounded-full p-0" id="timeline-circle-1">
-                <span class="icon-[tabler--check] text-success-content size-3.5" id="timeline-badge-1"></span>
-              </span>
-            </div>
             <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-success/5 border border-success/20">
               <div
                 class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
@@ -207,11 +225,6 @@
           <!-- 解析開始 -->
           <li id="timeline-item-2" class="hidden">
             <hr class="bg-warning" />
-            <div class="timeline-middle">
-              <span class="badge badge-warning size-4.5 rounded-full p-0">
-                <span class="icon-[tabler--player-play] text-warning-content size-3.5"></span>
-              </span>
-            </div>
             <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-warning/5 border border-warning/20">
               <div
                 class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
@@ -231,11 +244,6 @@
           <!-- 解析完了 -->
           <li id="timeline-item-3" class="hidden">
             <hr class="bg-success" />
-            <div class="timeline-middle">
-              <span class="badge badge-success size-4.5 rounded-full p-0">
-                <span class="icon-[tabler--check] text-success-content size-3.5"></span>
-              </span>
-            </div>
             <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-success/5 border border-success/20">
               <div
                 class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
@@ -325,26 +333,124 @@
       modelSelector.value = selectedModel;
     }
 
-    // セッションから選択された画像IDをクリア（サーバー側で処理済み）
-    // クライアント側でのクリアは不要
+    // 選択された画像がある場合のタイムライン表示制御
+    const selectedImageStatus = '{{ selected_image_status|default:"" }}';
+    const selectedImageId = '{{ selected_image.id|default:"" }}';
+
+    // グローバル変数として設定
+    window.currentImageId = selectedImageId;
+
+    if (selectedImageStatus) {
+      showTimelineForSelectedImage(selectedImageStatus);
+
+      // タイムラインが消えないように定期的にチェック
+      setInterval(() => {
+        const timelineContainer = document.getElementById('timeline-container');
+        if (timelineContainer && timelineContainer.classList.contains('hidden')) {
+          console.log('タイムラインが非表示になったため再表示します');
+          showTimelineForSelectedImage(selectedImageStatus);
+        }
+      }, 1000);
+    }
 
   });
+
+  // 選択された画像のステータスに応じてタイムラインを表示
+  function showTimelineForSelectedImage(status) {
+    console.log('タイムライン表示開始。ステータス:', status);
+
+    // タイムラインコンテナを強制的に表示
+    const timelineContainer = document.getElementById('timeline-container');
+    if (timelineContainer) {
+      timelineContainer.style.display = 'block';
+      timelineContainer.classList.remove('hidden');
+      timelineContainer.classList.add('block');
+      console.log('タイムラインコンテナを表示');
+    }
+
+    // 1つ目: ファイルアップロード完了（常に表示）
+    const timeline1 = document.getElementById('timeline-item-1-success');
+    if (timeline1) {
+      timeline1.classList.remove('hidden');
+      timeline1.style.display = 'block';
+      console.log('1つ目のタイムラインを表示');
+    }
+
+    // 2つ目: 解析開始（uploaded以降で表示）
+    const timeline2 = document.getElementById('timeline-item-2');
+    if (timeline2 && (status === 'uploaded' || status === 'analyzing' || status === 'completed')) {
+      timeline2.classList.remove('hidden');
+      timeline2.style.display = 'block';
+      console.log('2つ目のタイムラインを表示');
+    }
+
+    // 3つ目: 解析完了（completedで表示）
+    const timeline3 = document.getElementById('timeline-item-3');
+    if (timeline3 && status === 'completed') {
+      timeline3.classList.remove('hidden');
+      timeline3.style.display = 'block';
+      console.log('3つ目のタイムラインを表示');
+    }
+
+    // completedステータスの場合は3つ全て表示
+    if (status === 'completed') {
+      if (timeline2) {
+        timeline2.classList.remove('hidden');
+        timeline2.style.display = 'block';
+        console.log('2つ目のタイムラインを表示（completed）');
+      }
+      if (timeline3) {
+        timeline3.classList.remove('hidden');
+        timeline3.style.display = 'block';
+        console.log('3つ目のタイムラインを表示（completed）');
+      }
+    }
+
+    // ボタンの表示制御
+    const analysisButton = document.getElementById('analysis-button-container');
+    if (analysisButton) {
+      if (status === 'completed') {
+        // 解析完了時は再解析ボタンを表示
+        const button = analysisButton.querySelector('button');
+        if (button) {
+          button.innerHTML = '<span class="icon-[tabler--refresh] size-5 mr-2"></span>再解析';
+          button.onclick = function () {
+            retryAnalysis();
+          };
+        }
+        analysisButton.classList.remove('hidden');
+      } else if (status === 'uploaded') {
+        // アップロード完了時はモデル選択ボタンを表示
+        analysisButton.classList.remove('hidden');
+      }
+    }
+  }
+
+  // 再解析機能（仮実装）
+  function retryAnalysis() {
+    if (!window.currentImageId) {
+      console.error('画像IDが設定されていません');
+      alert('画像IDが設定されていません');
+      return;
+    }
+
+    console.log('再解析を開始します。画像ID:', window.currentImageId);
+    // TODO: 再解析APIを呼び出す
+    alert('再解析機能は実装中です。画像ID: ' + window.currentImageId);
+  }
 </script>
 {% endblock %}
 
 {% block extra_css %}
 <style>
-  /* タイムラインアイコン完全非表示 */
+  /* タイムラインの表示を有効化 */
   #timeline-container .timeline-middle {
-    display: none !important;
+    display: flex !important;
   }
 
-  /* アイコン分の左余白(ms-2 など)を打ち消し */
+  /* タイムラインのスタイル調整 */
   #timeline-container .timeline-end {
-    margin-left: 0 !important;
+    margin-left: 1rem !important;
   }
-
-  /* 最初と以降で付いている m-3 も詰めたければ以下(任意) */
-  /* #timeline-container .timeline-end.ms-2.m-3 { margin: 0 0 1rem 0 !important; } */
 </style>
 {% endblock %}
