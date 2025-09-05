@@ -199,23 +199,33 @@
             </td>
             <td>{{ image.upload_date|date:"Y-m-d H:i" }}</td>
             <td>
-              {% if image.status == 'success' %}
-              <span class="badge badge-outline border-dashed badge-success me-2 cursor-pointer" title="クリックしてタイムラインを確認"
-                data-overlay="#timeline-modal">解析成功</span>
+              {% if image.status == 'completed' %}
+              <span class="badge badge-outline border-dashed badge-success me-2 cursor-pointer"
+                title="クリックしてアップロードページに遷移" onclick="navigateToUploadPage({{ image.id }}, 'completed')">解析成功</span>
               {% elif image.status == 'analyzing' %}
-              <span class="badge badge-outline border-dashed badge-info me-2 cursor-pointer" title="クリックしてタイムラインを確認"
-                data-overlay="#timeline-modal">解析中</span>
+              <span class="badge badge-outline border-dashed badge-info me-2 cursor-pointer" title="クリックしてアップロードページに遷移"
+                onclick="navigateToUploadPage({{ image.id }}, 'analyzing')">解析中</span>
+              {% elif image.status == 'uploaded' %}
+              <span class="badge badge-outline border-dashed badge-warning me-2 cursor-pointer"
+                title="クリックしてアップロードページに遷移" onclick="navigateToUploadPage({{ image.id }}, 'uploaded')">アップロード完了</span>
               {% elif image.status == 'preparing' %}
+              {% if image.queue_item %}
+              <span class="badge badge-outline border-dashed badge-secondary me-2 cursor-pointer"
+                title="クリックしてタイムラインを確認" data-overlay="#timeline-modal">
+                準備中 → あと{{ image.queue_item.waiting_position }}枚
+              </span>
+              {% else %}
               <span class="badge badge-outline border-dashed badge-secondary me-2 cursor-pointer"
                 title="クリックしてタイムラインを確認" data-overlay="#timeline-modal">準備中</span>
+              {% endif %}
               {% elif image.status == 'failed' %}
-              <span class="badge badge-outline border-dashed badge-error me-2 cursor-pointer" title="クリックしてタイムラインを確認"
-                data-overlay="#timeline-modal">失敗</span>
+              <span class="badge badge-outline border-dashed badge-error me-2 cursor-pointer" title="クリックしてアップロードページに遷移"
+                onclick="navigateToUploadPage({{ image.id }}, 'failed')">失敗</span>
               {% endif %}
             </td>
             <td>
-              {% if image.analysis_results_list %}
-              {% for result in image.analysis_results_list %}
+              {% if image.analysis_results.all %}
+              {% for result in image.analysis_results.all %}
               <span class="badge badge-{% cycle 'error' 'secondary' 'success' %} me-1">{{ result.label }}</span>
               {% endfor %}
               {% else %}
@@ -223,8 +233,8 @@
               {% endif %}
             </td>
             <td>
-              {% if image.analysis_results_list %}
-              {% with first_result=image.analysis_results_list.first %}
+              {% if image.analysis_results.all %}
+              {% with first_result=image.analysis_results.first %}
               <span class="badge badge-success">{{ first_result.confidence }}%</span>
               {% endwith %}
               {% else %}
@@ -349,6 +359,46 @@
   </div>
 </div>
 
+<!-- モデル選択モーダル -->
+<div id="model-selection-modal" class="overlay modal hidden" role="dialog" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">解析モデルを選択</h3>
+        <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
+          data-overlay="#model-selection-modal">
+          <span class="icon-[tabler--x] size-4"></span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="flex flex-col gap-4">
+          <div>
+            <label class="form-label" for="model-selector">解析モデル</label>
+            <select class="select select-bordered w-full" id="model-selector">
+              <option value="">モデルを選択してください</option>
+              <option value="resnet50">ResNet-50 v2.1 (汎用画像分類)</option>
+              <option value="efficientnet">EfficientNet-B0 (軽量・高速)</option>
+              <option value="mobilenet">MobileNet v2 (モバイル最適化)</option>
+              <option value="vgg16">VGG-16 (高精度・詳細分析)</option>
+              <option value="custom">カスタムモデル (特定用途特化)</option>
+            </select>
+          </div>
+          <div class="bg-base-200 rounded-lg p-3">
+            <h4 class="font-semibold text-sm mb-2">選択されたモデルの特徴</h4>
+            <p id="model-description" class="text-sm text-gray-600">モデルを選択すると詳細が表示されます</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-soft btn-secondary" data-overlay="#model-selection-modal">キャンセル</button>
+        <button type="button" class="btn btn-primary" id="modal-start-analysis-btn">
+          <span class="icon-[tabler--player-play] size-4 mr-2"></span>解析開始
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- タイムライン表示モーダル -->
 <div id="timeline-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden" role="dialog"
   tabindex="-1">
@@ -405,6 +455,21 @@
 
             <div class="flex items-center gap-3">
               <div class="flex-shrink-0">
+                <div class="w-8 h-8 bg-secondary rounded-full flex items-center justify-center">
+                  <span class="icon-[tabler--settings] text-secondary-content size-4"></span>
+                </div>
+              </div>
+              <div class="flex-1">
+                <div class="flex justify-between items-center">
+                  <span class="text-sm font-medium">モデル選択</span>
+                  <span class="text-xs text-gray-500" id="model-selection-time">-</span>
+                </div>
+                <div class="text-xs text-gray-600" id="selected-model">選択モデル: -</div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <div class="flex-shrink-0">
                 <div class="w-8 h-8 bg-warning rounded-full flex items-center justify-center">
                   <span class="icon-[tabler--brain] text-warning-content size-4"></span>
                 </div>
@@ -415,6 +480,24 @@
                   <span class="text-xs text-gray-500" id="analysis-start-time">-</span>
                 </div>
                 <div class="text-xs text-gray-600" id="model-used">使用モデル: -</div>
+              </div>
+            </div>
+
+            <!-- エラー情報表示セクション（失敗時のみ表示） -->
+            <div id="error-info-section" class="hidden">
+              <div class="flex items-center gap-3">
+                <div class="flex-shrink-0">
+                  <div class="w-8 h-8 bg-error rounded-full flex items-center justify-center">
+                    <span class="icon-[tabler--x] text-error-content size-4"></span>
+                  </div>
+                </div>
+                <div class="flex-1">
+                  <div class="flex justify-between items-center">
+                    <span class="text-sm font-medium text-error">解析失敗</span>
+                    <span class="text-xs text-gray-500" id="error-timestamp">-</span>
+                  </div>
+                  <div class="text-xs text-error" id="error-message">エラーメッセージ: -</div>
+                </div>
               </div>
             </div>
 
@@ -444,6 +527,11 @@
       </div>
       <div class="modal-footer">
         <div class="flex justify-end gap-3">
+          <!-- 再解析ボタン（失敗時のみ表示） -->
+          <button type="button" id="retry-analysis-btn" class="btn btn-primary hidden" onclick="retryAnalysis()">
+            <span class="icon-[tabler--refresh] size-4 mr-2"></span>
+            再解析
+          </button>
           <button type="button" class="btn btn-soft btn-secondary" data-overlay="#timeline-modal">閉じる</button>
         </div>
       </div>
@@ -511,6 +599,29 @@
 {% block extra_js %}
 <script src="{% static 'js/image_gallery.js' %}"></script>
 <script>
+  // アップロードページに遷移する関数
+  function navigateToUploadPage(imageId, imageStatus) {
+    // Djangoのセッションに画像IDと状態を保存
+    fetch('/api/set-selected-image/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({
+        image_id: imageId,
+        image_status: imageStatus
+      })
+    }).then(() => {
+      // アップロードページに遷移
+      window.location.href = '/image_upload/';
+    }).catch(error => {
+      console.error('Error setting selected image:', error);
+      // エラーが発生しても遷移は実行
+      window.location.href = '/image_upload/';
+    });
+  }
+
   // モーダルに画像データを設定する関数
   function openImageModal(filename, imageSrc, uploadTime, status, labels, confidence) {
     // モーダルの内容を設定
@@ -724,7 +835,10 @@
 
   // 個別画像解析開始
   function startIndividualAnalysis(imageId, modelName) {
-    console.log('個別画像解析開始:', imageId, modelName);
+    console.log('=== 個別画像解析開始 ===');
+    console.log('画像ID:', imageId);
+    console.log('モデル名:', modelName);
+    console.log('タイムスタンプ:', new Date().toISOString());
 
     // 画像IDが取得できない場合の処理
     if (!imageId) {
@@ -735,8 +849,12 @@
 
     // CSRFトークンを取得
     const csrfToken = getCSRFToken();
+    console.log('CSRFトークン:', csrfToken);
 
     // API呼び出し
+    console.log('API呼び出し開始: /api/analysis/start/');
+    console.log('リクエストボディ:', { image_id: imageId, model: modelName });
+
     fetch('/api/analysis/start/', {
       method: 'POST',
       headers: {
@@ -749,16 +867,33 @@
       })
     })
       .then(response => {
+        console.log('=== API応答受信 ===');
+        console.log('ステータス:', response.status);
+        console.log('ステータステキスト:', response.statusText);
+        console.log('ヘッダー:', response.headers);
+
         // レスポンスがJSONかどうかをチェック
         const contentType = response.headers.get('content-type');
+        console.log('Content-Type:', contentType);
+
         if (!contentType || !contentType.includes('application/json')) {
           throw new Error('サーバーから無効なレスポンスが返されました');
         }
         return response.json();
       })
       .then(data => {
+        console.log('=== 解析開始API応答 ===');
+        console.log('成功:', data.ok);
+        console.log('メッセージ:', data.message);
+        console.log('結果:', data.results);
+        console.log('エラー:', data.error);
+
         if (data.ok) {
           console.log('解析開始成功:', data);
+
+          // モデル選択時刻を記録
+          recordModelSelection(imageId, modelName);
+
           // バッジを「解析中」に更新
           updateBadgeStatus(imageId, 'analyzing');
 
@@ -772,7 +907,10 @@
         }
       })
       .catch(error => {
-        console.error('API呼び出しエラー:', error);
+        console.error('=== API呼び出しエラー ===');
+        console.error('エラー詳細:', error);
+        console.error('エラーメッセージ:', error.message);
+        console.error('エラースタック:', error.stack);
         handleAnalysisError('解析の開始中にエラーが発生しました: ' + error.message);
       });
   }
@@ -838,6 +976,29 @@
         updateBadgeStatus(imageId, 'failed');
       });
     }
+  }
+
+  // モデル選択時刻を記録
+  function recordModelSelection(imageId, modelName) {
+    console.log('モデル選択記録:', imageId, modelName);
+
+    // モデル名の表示名を取得
+    const modelDisplayNames = {
+      'resnet50': 'ResNet-50 v2.1',
+      'efficientnet': 'EfficientNet-B0',
+      'mobilenet': 'MobileNet v2',
+      'vgg16': 'VGG-16',
+      'custom': 'カスタムモデル'
+    };
+
+    const displayName = modelDisplayNames[modelName] || modelName;
+
+    // タイムライン表示を即座に更新
+    const now = new Date();
+    document.getElementById('model-selection-time').textContent = formatDateTime(now);
+    document.getElementById('selected-model').textContent = `選択モデル: ${displayName}`;
+
+    console.log('モデル選択記録完了:', displayName);
   }
 
   // 画像ステータスを失敗に更新
@@ -1355,7 +1516,13 @@
 
       // モーダルの基本情報を設定
       document.getElementById('timeline-filename').textContent = timeline.filename || 'ファイル名不明';
-      document.getElementById('timeline-status').textContent = getStatusDisplayName(timeline.status);
+
+      // ステータス表示（準備中の場合はキュー情報も表示）
+      let statusText = getStatusDisplayName(timeline.status);
+      if (timeline.status === 'preparing' && timeline.queue_info && timeline.queue_info.waiting_position > 0) {
+        statusText += ` → あと${timeline.queue_info.waiting_position}枚`;
+      }
+      document.getElementById('timeline-status').textContent = statusText;
 
       // 進捗バーの表示制御
       updateProgressSection(timeline.status, imageId);
@@ -1375,12 +1542,25 @@
   // ステータス表示名を取得する関数
   function getStatusDisplayName(status) {
     const statusMap = {
+      'uploaded': 'アップロード完了',
       'preparing': '準備中',
       'analyzing': '解析中',
       'success': '解析成功',
       'failed': '失敗'
     };
     return statusMap[status] || status;
+  }
+
+  // モデル名の表示名変換
+  function getModelDisplayName(modelKey) {
+    const modelMap = {
+      'resnet50': 'PyTorch ResNet-50',
+      'efficientnet': 'TensorFlow EfficientNet',
+      'mobilenet': 'PyTorch MobileNet',
+      'vgg16': 'PyTorch VGG-16',
+      'custom': 'CLIP'
+    };
+    return modelMap[modelKey] || modelKey || '-';
   }
 
   // 進捗バーセクションの表示制御
@@ -1480,14 +1660,54 @@
       document.getElementById('upload-duration').textContent = '所要時間: -';
     }
 
+    // モデル選択時刻
+    const modelSelectionItem = document.querySelector('#timeline-content .flex.items-center.gap-3:nth-child(2)');
+    if (timeline.model_selected_at) {
+      const modelSelectionTime = new Date(timeline.model_selected_at);
+      document.getElementById('model-selection-time').textContent = formatDateTime(modelSelectionTime);
+      document.getElementById('selected-model').textContent = `選択モデル: ${timeline.selected_model || '-'}`;
+      // モデル選択アイテムを表示
+      if (modelSelectionItem) {
+        modelSelectionItem.style.display = 'flex';
+      }
+    } else {
+      document.getElementById('model-selection-time').textContent = '-';
+      document.getElementById('selected-model').textContent = '選択モデル: -';
+      // モデル選択アイテムを非表示
+      if (modelSelectionItem) {
+        modelSelectionItem.style.display = 'none';
+      }
+    }
+
     // 解析開始時刻
     if (timeline.analysis_started_at) {
       const analysisStartTime = new Date(timeline.analysis_started_at);
       document.getElementById('analysis-start-time').textContent = formatDateTime(analysisStartTime);
-      document.getElementById('model-used').textContent = `使用モデル: ${timeline.model_used || '-'}`;
+
+      // モデル名を適切に表示
+      const modelName = getModelDisplayName(timeline.model_used);
+      document.getElementById('model-used').textContent = `使用モデル: ${modelName}`;
     } else {
       document.getElementById('analysis-start-time').textContent = '-';
       document.getElementById('model-used').textContent = '使用モデル: -';
+    }
+
+    // エラー情報の表示
+    const errorInfoSection = document.getElementById('error-info-section');
+    const retryBtn = document.getElementById('retry-analysis-btn');
+    if (timeline.status === 'failed' && timeline.error_info) {
+      errorInfoSection.classList.remove('hidden');
+      retryBtn.classList.remove('hidden');
+      document.getElementById('error-message').textContent = `エラーメッセージ: ${timeline.error_info.error_message}`;
+      if (timeline.error_info.error_timestamp) {
+        const errorTime = new Date(timeline.error_info.error_timestamp);
+        document.getElementById('error-timestamp').textContent = formatDateTime(errorTime);
+      } else {
+        document.getElementById('error-timestamp').textContent = '-';
+      }
+    } else {
+      errorInfoSection.classList.add('hidden');
+      retryBtn.classList.add('hidden');
     }
 
     // 解析完了時刻
@@ -1511,15 +1731,79 @@
     }
   }
 
+  // 再解析機能
+  function retryAnalysis() {
+    if (!currentImageId) {
+      console.error('画像IDが設定されていません');
+      return;
+    }
+
+    // 確認ダイアログ
+    if (!confirm('この画像を再解析しますか？')) {
+      return;
+    }
+
+    // 再解析ボタンを無効化
+    const retryBtn = document.getElementById('retry-analysis-btn');
+    retryBtn.disabled = true;
+    retryBtn.innerHTML = '<span class="icon-[tabler--loader-2] size-4 mr-2 animate-spin"></span>再解析中...';
+
+    // 再解析APIを呼び出し
+    fetch('/api/analysis/retry/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: JSON.stringify({
+        image_id: currentImageId
+      })
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // 成功時はモーダルを閉じてページをリロード
+          closeTimelineModal();
+          location.reload();
+        } else {
+          alert('再解析の開始に失敗しました: ' + (data.error || '不明なエラー'));
+          // ボタンを元に戻す
+          retryBtn.disabled = false;
+          retryBtn.innerHTML = '<span class="icon-[tabler--refresh] size-4 mr-2"></span>再解析';
+        }
+      })
+      .catch(error => {
+        console.error('再解析エラー:', error);
+        alert('再解析の開始に失敗しました: ' + error.message);
+        // ボタンを元に戻す
+        retryBtn.disabled = false;
+        retryBtn.innerHTML = '<span class="icon-[tabler--refresh] size-4 mr-2"></span>再解析';
+      });
+  }
+
   // タイムライン表示をリセットする関数
   function resetTimelineDisplay() {
     document.getElementById('upload-time').textContent = '-';
     document.getElementById('upload-duration').textContent = '所要時間: -';
+    document.getElementById('model-selection-time').textContent = '-';
+    document.getElementById('selected-model').textContent = '選択モデル: -';
     document.getElementById('analysis-start-time').textContent = '-';
     document.getElementById('model-used').textContent = '使用モデル: -';
     document.getElementById('analysis-end-time').textContent = '-';
     document.getElementById('analysis-duration').textContent = '所要時間: -';
     document.getElementById('total-duration').textContent = '-';
+
+    // エラー情報セクションを非表示
+    const errorInfoSection = document.getElementById('error-info-section');
+    const retryBtn = document.getElementById('retry-analysis-btn');
+    if (errorInfoSection) errorInfoSection.classList.add('hidden');
+    if (retryBtn) retryBtn.classList.add('hidden');
+
+    // モデル選択アイテムを非表示
+    const modelSelectionItem = document.querySelector('#timeline-content .flex.items-center.gap-3:nth-child(2)');
+    if (modelSelectionItem) {
+      modelSelectionItem.style.display = 'none';
+    }
   }
 
   // 日時をフォーマットする関数

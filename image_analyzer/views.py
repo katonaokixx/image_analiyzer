@@ -17,7 +17,7 @@ from django.template.loader import render_to_string
 from django.conf import settings
 from datetime import timedelta
 
-from .models import Image, MLModel, ProgressLog, TimelineLog, PasswordResetToken
+from .models import Image, MLModel, ProgressLog, TimelineLog, PasswordResetToken, AnalysisQueue, User
 from django.utils import timezone
 from .services import analysis_service
 
@@ -127,7 +127,8 @@ def user_image_table(request: HttpRequest):
         messages.error(request, 'ログインが必要です。')
         return redirect('login')
     
-    images = Image.objects.order_by('-upload_date')
+    # ログインしているユーザーの画像のみを表示
+    images = Image.objects.filter(user=request.user).select_related('queue_item').order_by('-upload_date')
     
     # ページネーション設定
     paginator = Paginator(images, 10)  # 10件/ページ
@@ -151,7 +152,10 @@ def admin_image_table(request: HttpRequest):
         messages.error(request, '管理者権限が必要です。')
         return redirect('user_image_table')
     
-    images = Image.objects.order_by('-upload_date')
+    images = Image.objects.select_related('queue_item').order_by('-upload_date')
+    
+    # ユーザーリストを取得（フィルター用）
+    users = User.objects.all().order_by('username')
     
     # View All機能のチェック
     view_all = request.GET.get('view_all', 'false').lower() == 'true'
@@ -163,6 +167,7 @@ def admin_image_table(request: HttpRequest):
             'page_obj': None,  # ページネーションなし
             'has_data': images.exists(),
             'view_all': True,
+            'users': users,
         })
     else:
         # ページネーション設定（10件/ページ）
@@ -175,11 +180,101 @@ def admin_image_table(request: HttpRequest):
             'page_obj': page_obj,  # ページネーション情報
             'has_data': images.exists(),
             'view_all': False,
+            'users': users,
         })
 
 @csrf_protect
 def image_upload(request: HttpRequest):
-    return render(request, 'main/image_upload.html')
+    # セッションからアップロードした画像IDを取得
+    uploaded_image_ids = request.session.get('uploaded_image_ids', [])
+    
+    # セッションから選択された画像IDと状態を取得（バッジクリック時）
+    selected_image_id = request.session.get('selected_image_id')
+    selected_image_status = request.session.get('selected_image_status')
+    if selected_image_id:
+        # 選択された画像の情報を取得
+        try:
+            selected_image = Image.objects.get(id=selected_image_id, user=request.user)
+            # 選択された画像をアップロード済み画像リストに追加
+            if selected_image_id not in uploaded_image_ids:
+                uploaded_image_ids.append(selected_image_id)
+                request.session['uploaded_image_ids'] = uploaded_image_ids
+        except Image.DoesNotExist:
+            selected_image = None
+        finally:
+            # セッションから選択された画像IDと状態をクリア
+            if 'selected_image_id' in request.session:
+                del request.session['selected_image_id']
+            if 'selected_image_status' in request.session:
+                del request.session['selected_image_status']
+    else:
+        selected_image = None
+        selected_image_status = None
+    
+    # 画像情報を取得
+    uploaded_images = []
+    if uploaded_image_ids:
+        uploaded_images = Image.objects.filter(
+            id__in=uploaded_image_ids,
+            user=request.user
+        ).order_by('-id')
+    
+    # 選択されたモデルを取得
+    selected_model = request.session.get('selected_model', '')
+    has_uploaded_images = len(uploaded_images) > 0
+    has_selected_model = bool(selected_model)
+    
+    context = {
+        'uploaded_images': uploaded_images,
+        'selected_model': selected_model,
+        'has_uploaded_images': has_uploaded_images,
+        'has_selected_model': has_selected_model,
+        'show_analysis_button': has_uploaded_images and has_selected_model,
+        'show_timeline': has_uploaded_images,
+        'selected_image': selected_image,
+        'selected_image_status': selected_image_status
+    }
+    
+    return render(request, 'main/image_upload.html', context)
+
+@require_POST
+@csrf_protect
+def api_set_selected_image(request: HttpRequest):
+    """選択された画像IDと状態をセッションに保存"""
+    import json
+    
+    try:
+        data = json.loads(request.body)
+        image_id = data.get('image_id')
+        image_status = data.get('image_status')
+        
+        if not image_id:
+            return JsonResponse({'ok': False, 'error': '画像IDが指定されていません'}, status=400)
+        
+        # セッションに画像IDと状態を保存
+        request.session['selected_image_id'] = image_id
+        request.session['selected_image_status'] = image_status
+        
+        return JsonResponse({'ok': True, 'message': '画像IDと状態が保存されました'})
+        
+    except Exception as e:
+        logger.error(f"選択画像ID保存エラー: {e}")
+        return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+
+@require_POST
+@csrf_protect
+def api_select_model(request: HttpRequest):
+    """モデル選択API"""
+    model_name = request.POST.get('model')
+    
+    if not model_name:
+        return JsonResponse({'ok': False, 'error': 'モデルが選択されていません'}, status=400)
+    
+    # セッションに選択されたモデルを保存
+    request.session['selected_model'] = model_name
+    request.session.modified = True
+    
+    return JsonResponse({'ok': True, 'model': model_name})
 
 @require_POST
 @csrf_protect
@@ -209,7 +304,7 @@ def api_form_upload(request: HttpRequest):
     # ファイル保存
     saved = []
     for f in valid_files:
-        img = save_file_and_create_image(f)
+        img = save_file_and_create_image(f, request.user)
         
         # タイムラインログの作成・更新
         timeline_log, created = TimelineLog.objects.get_or_create(
@@ -223,7 +318,35 @@ def api_form_upload(request: HttpRequest):
             timeline_log.upload_completed_at = timezone.now()
             timeline_log.save()
         
+        # 自動でキューに追加
+        try:
+            # 次の位置を計算
+            next_position = AnalysisQueue.objects.filter(
+                status__in=['waiting', 'processing']
+            ).count() + 1
+            
+            # キューアイテムを作成
+            AnalysisQueue.objects.create(
+                image=img,
+                user=request.user if request.user.is_authenticated else None,
+                position=next_position,
+                priority='normal',
+                status='waiting',
+                model_name='resnet50'  # デフォルトモデル
+            )
+        except Exception as e:
+            # キュー追加に失敗してもアップロードは成功とする
+            print(f"Failed to add image to queue: {e}")
+        
         saved.append(img)
+    
+    # セッションにアップロードした画像IDを保存
+    uploaded_image_ids = request.session.get('uploaded_image_ids', [])
+    for img in saved:
+        if img.id not in uploaded_image_ids:
+            uploaded_image_ids.append(img.id)
+    request.session['uploaded_image_ids'] = uploaded_image_ids
+    request.session.modified = True
     
     return JsonResponse({
         'ok': True,
@@ -239,63 +362,168 @@ def api_form_upload(request: HttpRequest):
 @csrf_protect
 def api_start_analysis(request: HttpRequest):
     """解析開始API"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     model_name = request.POST.get('model')
     image_id = request.POST.get('image_id')  # 個別画像ID（オプション）
     
+    logger.info(f"=== 解析開始API呼び出し ===")
+    logger.info(f"モデル: {model_name}, 画像ID: {image_id}, ユーザー: {request.user.username}")
+    
     if not model_name:
+        logger.error("モデルが指定されていません")
         return JsonResponse({'ok': False, 'error': 'モデルが指定されていません'}, status=400)
     
-    # 個別画像解析の場合
-    if image_id:
-        try:
-            image = Image.objects.get(id=image_id, status='preparing')
-        except Image.DoesNotExist:
-            return JsonResponse({'ok': False, 'error': '指定された画像が見つからないか、解析対象ではありません'}, status=400)
-        
-        images = [image]
-    else:
-        # 一括解析の場合（既存の動作）
-        images = Image.objects.filter(status='preparing').order_by('-upload_date')
-        if not images.exists():
-            return JsonResponse({'ok': False, 'error': '解析対象の画像が見つかりません'}, status=400)
-    
-    # 解析開始時のタイムライン記録
-    for image in images:
-        timeline_log, created = TimelineLog.objects.get_or_create(
-            image=image,
-            defaults={}
-        )
-        timeline_log.analysis_started_at = timezone.now()
-        timeline_log.model_used = model_name
-        timeline_log.save()
-
-    # バックグラウンドで解析を実行
-    def run_analysis():
-        try:
-            if image_id:
-                # 個別画像解析
-                result = analysis_service.analyze_single_image(int(image_id), model_name)
-            else:
-                # 一括解析
-                image_ids = [img.id for img in images]
-                result = analysis_service.analyze_images_batch(image_ids, model_name)
+    # キューシステムを使用して解析を開始
+    try:
+        if image_id:
+            # 個別画像解析の場合
+            try:
+                image = Image.objects.get(id=image_id, status__in=['uploaded', 'preparing', 'analyzing'])
+                logger.info(f"個別画像解析対象: ID={image.id}, ファイル名={image.filename}, ステータス={image.status}")
+            except Image.DoesNotExist:
+                logger.error(f"指定された画像が見つからないか、解析対象ではありません: ID={image_id}")
+                return JsonResponse({'ok': False, 'error': '指定された画像が見つからないか、解析対象ではありません'}, status=400)
             
-            if not result['success']:
-                print(f"解析エラー: {result['error']}")
-        except Exception as e:
-            print(f"解析実行エラー: {e}")
+            # 既にキューに存在するかチェック
+            if hasattr(image, 'queue_item') and image.queue_item:
+                logger.info(f"画像ID={image_id}は既にキューに追加されています")
+                # 既にキューに存在する場合でも、キュー処理を開始
+                start_queue_processing()
+                return JsonResponse({'ok': True, 'message': 'この画像は既にキューに追加されています。処理を開始します。'})
+            
+            # キューに追加
+            next_position = AnalysisQueue.objects.filter(
+                status__in=['waiting', 'processing']
+            ).count() + 1
+            
+            queue_item = AnalysisQueue.objects.create(
+                image=image,
+                user=request.user if request.user.is_authenticated else None,
+                position=next_position,
+                priority='normal',
+                status='waiting',
+                model_name=model_name
+            )
+            
+            # 画像のステータスを準備中に更新
+            image.status = 'preparing'
+            image.save()
+            
+            logger.info(f"個別画像をキューに追加: ID={image.id}, 位置={next_position}")
+            
+        else:
+            # 一括解析の場合
+            images = Image.objects.filter(status__in=['uploaded', 'preparing', 'analyzing']).order_by('-upload_date')
+            logger.info(f"一括解析対象画像数: {images.count()}")
+            
+            if not images.exists():
+                logger.error("解析対象の画像が見つかりません")
+                return JsonResponse({'ok': False, 'error': '解析対象の画像が見つかりません'}, status=400)
+            
+            # 各画像をキューに追加
+            added_count = 0
+            skipped_count = 0
+            for img in images:
+                # 既にキューに存在するかチェック
+                if hasattr(img, 'queue_item') and img.queue_item:
+                    logger.info(f"画像ID={img.id}は既にキューに追加されています")
+                    skipped_count += 1
+                    continue
+                
+                next_position = AnalysisQueue.objects.filter(
+                    status__in=['waiting', 'processing']
+                ).count() + 1
+                
+                queue_item = AnalysisQueue.objects.create(
+                    image=img,
+                    user=request.user if request.user.is_authenticated else None,
+                    position=next_position,
+                    priority='normal',
+                    status='waiting',
+                    model_name=model_name
+                )
+                
+                # 画像のステータスを準備中に更新
+                img.status = 'preparing'
+                img.save()
+                
+                added_count += 1
+                logger.info(f"画像をキューに追加: ID={img.id}, 位置={next_position}")
+            
+            logger.info(f"一括解析で{added_count}件の画像をキューに追加、{skipped_count}件は既にキューに存在")
+            
+            # 既にキューに存在する画像がある場合でも、キュー処理を開始
+            if skipped_count > 0:
+                logger.info(f"既にキューに存在する{skipped_count}件の画像の処理を開始")
+        
+        # キュー処理を開始
+        start_queue_processing()
+        
+        return JsonResponse({'ok': True, 'message': '解析をキューに追加しました'})
+        
+    except Exception as e:
+        logger.error(f"キュー追加中にエラーが発生: {e}")
+        return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+
+def start_queue_processing():
+    """キュー処理を開始する"""
+    import logging
+    logger = logging.getLogger(__name__)
     
-    # 別スレッドで解析を実行
-    analysis_thread = threading.Thread(target=run_analysis)
-    analysis_thread.daemon = True
-    analysis_thread.start()
+    def process_queue():
+        logger.info("=== キュー処理開始 ===")
+        while True:
+            try:
+                # 次のキューアイテムを取得
+                next_item = AnalysisQueue.get_next_item()
+                if not next_item:
+                    logger.info("処理対象のキューアイテムがありません")
+                    break
+                
+                logger.info(f"キューアイテム処理開始: ID={next_item.id}, 画像ID={next_item.image.id}")
+                
+                # キューアイテムのステータスを処理中に更新
+                next_item.status = 'processing'
+                next_item.started_at = timezone.now()
+                next_item.save()
+                
+                # 画像のステータスを解析中に更新
+                next_item.image.status = 'analyzing'
+                next_item.image.save()
+                
+                # 解析を実行
+                result = analysis_service.process_queue_item(next_item.id)
+                
+                if result.get('success'):
+                    # 成功時
+                    next_item.status = 'completed'
+                    next_item.completed_at = timezone.now()
+                    next_item.image.status = 'completed'
+                    next_item.image.save()
+                    logger.info(f"キューアイテム処理完了: ID={next_item.id}")
+                else:
+                    # 失敗時
+                    next_item.status = 'failed'
+                    next_item.error_message = result.get('error', 'Unknown error')
+                    next_item.image.status = 'failed'
+                    next_item.image.save()
+                    logger.error(f"キューアイテム処理失敗: ID={next_item.id}, エラー={result.get('error')}")
+                
+                next_item.save()
+                
+            except Exception as e:
+                logger.error(f"キュー処理中にエラーが発生: {e}")
+                break
+        
+        logger.info("=== キュー処理終了 ===")
     
-    return JsonResponse({
-        'ok': True, 
-        'message': '解析を開始しました',
-        'total_images': len(images),
-        'individual': bool(image_id)
-    })
+    # キュー処理を別スレッドで実行
+    queue_thread = threading.Thread(target=process_queue)
+    queue_thread.daemon = True
+    queue_thread.start()
+    logger.info("キュー処理スレッドを開始")
 
 @require_GET
 def api_analysis_progress(request: HttpRequest):
@@ -356,24 +584,6 @@ def validate_file(f) -> str | None:
         return f'未対応拡張子です ({ext})'
     return None
 
-@transaction.atomic
-def save_file_and_create_image(f):
-    upload_dir = os.path.join(settings.MEDIA_ROOT, 'images')
-    os.makedirs(upload_dir, exist_ok=True)
-    base, ext = os.path.splitext(f.name)
-    ext = ext.lower()
-    filename = secure_unique_filename(upload_dir, base, ext)
-    full_path = os.path.join(upload_dir, filename)
-    with open(full_path, 'wb+') as dest:
-        for chunk in f.chunks():
-            dest.write(chunk)
-    img = Image.objects.create(
-        filename=filename,
-        file_path=full_path,
-        status='preparing'
-    )
-    return img
-
 @require_POST
 @csrf_protect
 def api_update_status(request: HttpRequest):
@@ -420,6 +630,42 @@ def api_get_timeline(request: HttpRequest, image_id: int):
             defaults={}
         )
         
+        # キュー情報を取得
+        queue_info = None
+        if hasattr(image, 'queue_item') and image.queue_item:
+            queue_info = {
+                'position': image.queue_item.position,
+                'status': image.queue_item.status,
+                'waiting_position': image.queue_item.waiting_position,
+                'priority': image.queue_item.priority,
+                'queued_at': image.queue_item.queued_at.isoformat() if image.queue_item.queued_at else None,
+                'estimated_wait_time': image.queue_item.estimated_wait_time,
+            }
+        
+        # エラー情報を取得
+        error_info = None
+        if image.status == 'failed':
+            # 最新のエラーログを取得
+            from .models import ProgressLog
+            latest_error = ProgressLog.objects.filter(
+                image=image,
+                current_stage__icontains='error'
+            ).order_by('-timestamp').first()
+            
+            if latest_error:
+                error_info = {
+                    'error_message': latest_error.stage_description,
+                    'error_stage': latest_error.current_stage,
+                    'error_timestamp': latest_error.timestamp.isoformat(),
+                }
+            else:
+                # フォールバック: 一般的なエラーメッセージ
+                error_info = {
+                    'error_message': '画像解析中にエラーが発生しました',
+                    'error_stage': 'analysis_error',
+                    'error_timestamp': timeline_log.analysis_started_at.isoformat() if timeline_log.analysis_started_at else None,
+                }
+        
         # タイムラインデータを構築
         timeline_data = {
             'image_id': image.id,
@@ -433,6 +679,8 @@ def api_get_timeline(request: HttpRequest, image_id: int):
             'upload_duration': timeline_log.upload_duration,
             'analysis_duration': timeline_log.analysis_duration,
             'total_duration': timeline_log.total_duration,
+            'queue_info': queue_info,
+            'error_info': error_info,
         }
         
         return JsonResponse({
@@ -452,31 +700,41 @@ def api_get_timeline(request: HttpRequest, image_id: int):
         }, status=500)
 
 
-def save_file_and_create_image(uploaded_file):
+def save_file_and_create_image(uploaded_file, user):
     """アップロードされたファイルを保存してImageモデルを作成"""
     from django.core.files.storage import default_storage
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    logger.info(f"=== ファイルアップロード開始 ===")
+    logger.info(f"ファイル名: {uploaded_file.name}, サイズ: {uploaded_file.size} bytes, ユーザー: {user.username}")
     
     # ファイル保存ディレクトリを準備
     upload_dir = os.path.join(settings.MEDIA_ROOT, 'images')
     os.makedirs(upload_dir, exist_ok=True)
+    logger.info(f"アップロードディレクトリ: {upload_dir}")
     
     # ファイル名を安全にする
     filename = uploaded_file.name
     name, ext = os.path.splitext(filename)
     safe_filename = secure_unique_filename(upload_dir, name, ext)
+    logger.info(f"安全なファイル名: {safe_filename}")
     
     # ファイルを保存
     file_path = os.path.join(upload_dir, safe_filename)
     with open(file_path, 'wb+') as destination:
         for chunk in uploaded_file.chunks():
             destination.write(chunk)
+    logger.info(f"ファイル保存完了: {file_path}")
     
     # Imageモデルを作成
     image = Image.objects.create(
         filename=safe_filename,
         file_path=file_path,
-        status='preparing'
+        status='uploaded',
+        user=user  # 現在のユーザーを設定
     )
+    logger.info(f"Imageモデル作成完了: ID={image.id}, ステータス={image.status}")
     
     return image
 
@@ -608,3 +866,368 @@ def password_reset_confirm_view(request):
 def password_reset_success_view(request):
     """パスワードリセットメール送信完了画面"""
     return render(request, 'auth/send_succefly_email.html')
+
+
+# ===== 解析キュー管理システム =====
+
+@login_required
+def queue_management_view(request):
+    """管理者用キュー管理画面"""
+    # 管理者権限チェック
+    if not request.user.is_staff:
+        messages.error(request, '管理者権限が必要です。')
+        return redirect('user_image_table')
+    
+    # キューアイテムを取得
+    queue_items = AnalysisQueue.objects.select_related('image', 'user').order_by('priority', 'position', 'queued_at')
+    
+    # 統計情報
+    stats = {
+        'total': queue_items.count(),
+        'waiting': queue_items.filter(status='waiting').count(),
+        'processing': queue_items.filter(status='processing').count(),
+        'completed': queue_items.filter(status='completed').count(),
+        'failed': queue_items.filter(status='failed').count(),
+    }
+    
+    return render(request, 'admin/queue_management.html', {
+        'queue_items': queue_items,
+        'stats': stats,
+    })
+
+
+@require_POST
+@csrf_protect
+@login_required
+def add_to_queue_view(request):
+    """画像をキューに追加"""
+    if not request.user.is_staff:
+        return JsonResponse({'ok': False, 'error': '管理者権限が必要です'}, status=403)
+    
+    image_id = request.POST.get('image_id')
+    priority = request.POST.get('priority', 'normal')
+    
+    try:
+        image = Image.objects.get(id=image_id)
+        
+        # 既にキューに存在するかチェック
+        if hasattr(image, 'queue_item'):
+            return JsonResponse({'ok': False, 'error': 'この画像は既にキューに追加されています'})
+        
+        # 次の位置を計算
+        next_position = AnalysisQueue.objects.filter(
+            status__in=['waiting', 'processing']
+        ).count() + 1
+        
+        # キューアイテムを作成
+        queue_item = AnalysisQueue.objects.create(
+            image=image,
+            user=image.user if hasattr(image, 'user') else request.user,
+            position=next_position,
+            priority=priority,
+            status='waiting'
+        )
+        
+        return JsonResponse({
+            'ok': True,
+            'queue_id': queue_item.id,
+            'position': queue_item.position,
+            'message': f'画像をキューに追加しました（位置: {queue_item.position}）'
+        })
+        
+    except Image.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': '画像が見つかりません'}, status=404)
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+
+
+@require_POST
+@csrf_protect
+@login_required
+def remove_from_queue_view(request):
+    """キューから画像を削除"""
+    if not request.user.is_staff:
+        return JsonResponse({'ok': False, 'error': '管理者権限が必要です'}, status=403)
+    
+    queue_id = request.POST.get('queue_id')
+    
+    try:
+        queue_item = AnalysisQueue.objects.get(id=queue_id)
+        queue_item.cancel()
+        
+        return JsonResponse({
+            'ok': True,
+            'message': 'キューから削除しました'
+        })
+        
+    except AnalysisQueue.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'キューアイテムが見つかりません'}, status=404)
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+
+
+@require_POST
+@csrf_protect
+@login_required
+def change_queue_position_view(request):
+    """キュー内の位置を変更"""
+    if not request.user.is_staff:
+        return JsonResponse({'ok': False, 'error': '管理者権限が必要です'}, status=403)
+    
+    queue_id = request.POST.get('queue_id')
+    new_position = int(request.POST.get('new_position'))
+    
+    try:
+        queue_item = AnalysisQueue.objects.get(id=queue_id)
+        old_position = queue_item.position
+        queue_item.move_to_position(new_position)
+        
+        return JsonResponse({
+            'ok': True,
+            'old_position': old_position,
+            'new_position': new_position,
+            'message': f'位置を {old_position} から {new_position} に変更しました'
+        })
+        
+    except AnalysisQueue.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'キューアイテムが見つかりません'}, status=404)
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+
+
+@require_POST
+@csrf_protect
+@login_required
+def change_queue_priority_view(request):
+    """キューアイテムの優先度を変更"""
+    if not request.user.is_staff:
+        return JsonResponse({'ok': False, 'error': '管理者権限が必要です'}, status=403)
+    
+    queue_id = request.POST.get('queue_id')
+    new_priority = request.POST.get('new_priority')
+    
+    try:
+        queue_item = AnalysisQueue.objects.get(id=queue_id)
+        old_priority = queue_item.priority
+        queue_item.priority = new_priority
+        queue_item.save()
+        
+        # 優先度変更後、キューを再整理
+        AnalysisQueue.reorder_positions()
+        
+        return JsonResponse({
+            'ok': True,
+            'old_priority': old_priority,
+            'new_priority': new_priority,
+            'message': f'優先度を {old_priority} から {new_priority} に変更しました'
+        })
+        
+    except AnalysisQueue.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'キューアイテムが見つかりません'}, status=404)
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+
+
+@require_POST
+@csrf_protect
+@login_required
+def change_queue_model_view(request):
+    """キューのモデルを変更"""
+    if not request.user.is_staff:
+        return JsonResponse({'ok': False, 'error': '管理者権限が必要です'}, status=403)
+    
+    queue_id = request.POST.get('queue_id')
+    new_model = request.POST.get('new_model')
+    
+    if not queue_id or not new_model:
+        return JsonResponse({'ok': False, 'error': 'queue_idとnew_modelが必要です'})
+    
+    try:
+        queue_item = AnalysisQueue.objects.get(id=queue_id)
+        
+        # 処理中の場合は変更不可
+        if queue_item.status == 'processing':
+            return JsonResponse({'ok': False, 'error': '処理中のアイテムは変更できません'})
+        
+        # モデル名を更新
+        queue_item.model_name = new_model
+        queue_item.save()
+        
+        return JsonResponse({
+            'ok': True,
+            'message': f'モデルを{new_model}に変更しました'
+        })
+        
+    except AnalysisQueue.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'キューアイテムが見つかりません'})
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)})
+
+
+@require_GET
+@login_required
+def get_queue_status_view(request):
+    """キュー状態を取得（AJAX用）"""
+    user_id = request.GET.get('user_id')
+    
+    if user_id and request.user.is_staff:
+        # 管理者: 指定ユーザーのキュー状態
+        queue_items = AnalysisQueue.objects.filter(user_id=user_id)
+    else:
+        # 一般ユーザー: 自分のキュー状態
+        queue_items = AnalysisQueue.objects.filter(user=request.user)
+    
+    queue_data = []
+    for item in queue_items:
+        queue_data.append({
+            'id': item.id,
+            'image_id': item.image.id,
+            'filename': item.image.filename,
+            'position': item.position,
+            'status': item.status,
+            'status_display': item.get_status_display(),
+            'priority': item.priority,
+            'priority_display': item.get_priority_display(),
+            'waiting_position': item.waiting_position,
+            'estimated_wait_time': item.estimated_wait_time,
+            'queued_at': item.queued_at.strftime('%Y-%m-%d %H:%M'),
+        })
+    
+    return JsonResponse({
+        'ok': True,
+        'queue_items': queue_data
+    })
+
+
+@require_POST
+@csrf_protect
+@login_required
+def start_queue_processing_view(request):
+    """キュー処理を開始"""
+    if not request.user.is_staff:
+        return JsonResponse({'ok': False, 'error': '管理者権限が必要です'}, status=403)
+    
+    # 次の処理対象を取得
+    next_item = AnalysisQueue.get_next_item()
+    
+    if not next_item:
+        return JsonResponse({'ok': False, 'error': '処理対象のキューアイテムがありません'})
+    
+    # 実際の解析処理を開始（非同期）
+    import threading
+    from .services import analysis_service
+    
+    def process_async():
+        result = analysis_service.process_queue_item(next_item.id)
+        if result['success']:
+            print(f"解析完了: {result['message']}")
+        else:
+            print(f"解析失敗: {result['error']}")
+    
+    # バックグラウンドで解析を実行
+    thread = threading.Thread(target=process_async)
+    thread.daemon = True
+    thread.start()
+    
+    return JsonResponse({
+        'ok': True,
+        'queue_id': next_item.id,
+        'image_id': next_item.image.id,
+        'message': f'解析を開始しました: {next_item.image.filename}'
+    })
+
+
+@require_POST
+@csrf_protect
+@login_required
+def complete_queue_processing_view(request):
+    """キュー処理を完了"""
+    if not request.user.is_staff:
+        return JsonResponse({'ok': False, 'error': '管理者権限が必要です'}, status=403)
+    
+    queue_id = request.POST.get('queue_id')
+    success = request.POST.get('success', 'true').lower() == 'true'
+    error_message = request.POST.get('error_message', '')
+    
+    try:
+        queue_item = AnalysisQueue.objects.get(id=queue_id)
+        
+        if success:
+            queue_item.status = 'completed'
+            queue_item.image.status = 'success'
+        else:
+            queue_item.status = 'failed'
+            queue_item.image.status = 'failed'
+            queue_item.error_message = error_message
+            queue_item.retry_count += 1
+        
+        queue_item.completed_at = timezone.now()
+        queue_item.save()
+        queue_item.image.save()
+        
+        return JsonResponse({
+            'ok': True,
+            'message': f'処理を完了しました: {queue_item.image.filename}'
+        })
+        
+    except AnalysisQueue.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'キューアイテムが見つかりません'}, status=404)
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+
+
+def api_retry_analysis(request: HttpRequest):
+    """失敗した画像の再解析API"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POSTメソッドが必要です'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        image_id = data.get('image_id')
+        
+        if not image_id:
+            return JsonResponse({'success': False, 'error': '画像IDが必要です'}, status=400)
+        
+        # 画像を取得
+        try:
+            image = Image.objects.get(id=image_id)
+        except Image.DoesNotExist:
+            return JsonResponse({'success': False, 'error': '画像が見つかりません'}, status=404)
+        
+        # 失敗した画像のみ再解析可能
+        if image.status != 'failed':
+            return JsonResponse({'success': False, 'error': '失敗した画像のみ再解析できます'}, status=400)
+        
+        # 画像のステータスをリセット
+        image.status = 'uploaded'
+        image.save()
+        
+        # 既存のエラーログをクリア
+        from .models import ProgressLog
+        ProgressLog.objects.filter(image=image, current_stage__icontains='error').delete()
+        
+        # タイムラインログをリセット
+        from .models import TimelineLog
+        timeline_log, created = TimelineLog.objects.get_or_create(
+            image=image,
+            defaults={}
+        )
+        timeline_log.analysis_started_at = None
+        timeline_log.analysis_completed_at = None
+        timeline_log.model_used = None
+        timeline_log.analysis_duration = None
+        timeline_log.total_duration = None
+        timeline_log.save()
+        
+        logger.info(f"画像再解析準備完了: ID={image.id}, ファイル名={image.filename}")
+        
+        return JsonResponse({
+            'success': True, 
+            'message': '再解析の準備が完了しました。モデルを選択して解析を開始してください。'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': '無効なJSONデータです'}, status=400)
+    except Exception as e:
+        logger.error(f"再解析APIでエラー発生: {e}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

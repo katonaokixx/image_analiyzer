@@ -14,6 +14,32 @@
       <!-- CSRFトークン -->
       {% csrf_token %}
 
+      <!-- 選択された画像の情報表示 -->
+      {% if selected_image %}
+      <div class="alert alert-info mb-6">
+        <div class="flex items-center gap-3">
+          <span class="icon-[tabler--info-circle] size-5"></span>
+          <div>
+            <h3 class="font-semibold">選択された画像</h3>
+            <p class="text-sm">画像「{{ selected_image.filename }}」が選択されています。</p>
+            <p class="text-xs text-base-content/70">ステータス:
+              {% if selected_image_status == 'completed' %}
+              <span class="badge badge-success badge-sm">解析成功</span>
+              {% elif selected_image_status == 'analyzing' %}
+              <span class="badge badge-info badge-sm">解析中</span>
+              {% elif selected_image_status == 'uploaded' %}
+              <span class="badge badge-warning badge-sm">アップロード完了</span>
+              {% elif selected_image_status == 'preparing' %}
+              <span class="badge badge-secondary badge-sm">準備中</span>
+              {% elif selected_image_status == 'failed' %}
+              <span class="badge badge-error badge-sm">失敗</span>
+              {% endif %}
+            </p>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
       <!-- data-file-upload は厳密な JSON -->
       <div id="file-upload-limit" data-file-upload='{
              "url": "/api/form-upload/",
@@ -115,8 +141,18 @@
         <div class="group flex items-center justify-center gap-2 pt-4 pb-4">
           <span
             class="icon-[tabler--chevron-left] text-primary size-4 sm:size-5 shrink-0 transition-transform group-hover:-translate-x-1 rtl:rotate-180"></span>
-          <a href="{% url 'user_image_table' %}"
+          <a id="go-to-image-list-btn" href="{% url 'user_image_table' %}"
             class="link link-animated link-primary font-normal text-sm sm:text-base">画像一覧へ</a>
+        </div>
+
+
+        <!-- モデル未選択アラート -->
+        <div id="model-selection-alert" class="alert alert-outline alert-warning hidden" role="alert">
+          <span class="icon-[tabler--alert-triangle] size-5"></span>
+          <div>
+            <h3 class="font-semibold">モデルを選択してください</h3>
+            <div class="text-xs">画像一覧に進む前に、解析モデルを選択してください。</div>
+          </div>
         </div>
 
         <!-- タイムライン -->
@@ -183,25 +219,10 @@
                 <span class="text-base-content/50 text-xs sm:text-sm font-normal">今すぐ</span>
               </div>
               <p class="mb-2 text-xs sm:text-sm">AIによる画像解析を開始しました。</p>
-              <div class="flex items-center gap-1 mb-3">
-                <span id="analysis-status-text" class="text-xs sm:text-sm text-warning font-medium">解析中</span>
-                <div class="flex gap-1">
-                  <span id="dot-1" class="w-1 sm:w-1.5 h-1 sm:h-1.5 bg-warning rounded-full animate-pulse"></span>
-                  <span id="dot-2" class="w-1 sm:w-1.5 h-1 sm:h-1.5 bg-warning rounded-full animate-pulse"></span>
-                  <span id="dot-3" class="w-1 sm:w-1.5 h-1 sm:h-1.5 bg-warning rounded-full animate-pulse"></span>
-                </div>
-              </div>
-              <div class="flex items-center gap-x-2 sm:gap-x-3 whitespace-nowrap mb-2">
-                <div class="progress h-1.5 sm:h-2 flex-1" id="analysis-progress">
-                  <div class="progress-bar progress-success transition-all duration-500" style="width:0%"
-                    id="analysis-progress-bar"></div>
-                </div>
-                <span class="text-base-content mb-0.5 text-xs sm:text-sm"><span
-                    id="analysis-progress-value">0</span>%</span>
-              </div>
-              <div class="flex items-center gap-2" id="analysis-status-container">
-                <span id="analysis-status-icon" class="icon-[tabler--brain] text-warning size-4 sm:size-5"></span>
-                <span id="analysis-status-text-2" class="text-xs sm:text-sm text-warning font-medium">解析中</span>
+
+              <!-- アップロードUIを流用した解析進捗表示 -->
+              <div class="mx-4 sm:mx-8 lg:mx-12 space-y-2" id="analysis-progress-previews">
+                <!-- 各画像の解析進捗はJavaScriptで動的に生成 -->
               </div>
             </div>
             <hr class="bg-warning" />
@@ -263,11 +284,11 @@
               <label class="label"><span class="label-text font-semibold text-sm sm:text-base">解析モデル</span></label>
               <select class="select select-bordered w-full text-sm sm:text-base" id="model-selector">
                 <option value="">モデルを選択してください</option>
-                <option value="resnet50">ResNet-50 v2.1 (汎用画像分類)</option>
-                <option value="efficientnet">EfficientNet-B0 (軽量・高速)</option>
-                <option value="mobilenet">MobileNet v2 (モバイル最適化)</option>
-                <option value="vgg16">VGG-16 (高精度・詳細分析)</option>
-                <option value="custom">カスタムモデル (特定用途特化)</option>
+                <option value="resnet50">PyTorch ResNet-50 (汎用画像分類)</option>
+                <option value="efficientnet">TensorFlow EfficientNet (軽量・高速)</option>
+                <option value="mobilenet">PyTorch MobileNet (モバイル最適化)</option>
+                <option value="vgg16">PyTorch VGG-16 (高精度・詳細分析)</option>
+                <option value="custom">CLIP (柔軟なテキストラベル分類)</option>
               </select>
             </div>
             <div class="bg-base-200 rounded-lg p-3 sm:p-4">
@@ -292,7 +313,23 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/upload.js' %}?v={{ timestamp|default:'1.0' }}"></script>
+<!-- 簡素化されたアップロード機能 -->
+<script src="{% static 'js/upload-simplified.js' %}?v={{ timestamp|default:'1.0' }}"></script>
+<script>
+  // セッションから保存されたモデル選択を復元
+  document.addEventListener('DOMContentLoaded', function () {
+    const selectedModel = '{{ selected_model|default:"" }}';
+    const modelSelector = document.getElementById('model-selector');
+
+    if (selectedModel && modelSelector) {
+      modelSelector.value = selectedModel;
+    }
+
+    // セッションから選択された画像IDをクリア（サーバー側で処理済み）
+    // クライアント側でのクリアは不要
+
+  });
+</script>
 {% endblock %}
 
 {% block extra_css %}

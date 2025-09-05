@@ -119,6 +119,7 @@ class Image(models.Model):
     
     # ステータスの選択肢
     STATUS_CHOICES = [
+        ('uploaded', 'アップロード完了'),
         ('preparing', '準備中'),
         ('analyzing', '解析中'),
         ('success', '解析成功'),
@@ -154,13 +155,13 @@ class Image(models.Model):
         verbose_name='ステータス'
     )
     
-    # 新規追加：ユーザー関連付け（一時的にコメントアウト）
-    # user = models.ForeignKey(
-    #     'User',
-    #     on_delete=models.CASCADE,
-    #     verbose_name='アップロードユーザー',
-    #     related_name='uploaded_images'
-    # )
+    # ユーザー関連付け
+    user = models.ForeignKey(
+        'User',
+        on_delete=models.CASCADE,
+        verbose_name='アップロードユーザー',
+        related_name='uploaded_images'
+    )
     
     model_used = models.ForeignKey(
         MLModel,
@@ -298,10 +299,21 @@ class AnalysisResult(models.Model):
         help_text='0.00〜100.00%の範囲'
     )
     
+    model_name = models.CharField(
+        max_length=50,
+        verbose_name='使用モデル名',
+        help_text='解析に使用したモデルの名前'
+    )
+    
     model_version = models.CharField(
         max_length=20,
         verbose_name='モデルバージョン',
         help_text='解析に使用したモデルのバージョン'
+    )
+    
+    rank = models.PositiveIntegerField(
+        verbose_name='順位',
+        help_text='予測結果の順位（1位、2位など）'
     )
     
     created_at = models.DateTimeField(
@@ -410,26 +422,160 @@ class PasswordResetToken(models.Model):
     token = models.CharField(max_length=64, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     used = models.BooleanField(default=False)
-    
+
     class Meta:
         db_table = 'password_reset_tokens'
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return f"PasswordResetToken for {self.user.username} - {self.created_at}"
-    
+
     @property
     def is_expired(self):
         """トークンが期限切れかどうか"""
         expiry_time = self.created_at + timedelta(seconds=getattr(settings, 'PASSWORD_RESET_TIMEOUT', 3600))
         return timezone.now() > expiry_time
-    
+
     @property
     def is_valid(self):
         """トークンが有効かどうか"""
         return not self.used and not self.is_expired
-    
+
     def mark_as_used(self):
         """トークンを使用済みとしてマーク"""
         self.used = True
         self.save()
+
+
+class AnalysisQueue(models.Model):
+    """解析キュー管理モデル"""
+    
+    QUEUE_STATUS_CHOICES = [
+        ('waiting', '待機中'),
+        ('processing', '処理中'),
+        ('completed', '完了'),
+        ('failed', '失敗'),
+        ('cancelled', 'キャンセル'),
+    ]
+    
+    PRIORITY_CHOICES = [
+        ('low', '低'),
+        ('normal', '通常'),
+        ('high', '高'),
+        ('urgent', '緊急'),
+    ]
+    
+    # 基本情報
+    image = models.OneToOneField(Image, on_delete=models.CASCADE, related_name='queue_item')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='queue_items')
+    
+    # キュー管理
+    position = models.PositiveIntegerField(verbose_name='キュー位置')
+    status = models.CharField(
+        max_length=20, 
+        choices=QUEUE_STATUS_CHOICES, 
+        default='waiting',
+        verbose_name='キュー状態'
+    )
+    priority = models.CharField(
+        max_length=10, 
+        choices=PRIORITY_CHOICES, 
+        default='normal',
+        verbose_name='優先度'
+    )
+    
+    # タイムスタンプ
+    queued_at = models.DateTimeField(auto_now_add=True, verbose_name='キュー追加日時')
+    started_at = models.DateTimeField(null=True, blank=True, verbose_name='処理開始日時')
+    completed_at = models.DateTimeField(null=True, blank=True, verbose_name='処理完了日時')
+    
+    # エラー情報
+    error_message = models.TextField(blank=True, verbose_name='エラーメッセージ')
+    retry_count = models.PositiveIntegerField(default=0, verbose_name='リトライ回数')
+    
+    # 処理設定
+    model_name = models.CharField(max_length=100, blank=True, verbose_name='使用モデル')
+    
+    class Meta:
+        db_table = 'analysis_queue'
+        ordering = ['priority', 'position', 'queued_at']
+        verbose_name = '解析キュー'
+        verbose_name_plural = '解析キュー'
+
+    def __str__(self):
+        return f"Queue #{self.position}: {self.image.filename} ({self.get_status_display()})"
+
+    @property
+    def waiting_position(self):
+        """待機中の位置（処理中より前の待機中アイテム数）"""
+        if self.status != 'waiting':
+            return 0
+        
+        waiting_count = AnalysisQueue.objects.filter(
+            status='waiting',
+            priority__gte=self.priority,
+            position__lt=self.position
+        ).count()
+        
+        return waiting_count + 1
+
+    @property
+    def estimated_wait_time(self):
+        """推定待機時間（分）"""
+        if self.status != 'waiting':
+            return 0
+        
+        # 平均処理時間を5分と仮定
+        avg_processing_time = 5
+        return self.waiting_position * avg_processing_time
+
+    def move_to_position(self, new_position):
+        """キュー内の位置を変更"""
+        if new_position == self.position:
+            return
+        
+        # 他のアイテムの位置を調整
+        if new_position > self.position:
+            # 後ろに移動
+            AnalysisQueue.objects.filter(
+                position__gt=self.position,
+                position__lte=new_position
+            ).exclude(id=self.id).update(position=models.F('position') - 1)
+        else:
+            # 前に移動
+            AnalysisQueue.objects.filter(
+                position__gte=new_position,
+                position__lt=self.position
+            ).exclude(id=self.id).update(position=models.F('position') + 1)
+        
+        self.position = new_position
+        self.save()
+
+    def cancel(self):
+        """キューからキャンセル"""
+        self.status = 'cancelled'
+        self.completed_at = timezone.now()
+        self.save()
+        
+        # 後続のアイテムの位置を調整
+        AnalysisQueue.objects.filter(
+            position__gt=self.position
+        ).update(position=models.F('position') - 1)
+
+    @classmethod
+    def get_next_item(cls):
+        """次の処理対象アイテムを取得"""
+        return cls.objects.filter(
+            status='waiting'
+        ).order_by('priority', 'position', 'queued_at').first()
+
+    @classmethod
+    def reorder_positions(cls):
+        """キュー位置を再整理"""
+        items = cls.objects.filter(
+            status__in=['waiting', 'processing']
+        ).order_by('priority', 'queued_at')
+        
+        for index, item in enumerate(items, 1):
+            item.position = index
+            item.save(update_fields=['position'])

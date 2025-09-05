@@ -74,10 +74,9 @@
         <div class="select-floating w-40">
           <select class="select" aria-label="User filter" id="userFilter">
             <option>すべて</option>
-            <option>user_001</option>
-            <option>user_002</option>
-            <option>user_003</option>
-            <option>user_004</option>
+            {% for user in users %}
+            <option>{{ user.username }}</option>
+            {% endfor %}
           </select>
           <label class="select-floating-label" for="userFilter">ユーザー名</label>
         </div>
@@ -141,15 +140,13 @@
             <th>解析開始日時</th>
             <th>解析終了日時</th>
             <th>使用した学習モデル</th>
-            <th>機械学習によってつけられたラベル</th>
-            <th>信頼度</th>
           </tr>
         </thead>
         <tbody>
           {% for image in images %}
           <tr data-image-id="{{ image.id }}">
             <td>
-              <span class="font-medium">user_001</span>
+              <span class="font-medium">{{ image.user.username }}</span>
             </td>
             <td>
               <div class="flex items-center gap-3">
@@ -175,8 +172,15 @@
               <span class="badge badge-outline border-dashed badge-info me-2 cursor-pointer" title="クリックしてタイムラインを確認"
                 data-overlay="#timeline-modal">解析中</span>
               {% elif image.status == 'preparing' %}
+              {% if image.queue_item %}
+              <span class="badge badge-outline border-dashed badge-secondary me-2 cursor-pointer"
+                title="クリックしてタイムラインを確認" data-overlay="#timeline-modal">
+                準備中 → あと{{ image.queue_item.waiting_position }}枚
+              </span>
+              {% else %}
               <span class="badge badge-outline border-dashed badge-secondary me-2 cursor-pointer"
                 title="クリックしてタイムラインを確認" data-overlay="#timeline-modal">準備中</span>
+              {% endif %}
               {% elif image.status == 'failed' %}
               <span class="badge badge-outline border-dashed badge-error me-2 cursor-pointer" title="クリックしてタイムラインを確認"
                 data-overlay="#timeline-modal">失敗</span>
@@ -189,7 +193,8 @@
             <td>
               {% if image.status == 'failed' %}
               <button type="button" class="btn btn-error btn-sm" aria-haspopup="dialog" aria-expanded="false"
-                aria-controls="error-log-modal" data-overlay="#error-log-modal">エラー詳細</button>
+                aria-controls="error-log-modal" data-overlay="#error-log-modal"
+                onclick="openErrorModal({{ image.id }})">エラー詳細</button>
               {% else %}
               <span class="text-sm text-gray-500">-</span>
               {% endif %}
@@ -215,24 +220,7 @@
               <span class="text-sm text-gray-500">-</span>
               {% endif %}
             </td>
-            <td>
-              {% if image.analysis_results.exists %}
-              {% for result in image.analysis_results.all %}
-              <span class="badge badge-primary">{{ result.label }}</span>
-              {% endfor %}
-              {% else %}
-              <span class="text-sm text-gray-500">-</span>
-              {% endif %}
-            </td>
-            <td>
-              {% if image.analysis_results.exists %}
-              {% for result in image.analysis_results.all %}
-              <span class="badge badge-success">{{ result.confidence }}%</span>
-              {% endfor %}
-              {% else %}
-              <span class="text-sm text-gray-500">-</span>
-              {% endif %}
-            </td>
+
           </tr>
           {% endfor %}
         </tbody>
@@ -513,15 +501,15 @@
           <div class="grid grid-cols-1 gap-3">
             <div class="flex justify-between items-center">
               <span class="font-semibold">ファイル名:</span>
-              <span class="text-sm text-gray-600">sample_image_001.jpg</span>
+              <span class="text-sm text-gray-600" id="error-filename">-</span>
             </div>
             <div class="flex justify-between items-center">
               <span class="font-semibold">ユーザー名:</span>
-              <span class="text-sm text-gray-600">user_001</span>
+              <span class="text-sm text-gray-600" id="error-username">-</span>
             </div>
             <div class="flex justify-between items-center">
               <span class="font-semibold">アップロード日時:</span>
-              <span class="text-sm text-gray-600">2024-01-15 10:30</span>
+              <span class="text-sm text-gray-600" id="error-upload-time">-</span>
             </div>
             <div class="flex justify-between items-center">
               <span class="font-semibold">ステータス:</span>
@@ -529,13 +517,13 @@
             </div>
             <div class="flex justify-between items-center">
               <span class="font-semibold">エラーログ:</span>
-              <div class="text-sm text-gray-600 max-w-xs text-right">
-                ファイル形式がサポートされていません。PNGファイルは現在サポートされていません。
+              <div class="text-sm text-gray-600 max-w-xs text-right" id="error-message">
+                -
               </div>
             </div>
             <div class="flex justify-between items-center">
               <span class="font-semibold">エラー発生日時:</span>
-              <span class="text-sm text-gray-600">2024-01-15 10:35</span>
+              <span class="text-sm text-gray-600" id="error-timestamp">-</span>
             </div>
           </div>
         </div>
@@ -928,7 +916,17 @@
 
       // モーダルにデータを設定
       document.getElementById('timeline-filename').textContent = filename;
-      document.getElementById('timeline-status').textContent = status;
+
+      // ステータス表示（準備中の場合はキュー情報も表示）
+      let statusText = status;
+      if (status === '準備中') {
+        // キュー情報を取得して表示
+        const queueInfo = row.querySelector('.text-warning');
+        if (queueInfo) {
+          statusText += ` → ${queueInfo.textContent}`;
+        }
+      }
+      document.getElementById('timeline-status').textContent = statusText;
       document.getElementById('upload-time').textContent = uploadTime;
       document.getElementById('analysis-start-time').textContent = analysisStart;
       document.getElementById('analysis-end-time').textContent = analysisEnd;
@@ -960,6 +958,48 @@
         progressValue.textContent = percentage;
       }
     }
+
+
   });
+
+  // エラーログモーダルを開く関数（グローバルスコープ）
+  function openErrorModal(imageId) {
+    console.log('Opening error modal for image ID:', imageId);
+
+    // 画像データを取得
+    const row = document.querySelector(`tr[data-image-id="${imageId}"]`);
+    if (!row) {
+      console.log('Row not found for image ID:', imageId);
+      return;
+    }
+
+    // テーブル構造に基づいてデータを取得
+    console.log('Row cells:', row.cells);
+    console.log('Cell 0 HTML:', row.cells[0]?.innerHTML);
+    console.log('Cell 1 HTML:', row.cells[1]?.innerHTML);
+    console.log('Cell 2 HTML:', row.cells[2]?.innerHTML);
+
+    // 1列目: ユーザー名
+    const username = row.cells[0]?.querySelector('.font-medium')?.textContent?.trim() || '';
+
+    // 2列目: ファイル名（2番目のdivの中の.font-medium）
+    const filename = row.cells[1]?.querySelector('div:nth-child(2) .font-medium')?.textContent?.trim() || '';
+
+    // 3列目: アップロード日時
+    const uploadTime = row.cells[2]?.textContent?.trim() || '';
+
+    console.log('Extracted data:', { username, filename, uploadTime });
+
+    // エラーメッセージ（実際のエラーログがある場合はここで取得）
+    const errorMessage = 'ファイル形式がサポートされていません。PNGファイルは現在サポートされていません。';
+    const errorTimestamp = new Date().toLocaleString('ja-JP');
+
+    // モーダルにデータを設定
+    document.getElementById('error-filename').textContent = filename || '不明';
+    document.getElementById('error-username').textContent = username || '不明';
+    document.getElementById('error-upload-time').textContent = uploadTime || '不明';
+    document.getElementById('error-message').textContent = errorMessage;
+    document.getElementById('error-timestamp').textContent = errorTimestamp;
+  }
 </script>
 {% endblock %}
