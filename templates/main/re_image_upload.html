@@ -150,7 +150,8 @@
         </li>
 
         <!-- 解析完了 -->
-        <li id="timeline-item-3" class="hidden" style="display: none;">
+        {% if selected_image_status == 'completed' %}
+        <li id="timeline-item-3" class="hidden">
           <div
             class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-{{ timeline_log.completion_step_color|default:'success' }}/5 border border-{{ timeline_log.completion_step_color|default:'success' }}/20">
             <div
@@ -179,6 +180,7 @@
             </div>
           </div>
         </li>
+        {% endif %}
 
 
         <!-- 再解析開始 -->
@@ -354,13 +356,16 @@
       timeline3.classList.remove('hidden');
       timeline3.style.display = 'block';
       console.log('3つ目のタイムライン（解析完了）を表示 - ステータス:', status);
-    } else {
-      // 解析失敗やその他の場合は3つ目のタイムラインは非表示
-      if (timeline3) {
-        timeline3.className = 'hidden';
-        timeline3.style.display = 'none';
-        console.log('3つ目のタイムライン（非表示） - ステータス:', status);
-      }
+    } else if (timeline3 && status === 'failed') {
+      // 解析失敗の場合は3つ目のタイムラインは非表示
+      timeline3.className = 'hidden';
+      timeline3.style.display = 'none';
+      console.log('3つ目のタイムライン（解析失敗時は非表示） - ステータス:', status);
+    } else if (timeline3) {
+      // その他の場合は非表示
+      timeline3.className = 'hidden';
+      timeline3.style.display = 'none';
+      console.log('3つ目のタイムライン（その他は非表示） - ステータス:', status);
     }
 
 
