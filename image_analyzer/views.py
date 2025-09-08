@@ -540,20 +540,14 @@ def api_start_analysis(request: HttpRequest):
                 timeline_log.save()
             
             # 既にキューに存在するかチェック
-            if hasattr(image, 'queue_item') and image.queue_item:
+            existing_queue_item = AnalysisQueue.objects.filter(image=image).first()
+            if existing_queue_item:
                 logger.info(f"画像ID={image_id}は既にキューに追加されています")
                 # 既にキューに存在する場合でも、キュー処理を開始
                 start_queue_processing()
                 return JsonResponse({'ok': True, 'message': 'この画像は既にキューに追加されています。処理を開始します。'})
             
             # タイムラインログを更新（解析開始時刻を記録）
-            from .models import TimelineLog
-            from django.utils import timezone
-            
-            timeline_log, created = TimelineLog.objects.get_or_create(
-                image=image,
-                defaults={}
-            )
             timeline_log.analysis_started_at = timezone.now()
             timeline_log.model_used = model_name
             timeline_log.save()
@@ -592,7 +586,8 @@ def api_start_analysis(request: HttpRequest):
             skipped_count = 0
             for img in images:
                 # 既にキューに存在するかチェック
-                if hasattr(img, 'queue_item') and img.queue_item:
+                existing_queue_item = AnalysisQueue.objects.filter(image=img).first()
+                if existing_queue_item:
                     logger.info(f"画像ID={img.id}は既にキューに追加されています")
                     skipped_count += 1
                     continue
@@ -1139,7 +1134,8 @@ def add_to_queue_view(request):
         image = Image.objects.get(id=image_id)
         
         # 既にキューに存在するかチェック
-        if hasattr(image, 'queue_item'):
+        existing_queue_item = AnalysisQueue.objects.filter(image=image).first()
+        if existing_queue_item:
             return JsonResponse({'ok': False, 'error': 'この画像は既にキューに追加されています'})
         
         # 次の位置を計算
@@ -1437,6 +1433,14 @@ def api_retry_analysis(request: HttpRequest):
         # 既存のエラーログをクリア
         from .models import ProgressLog
         ProgressLog.objects.filter(image=image, current_stage__icontains='error').delete()
+        
+        # 既存のキューアイテムを削除（すべてのステータス）
+        from .models import AnalysisQueue
+        AnalysisQueue.objects.filter(image=image).delete()
+        
+        # 既存の解析結果を削除
+        from .models import AnalysisResult
+        AnalysisResult.objects.filter(image=image).delete()
         
         # タイムラインログをリセット
         from .models import TimelineLog
