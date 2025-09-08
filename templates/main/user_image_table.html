@@ -26,9 +26,6 @@
           class="icon-[tabler--chevron-right] text-primary size-5 shrink-0 transition-transform group-hover:translate-x-1 rtl:rotate-180"></span>
       </div>
     </div>
-
-
-
     <!-- 画像ギャラリー -->
     {% if has_data %}
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -600,6 +597,8 @@
 <script>
   // アップロードページに遷移する関数
   function navigateToUploadPage(imageId, imageStatus) {
+    console.log('navigateToUploadPage called with:', imageId, imageStatus);
+
     // Djangoのセッションに画像IDと状態を保存
     fetch('/api/set-selected-image/', {
       method: 'POST',
@@ -611,13 +610,17 @@
         image_id: imageId,
         image_status: imageStatus
       })
-    }).then(() => {
-      // アップロードページに遷移
-      window.location.href = '/image_upload/';
+    }).then(response => {
+      console.log('API response:', response);
+      return response.json();
+    }).then(data => {
+      console.log('API data:', data);
+      // 再解析ページに遷移
+      window.location.href = '/re_image_upload/';
     }).catch(error => {
       console.error('Error setting selected image:', error);
       // エラーが発生しても遷移は実行
-      window.location.href = '/image_upload/';
+      window.location.href = '/re_image_upload/';
     });
   }
 

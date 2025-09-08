@@ -15,6 +15,7 @@ urlpatterns = [
     path('user_image_table/', views.user_image_table, name='user_image_table_alt'),
     # 新UI統一: test_upload を image_upload に改名済み。
     path('image_upload/', views.image_upload, name='image_upload'),
+    path('re_image_upload/', views.re_image_upload, name='re_image_upload'),
     path('admin_table/', views.admin_image_table, name='admin_image_table'),
     path('api/form-upload/', views.api_form_upload, name='api_form_upload'),
     path('api/set-selected-image/', views.api_set_selected_image, name='api_set_selected_image'),

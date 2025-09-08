@@ -150,7 +150,7 @@ def admin_image_table(request: HttpRequest):
     
     if not request.user.is_staff:
         messages.error(request, '管理者権限が必要です。')
-        return redirect('user_image_table')
+        return redirect('admin_image_table')
     
     images = Image.objects.select_related('queue_item').order_by('-upload_date')
     
@@ -184,9 +184,17 @@ def admin_image_table(request: HttpRequest):
         })
 
 @csrf_protect
+@login_required
 def image_upload(request: HttpRequest):
+    # ログイン認証チェック
+    if not request.user.is_authenticated:
+        messages.error(request, 'ログインが必要です。')
+        return redirect('login')
+    
     # セッションからアップロードした画像IDを取得
     uploaded_image_ids = request.session.get('uploaded_image_ids', [])
+    print(f"DEBUG: uploaded_image_ids = {uploaded_image_ids}")
+    print(f"DEBUG: user = {request.user.username if request.user.is_authenticated else 'Anonymous'}")
     
     # セッションから選択された画像IDと状態を取得（バッジクリック時）
     selected_image_id = request.session.get('selected_image_id')
@@ -218,11 +226,44 @@ def image_upload(request: HttpRequest):
             id__in=uploaded_image_ids,
             user=request.user
         ).order_by('-id')
+        print(f"DEBUG: セッションから画像を取得: {[img.id for img in uploaded_images]}")
+    else:
+        # セッションが空の場合は、最新のアップロード済み画像を取得してセッションに保存
+        uploaded_images = Image.objects.filter(
+            user=request.user,
+            status__in=['uploaded', 'completed', 'failed']
+        ).order_by('-id')[:5]  # 最新5件
+        
+        if uploaded_images:
+            # 取得した画像IDをセッションに保存
+            uploaded_image_ids = [img.id for img in uploaded_images]
+            request.session['uploaded_image_ids'] = uploaded_image_ids
+            request.session.modified = True
+            print(f"DEBUG: セッションが空のため、最新の画像を取得してセッションに保存: {uploaded_image_ids}")
+        else:
+            print("DEBUG: アップロード済み画像がありません")
+    
     
     # 選択されたモデルを取得
     selected_model = request.session.get('selected_model', '')
     has_uploaded_images = len(uploaded_images) > 0
     has_selected_model = bool(selected_model)
+    
+    # 解析状態を取得（最新の画像の状態）
+    analysis_status = None
+    if uploaded_images:
+        latest_image = uploaded_images.first()
+        analysis_status = latest_image.status
+    
+    # アップロード済み画像の情報をJSON形式で準備
+    uploaded_images_json = []
+    for img in uploaded_images:
+        uploaded_images_json.append({
+            'id': img.id,
+            'filename': img.filename,
+            'thumbnail_url': img.thumbnail_url,
+            'status': img.status
+        })
     
     context = {
         'uploaded_images': uploaded_images,
@@ -232,10 +273,69 @@ def image_upload(request: HttpRequest):
         'show_analysis_button': has_uploaded_images and has_selected_model,
         'show_timeline': has_uploaded_images,
         'selected_image': selected_image,
-        'selected_image_status': selected_image_status
+        'selected_image_status': selected_image_status,
+        'analysis_status': analysis_status,
+        'uploaded_images_json': uploaded_images_json
     }
     
     return render(request, 'main/image_upload.html', context)
+
+@csrf_protect
+@login_required
+def re_image_upload(request: HttpRequest):
+    """再解析専用ページ"""
+    # ログイン認証チェック
+    if not request.user.is_authenticated:
+        messages.error(request, 'ログインが必要です。')
+        return redirect('login')
+    
+    # セッションから選択された画像IDと状態を取得（バッジクリック時）
+    selected_image_id = request.session.get('selected_image_id')
+    selected_image_status = request.session.get('selected_image_status')
+    
+    print(f"DEBUG: selected_image_id = {selected_image_id}")
+    print(f"DEBUG: selected_image_status = {selected_image_status}")
+    print(f"DEBUG: user = {request.user}")
+    
+    selected_image = None
+    if selected_image_id:
+        try:
+            selected_image = Image.objects.get(id=selected_image_id, user=request.user)
+            print(f"DEBUG: selected_image found = {selected_image.filename}, status = {selected_image.status}")
+        except Image.DoesNotExist:
+            selected_image = None
+            print(f"DEBUG: Image not found for ID {selected_image_id}")
+            # 画像が存在しない場合はセッションをクリア
+            if 'selected_image_id' in request.session:
+                del request.session['selected_image_id']
+            if 'selected_image_status' in request.session:
+                del request.session['selected_image_status']
+    else:
+        print("DEBUG: No selected_image_id in session")
+        # セッションに画像IDがない場合は、最新の画像を取得
+        try:
+            selected_image = Image.objects.filter(user=request.user).order_by('-upload_date').first()
+            if selected_image:
+                selected_image_status = selected_image.status
+                print(f"DEBUG: Using latest image as fallback: {selected_image.filename}, status = {selected_image.status}")
+        except Exception as e:
+            print(f"DEBUG: Error getting latest image: {e}")
+    
+    # タイムライン情報を取得
+    timeline_log = None
+    if selected_image:
+        try:
+            timeline_log = selected_image.timeline_log
+        except TimelineLog.DoesNotExist:
+            timeline_log = None
+    
+    context = {
+        'selected_image': selected_image,
+        'selected_image_status': selected_image_status,
+        'timeline_log': timeline_log,
+    }
+    
+    return render(request, 'main/re_image_upload.html', context)
 
 @require_POST
 @csrf_protect
@@ -306,17 +406,43 @@ def api_form_upload(request: HttpRequest):
     for f in valid_files:
         img = save_file_and_create_image(f, request.user)
         
-        # タイムラインログの作成・更新
+        # タイムラインログの作成・更新（解析ステップは保留）
         timeline_log, created = TimelineLog.objects.get_or_create(
             image=img,
             defaults={
                 'upload_started_at': timezone.now(),
-                'upload_completed_at': timezone.now()
+                'upload_completed_at': timezone.now(),
+                # 1つ目のタイムライン情報を保存
+                'upload_step_title': 'ファイルアップロード完了',
+                'upload_step_description': 'ファイルのアップロードに成功しました',
+                'upload_step_status': 'アップロード成功',
+                'upload_step_icon': 'check-circle',
+                'upload_step_color': 'success',
+                # 解析ステップは未実行のためNone
+                'analysis_step_status': None,
+                'analysis_step_title': None,
+                'completion_step_status': None,
+                'completion_step_title': None,
             }
         )
         if not created:
             timeline_log.upload_completed_at = timezone.now()
+            # 1つ目のタイムライン情報を更新
+            timeline_log.upload_step_title = 'ファイルアップロード完了'
+            timeline_log.upload_step_description = 'ファイルのアップロードに成功しました'
+            timeline_log.upload_step_status = 'アップロード成功'
+            timeline_log.upload_step_icon = 'check-circle'
+            # 解析ステップは未実行のためNone
+            timeline_log.analysis_step_status = None
+            timeline_log.analysis_step_title = None
+            timeline_log.completion_step_status = None
+            timeline_log.completion_step_title = None
+            timeline_log.upload_step_color = 'success'
             timeline_log.save()
+        
+        # アップロード完了時のステータスを設定
+        img.status = 'uploaded'
+        img.save()
         
         # 自動でキューに追加
         try:
@@ -386,12 +512,51 @@ def api_start_analysis(request: HttpRequest):
                 logger.error(f"指定された画像が見つからないか、解析対象ではありません: ID={image_id}")
                 return JsonResponse({'ok': False, 'error': '指定された画像が見つからないか、解析対象ではありません'}, status=400)
             
+            # 解析開始時にタイムライン情報を保存
+            timeline_log, created = TimelineLog.objects.get_or_create(
+                image=image,
+                defaults={
+                    'analysis_started_at': timezone.now(),
+                    # 2つ目のタイムライン情報を保存（成功時）
+                    'analysis_step_title': '解析開始',
+                    'analysis_step_description': 'AIによる画像解析を開始しました。',
+                    'analysis_step_status': '解析中',
+                    'analysis_step_icon': 'brain',
+                    'analysis_step_color': 'warning',
+                    'analysis_progress_percentage': 0,
+                    'analysis_progress_stage': 'preparing'
+                }
+            )
+            if not created:
+                timeline_log.analysis_started_at = timezone.now()
+                # 2つ目のタイムライン情報を更新（成功時）
+                timeline_log.analysis_step_title = '解析開始'
+                timeline_log.analysis_step_description = 'AIによる画像解析を開始しました。'
+                timeline_log.analysis_step_status = '解析中'
+                timeline_log.analysis_step_icon = 'brain'
+                timeline_log.analysis_step_color = 'warning'
+                timeline_log.analysis_progress_percentage = 0
+                timeline_log.analysis_progress_stage = 'preparing'
+                timeline_log.save()
+            
             # 既にキューに存在するかチェック
             if hasattr(image, 'queue_item') and image.queue_item:
                 logger.info(f"画像ID={image_id}は既にキューに追加されています")
                 # 既にキューに存在する場合でも、キュー処理を開始
                 start_queue_processing()
                 return JsonResponse({'ok': True, 'message': 'この画像は既にキューに追加されています。処理を開始します。'})
+            
+            # タイムラインログを更新（解析開始時刻を記録）
+            from .models import TimelineLog
+            from django.utils import timezone
+            
+            timeline_log, created = TimelineLog.objects.get_or_create(
+                image=image,
+                defaults={}
+            )
+            timeline_log.analysis_started_at = timezone.now()
+            timeline_log.model_used = model_name
+            timeline_log.save()
             
             # キューに追加
             next_position = AnalysisQueue.objects.filter(
@@ -509,6 +674,27 @@ def start_queue_processing():
                     next_item.error_message = result.get('error', 'Unknown error')
                     next_item.image.status = 'failed'
                     next_item.image.save()
+                    
+                    # 失敗時にタイムライン情報を更新
+                    try:
+                        timeline_log = next_item.image.timeline_log
+                        timeline_log.analysis_step_title = '解析失敗'
+                        timeline_log.analysis_step_description = '画像の解析に失敗しました'
+                        timeline_log.analysis_step_status = '解析失敗'
+                        timeline_log.analysis_step_icon = 'alert-circle'
+                        timeline_log.analysis_step_color = 'error'
+                        timeline_log.analysis_progress_percentage = 0
+                        timeline_log.analysis_progress_stage = 'failed'
+                        # 3つ目のタイムラインも失敗に更新
+                        timeline_log.completion_step_title = '解析失敗'
+                        timeline_log.completion_step_description = '画像の解析に失敗しました'
+                        timeline_log.completion_step_status = '解析失敗'
+                        timeline_log.completion_step_icon = 'alert-circle'
+                        timeline_log.completion_step_color = 'error'
+                        timeline_log.save()
+                    except TimelineLog.DoesNotExist:
+                        pass
+                    
                     logger.error(f"キューアイテム処理失敗: ID={next_item.id}, エラー={result.get('error')}")
                 
                 next_item.save()
@@ -684,15 +870,46 @@ def api_get_timeline(request: HttpRequest, image_id: int):
             'status': image.status,
             'upload_started_at': timeline_log.upload_started_at.isoformat() if timeline_log.upload_started_at else None,
             'upload_completed_at': timeline_log.upload_completed_at.isoformat() if timeline_log.upload_completed_at else None,
-            'analysis_started_at': timeline_log.analysis_started_at.isoformat() if timeline_log.analysis_started_at else None,
-            'analysis_completed_at': timeline_log.analysis_completed_at.isoformat() if timeline_log.analysis_completed_at else None,
             'model_used': timeline_log.model_used,
             'upload_duration': timeline_log.upload_duration,
-            'analysis_duration': timeline_log.analysis_duration,
-            'total_duration': timeline_log.total_duration,
             'queue_info': queue_info,
             'error_info': error_info,
         }
+        
+        # アップロードステップの情報
+        if timeline_log.upload_step_status:
+            timeline_data['upload_step'] = {
+                'title': timeline_log.upload_step_title,
+                'status': timeline_log.upload_step_status,
+                'icon': timeline_log.upload_step_icon,
+                'color': timeline_log.upload_step_color,
+                'description': timeline_log.upload_step_description,
+            }
+        
+        # 解析ステップは未実行なら返さない
+        if timeline_log.analysis_step_status:
+            timeline_data['analysis_started_at'] = timeline_log.analysis_started_at.isoformat() if timeline_log.analysis_started_at else None
+            timeline_data['analysis_completed_at'] = timeline_log.analysis_completed_at.isoformat() if timeline_log.analysis_completed_at else None
+            timeline_data['analysis_duration'] = timeline_log.analysis_duration
+            timeline_data['analysis_step'] = {
+                'title': timeline_log.analysis_step_title,
+                'status': timeline_log.analysis_step_status,
+                'icon': timeline_log.analysis_step_icon,
+                'color': timeline_log.analysis_step_color,
+                'description': timeline_log.analysis_step_description,
+            }
+        
+        # 完了ステップも同様
+        if timeline_log.completion_step_status:
+            timeline_data['completion_step'] = {
+                'title': timeline_log.completion_step_title,
+                'status': timeline_log.completion_step_status,
+                'icon': timeline_log.completion_step_icon,
+                'color': timeline_log.completion_step_color,
+                'description': timeline_log.completion_step_description,
+            }
+        
+        timeline_data['total_duration'] = timeline_log.total_duration
         
         return JsonResponse({
             'ok': True,
@@ -1187,10 +1404,14 @@ def complete_queue_processing_view(request):
         return JsonResponse({'ok': False, 'error': str(e)}, status=500)
 
 
+@require_POST
+@csrf_protect
 def api_retry_analysis(request: HttpRequest):
     """失敗した画像の再解析API"""
-    if request.method != 'POST':
-        return JsonResponse({'success': False, 'error': 'POSTメソッドが必要です'}, status=405)
+    import json
+    import logging
+    
+    logger = logging.getLogger(__name__)
     
     try:
         data = json.loads(request.body)
@@ -1205,9 +1426,9 @@ def api_retry_analysis(request: HttpRequest):
         except Image.DoesNotExist:
             return JsonResponse({'success': False, 'error': '画像が見つかりません'}, status=404)
         
-        # 失敗した画像のみ再解析可能
-        if image.status != 'failed':
-            return JsonResponse({'success': False, 'error': '失敗した画像のみ再解析できます'}, status=400)
+        # 再解析可能なステータスをチェック（アップロード済み、解析済み、または失敗した画像）
+        if image.status not in ['uploaded', 'failed', 'completed', 'analyzing']:
+            return JsonResponse({'success': False, 'error': f'再解析可能な画像ではありません。現在のステータス: {image.status}'}, status=400)
         
         # 画像のステータスをリセット
         image.status = 'uploaded'
@@ -1226,8 +1447,6 @@ def api_retry_analysis(request: HttpRequest):
         timeline_log.analysis_started_at = None
         timeline_log.analysis_completed_at = None
         timeline_log.model_used = None
-        timeline_log.analysis_duration = None
-        timeline_log.total_duration = None
         timeline_log.save()
         
         logger.info(f"画像再解析準備完了: ID={image.id}, ファイル名={image.filename}")

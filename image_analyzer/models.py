@@ -353,6 +353,128 @@ class TimelineLog(models.Model):
         blank=True
     )
     
+    # 1つ目のタイムライン（ファイルアップロード完了）
+    upload_step_title = models.CharField(
+        max_length=100,
+        verbose_name='アップロード完了タイトル',
+        default='ファイルアップロード完了',
+        blank=True
+    )
+    
+    upload_step_description = models.CharField(
+        max_length=200,
+        verbose_name='アップロード完了説明',
+        default='ファイルのアップロードに成功しました',
+        blank=True
+    )
+    
+    upload_step_status = models.CharField(
+        max_length=50,
+        verbose_name='アップロード完了ステータス',
+        default='アップロード成功',
+        blank=True
+    )
+    
+    upload_step_icon = models.CharField(
+        max_length=50,
+        verbose_name='アップロード完了アイコン',
+        default='check-circle',
+        blank=True
+    )
+    
+    upload_step_color = models.CharField(
+        max_length=20,
+        verbose_name='アップロード完了色',
+        default='success',
+        blank=True
+    )
+    
+    # 2つ目のタイムライン（解析開始/解析失敗）
+    analysis_step_title = models.CharField(
+        max_length=100,
+        verbose_name='解析ステップタイトル',
+        null=True,
+        blank=True
+    )
+    
+    analysis_step_description = models.CharField(
+        max_length=200,
+        verbose_name='解析ステップ説明',
+        null=True,
+        blank=True
+    )
+    
+    analysis_step_status = models.CharField(
+        max_length=50,
+        verbose_name='解析ステップステータス',
+        null=True,
+        blank=True
+    )
+    
+    analysis_step_icon = models.CharField(
+        max_length=50,
+        verbose_name='解析ステップアイコン',
+        default='brain',
+        blank=True
+    )
+    
+    analysis_step_color = models.CharField(
+        max_length=20,
+        verbose_name='解析ステップ色',
+        default='warning',
+        blank=True
+    )
+    
+    # 進捗バー情報
+    analysis_progress_percentage = models.IntegerField(
+        verbose_name='解析進捗率',
+        default=0,
+        blank=True
+    )
+    
+    analysis_progress_stage = models.CharField(
+        max_length=50,
+        verbose_name='解析進捗ステージ',
+        default='preparing',
+        blank=True
+    )
+    
+    # 3つ目のタイムライン（解析完了/解析失敗）
+    completion_step_title = models.CharField(
+        max_length=100,
+        verbose_name='完了ステップタイトル',
+        null=True,
+        blank=True
+    )
+    
+    completion_step_description = models.CharField(
+        max_length=200,
+        verbose_name='完了ステップ説明',
+        null=True,
+        blank=True
+    )
+    
+    completion_step_status = models.CharField(
+        max_length=50,
+        verbose_name='完了ステップステータス',
+        null=True,
+        blank=True
+    )
+    
+    completion_step_icon = models.CharField(
+        max_length=50,
+        verbose_name='完了ステップアイコン',
+        default='brain',
+        blank=True
+    )
+    
+    completion_step_color = models.CharField(
+        max_length=20,
+        verbose_name='完了ステップ色',
+        default='success',
+        blank=True
+    )
+    
     analysis_started_at = models.DateTimeField(
         verbose_name='解析開始時刻',
         null=True,

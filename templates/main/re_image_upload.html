@@ -1,0 +1,753 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}画像アップロード - 画像解析アプリ{% endblock %}
+
+{% block content %}
+<!-- ページヘッダーセクション -->
+<div class="pt-16 py-2 sm:py-4 lg:pt-24 lg:pb-12">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div class="mb-1 space-y-4 text-center sm:mb-2 lg:mb-3">
+      <h2 class="text-base-content text-2xl font-semibold md:text-3xl lg:text-4xl">
+        <span class="relative z-1 font-bold">
+          画像再解析
+          <span class="from-primary absolute start-0 bottom-1 -z-1 h-0.5 w-full bg-gradient-to-r to-transparent to-80%"
+            aria-hidden="true"></span>
+        </span>
+      </h2>
+      <p class="text-base-content/80 text-xl">
+        選択された画像を再解析できます。
+      </p>
+      <div class="group flex items-center justify-center gap-2 pt-4 pb-2">
+        <span
+          class="icon-[tabler--chevron-left] text-primary size-5 shrink-0 transition-transform group-hover:-translate-x-1 rtl:rotate-180"></span>
+        <a href="{% url 'user_image_table' %}" class="link link-animated link-primary font-normal">画像一覧へ</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="pt-0 mb-8 px-4 sm:px-6 lg:px-8">
+  <div class="card max-w-5xl w-full mx-auto">
+    <div class="card-header">
+      <h5 class="card-title text-lg sm:text-xl">画像アップロード</h5>
+    </div>
+    <div class="card-body p-4 sm:p-6">
+
+      <!-- CSRFトークン -->
+      {% csrf_token %}
+
+      <!-- 選択された画像のカード表示 -->
+      {% if selected_image %}
+      <div class="mb-6">
+        <h3 class="text-lg font-semibold mb-4">選択された画像</h3>
+        <div class="rounded-box bg-base-100 shadow-base-300/20 p-3 shadow-lg">
+          <div class="mb-1 flex items-center justify-between">
+            <div class="flex items-center gap-x-3">
+              <span
+                class="text-base-content/80 border-base-content/20 flex size-8 items-center justify-center rounded-lg border p-0.5">
+                <img src="{{ selected_image.thumbnail_url }}" alt="{{ selected_image.filename }}"
+                  class="rounded-md w-full h-full object-cover">
+              </span>
+              <div>
+                <p class="text-base-content text-sm font-medium">
+                  <span class="inline-block truncate align-bottom">{{ selected_image.filename }}</span>
+                </p>
+                <p class="text-base-content/50 text-xs">
+                  {% if selected_image_status == 'completed' %}
+                  解析完了
+                  {% elif selected_image_status == 'analyzing' %}
+                  解析中
+                  {% elif selected_image_status == 'uploaded' %}
+                  アップロード完了
+                  {% elif selected_image_status == 'preparing' %}
+                  準備中
+                  {% elif selected_image_status == 'failed' %}
+                  解析失敗
+                  {% else %}
+                  {{ selected_image_status }}
+                  {% endif %}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- 再解析ボタン -->
+      <div id="analysis-button-container" class="flex justify-center mt-4">
+        <button id="start-analysis-btn" class="btn btn-primary btn-outline waves waves-primary"
+          data-overlay="#slide-down-animated-modal">
+          <span class="icon-[tabler--refresh] size-5 mr-2"></span>再解析
+        </button>
+      </div>
+
+      <!-- タイムライン -->
+      <ul id="timeline-container"
+        class="timeline timeline-snap-icon timeline-compact timeline-vertical w-full {% if selected_image %}block{% else %}hidden{% endif %}">
+
+        <!-- アップロード成功 -->
+        <li id="timeline-item-1-success" class="hidden">
+          <div
+            class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-{{ timeline_log.upload_step_color|default:'success' }}/5 border border-{{ timeline_log.upload_step_color|default:'success' }}/20">
+            <div
+              class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
+              <span class="text-sm sm:text-base">{{ timeline_log.upload_step_title|default:'ファイルアップロード完了' }}</span>
+              <span class="text-base-content/50 text-xs sm:text-sm font-normal">今すぐ</span>
+            </div>
+            <p id="timeline-description" class="mb-2 text-xs sm:text-sm">
+              {% if timeline_log and timeline_log.upload_step_description %}
+              {{ timeline_log.upload_step_description }}
+              {% else %}
+              ファイルのアップロードに成功しました
+              {% endif %}
+            </p>
+            <div class="flex items-center gap-2">
+              <span
+                class="icon-[tabler--{{ timeline_log.upload_step_icon|default:'check-circle' }}] text-{{ timeline_log.upload_step_color|default:'success' }} size-4 sm:size-5"></span>
+              <span class="text-xs sm:text-sm text-{{ timeline_log.upload_step_color|default:'success' }} font-medium">
+                {% if timeline_log and timeline_log.upload_step_status %}
+                {{ timeline_log.upload_step_status }}
+                {% else %}
+                アップロード成功
+                {% endif %}
+              </span>
+            </div>
+          </div>
+        </li>
+
+
+        <!-- 解析開始 -->
+        <li id="timeline-item-2" class="hidden">
+          <div
+            class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-{{ timeline_log.analysis_step_color|default:'warning' }}/5 border border-{{ timeline_log.analysis_step_color|default:'warning' }}/20">
+            <div
+              class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
+              <span class="text-sm sm:text-base">{{ timeline_log.analysis_step_title|default:'解析開始' }}</span>
+              <span class="text-base-content/50 text-xs sm:text-sm font-normal">今すぐ</span>
+            </div>
+            <p class="mb-2 text-xs sm:text-sm">{{ timeline_log.analysis_step_description|default:'AIによる画像解析を開始しました。' }}
+            </p>
+            <div class="flex items-center gap-2">
+              <span
+                class="icon-[tabler--{{ timeline_log.analysis_step_icon|default:'brain' }}] text-{{ timeline_log.analysis_step_color|default:'warning' }} size-4 sm:size-5"></span>
+              <span
+                class="text-xs sm:text-sm text-{{ timeline_log.analysis_step_color|default:'warning' }} font-medium">
+                {% if timeline_log and timeline_log.analysis_step_status %}
+                {{ timeline_log.analysis_step_status }}
+                {% else %}
+                解析開始
+                {% endif %}
+              </span>
+            </div>
+
+            <!-- アップロードUIを流用した解析進捗表示 -->
+            <div class="mx-4 sm:mx-8 lg:mx-12 space-y-2" id="analysis-progress-previews">
+              <!-- 各画像の解析進捗はJavaScriptで動的に生成 -->
+            </div>
+          </div>
+        </li>
+
+        <!-- 解析完了 -->
+        <li id="timeline-item-3" class="hidden" style="display: none;">
+          <div
+            class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-{{ timeline_log.completion_step_color|default:'success' }}/5 border border-{{ timeline_log.completion_step_color|default:'success' }}/20">
+            <div
+              class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
+              <span class="text-sm sm:text-base">{{ timeline_log.completion_step_title|default:'解析完了' }}</span>
+              <span class="text-base-content/50 text-xs sm:text-sm font-normal">今すぐ</span>
+            </div>
+            <p class="mb-2 text-xs sm:text-sm">
+              {% if timeline_log and timeline_log.completion_step_description %}
+              {{ timeline_log.completion_step_description }}
+              {% else %}
+              画像のカテゴリー分類が完了しました
+              {% endif %}
+            </p>
+            <div class="flex items-center gap-2">
+              <span
+                class="icon-[tabler--{{ timeline_log.completion_step_icon|default:'brain' }}] text-{{ timeline_log.completion_step_color|default:'success' }} size-4 sm:size-5"></span>
+              <span
+                class="text-xs sm:text-sm text-{{ timeline_log.completion_step_color|default:'success' }} font-medium">
+                {% if timeline_log and timeline_log.completion_step_status %}
+                {{ timeline_log.completion_step_status }}
+                {% else %}
+                完了
+                {% endif %}
+              </span>
+            </div>
+          </div>
+        </li>
+
+
+        <!-- 再解析開始 -->
+        <li id="timeline-item-4" class="hidden" style="display: none;">
+          <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-warning/5 border border-warning/20">
+            <div
+              class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
+              <span class="text-sm sm:text-base">再解析開始</span>
+              <span class="text-base-content/50 text-xs sm:text-sm font-normal">今すぐ</span>
+            </div>
+            <p class="mb-2 text-xs sm:text-sm">AIによる画像再解析を開始しました。</p>
+
+            <!-- 再解析進捗表示 -->
+            <div class="mx-4 sm:mx-8 lg:mx-12 space-y-2" id="retry-analysis-progress-previews">
+              <!-- 再解析の進捗はJavaScriptで動的に生成 -->
+            </div>
+          </div>
+        </li>
+
+        <!-- 再解析完了 -->
+        <li id="timeline-item-5" class="hidden" style="display: none;">
+          <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-success/5 border border-success/20">
+            <div
+              class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
+              <span class="text-sm sm:text-base">再解析完了</span>
+              <span class="text-base-content/50 text-xs sm:text-sm font-normal">今すぐ</span>
+            </div>
+            <p class="mb-2 text-xs sm:text-sm">画像の再解析が完了しました</p>
+            <div class="flex items-center gap-2">
+              <span class="icon-[tabler--refresh] text-success size-4 sm:size-5"></span>
+              <span class="text-xs sm:text-sm text-success font-medium">再解析完了</span>
+            </div>
+          </div>
+        </li>
+
+      </ul>
+
+    </div><!-- /#file-upload-limit -->
+  </div>
+</div>
+</div>
+
+<div class="h-16"></div>
+
+<!-- モデル選択モーダル -->
+<div id="slide-down-animated-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden"
+  role="dialog" tabindex="-1">
+  <div
+    class="modal-dialog overlay-open:mt-4 sm:overlay-open:mt-8 lg:overlay-open:mt-12 overlay-open:duration-300 transition-all ease-out max-w-sm sm:max-w-md lg:max-w-lg">
+    <div class="modal-content">
+      <div class="modal-header p-4 sm:p-6">
+        <h3 class="modal-title text-lg sm:text-xl">画像解析モデル選択</h3>
+        <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
+          data-overlay="#slide-down-animated-modal">
+          <span class="icon-[tabler--x] size-4"></span>
+        </button>
+      </div>
+      <div class="modal-body p-4 sm:p-6">
+        <div class="flex flex-col gap-4 sm:gap-6">
+          <div class="text-center">
+            <p class="text-sm sm:text-base text-gray-600 mb-2">アップロードされた画像を解析するための機械学習モデルを選択してください。</p>
+            <p class="text-xs sm:text-sm text-gray-500">各モデルは異なる特徴を持ち、解析目的に応じて最適なものを選択できます。</p>
+          </div>
+          <div class="space-y-3">
+            <div class="form-control">
+              <label class="label"><span class="label-text font-semibold text-sm sm:text-base">解析モデル</span></label>
+              <select class="select select-bordered w-full text-sm sm:text-base" id="model-selector">
+                <option value="">モデルを選択してください</option>
+                <option value="resnet50">PyTorch ResNet-50 (汎用画像分類)</option>
+                <option value="efficientnet">TensorFlow EfficientNet (軽量・高速)</option>
+                <option value="mobilenet">PyTorch MobileNet (モバイル最適化)</option>
+                <option value="vgg16">PyTorch VGG-16 (高精度・詳細分析)</option>
+                <option value="custom">CLIP (柔軟なテキストラベル分類)</option>
+              </select>
+            </div>
+            <div class="bg-base-200 rounded-lg p-3 sm:p-4">
+              <h4 class="font-semibold text-xs sm:text-sm mb-2">選択されたモデルの特徴</h4>
+              <p class="text-xs sm:text-sm text-gray-600" id="model-description">モデルを選択すると、ここに詳細な説明が表示されます。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="flex justify-end gap-3">
+          <button type="button" class="btn btn-soft btn-secondary"
+            data-overlay="#slide-down-animated-modal">キャンセル</button>
+          <button type="button" class="btn btn-primary" id="modal-start-analysis-btn">
+            <span class="icon-[tabler--player-play] size-5 mr-2"></span>解析開始
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // 選択された画像がある場合のタイムライン表示制御
+  document.addEventListener('DOMContentLoaded', function () {
+    const selectedImageStatus = '{{ selected_image_status|default:"" }}';
+    const selectedImageId = '{{ selected_image.id|default:"" }}';
+
+    // グローバル変数として設定
+    window.currentImageId = selectedImageId;
+
+    if (selectedImageStatus) {
+      showTimelineForSelectedImage(selectedImageStatus);
+
+      // タイムラインが消えないように定期的にチェック
+      setInterval(() => {
+        const timelineContainer = document.getElementById('timeline-container');
+        if (timelineContainer && timelineContainer.classList.contains('hidden')) {
+          console.log('タイムラインが非表示になったため再表示します');
+          showTimelineForSelectedImage(selectedImageStatus);
+        }
+      }, 1000);
+    }
+
+    // 再解析ボタンのイベント設定（モーダル表示用）
+    const retryButton = document.getElementById('start-analysis-btn');
+    if (retryButton) {
+      retryButton.onclick = function () {
+        // モーダルを表示（デフォルトの動作）
+        // data-overlay属性により自動的にモーダルが表示される
+      };
+    }
+
+    // モーダル内の解析開始ボタンのイベント設定
+    const modalStartButton = document.getElementById('modal-start-analysis-btn');
+    if (modalStartButton) {
+      modalStartButton.onclick = function () {
+        retryAnalysis();
+      };
+    }
+  });
+
+  // 選択された画像のステータスに応じてタイムラインを表示
+  function showTimelineForSelectedImage(status) {
+    console.log('再解析ページのタイムライン表示開始。ステータス:', status);
+
+    // タイムラインコンテナを表示
+    const timelineContainer = document.getElementById('timeline-container');
+    if (timelineContainer) {
+      timelineContainer.style.display = 'block';
+      timelineContainer.classList.remove('hidden');
+      timelineContainer.classList.add('block');
+      console.log('タイムラインコンテナを表示');
+    }
+
+    // 1つ目: ファイルアップロード完了（常に表示）
+    const timeline1 = document.getElementById('timeline-item-1-success');
+    if (timeline1) {
+      timeline1.classList.remove('hidden');
+      timeline1.style.display = 'block';
+      console.log('1つ目のタイムラインを表示');
+    }
+
+    // 2つ目: 解析開始/解析失敗（analyzing, completed, failedで表示）
+    const timeline2 = document.getElementById('timeline-item-2');
+    if (timeline2 && (status === 'analyzing' || status === 'completed' || status === 'failed')) {
+      timeline2.classList.remove('hidden');
+      timeline2.style.display = 'block';
+      console.log('2つ目のタイムライン（解析開始/解析失敗）を表示 - ステータス:', status);
+
+      // 進捗バー付きカードを生成
+      createAnalysisProgressPreviews();
+    }
+
+    // 3つ目: 解析完了のみ表示（completedのみ）
+    const timeline3 = document.getElementById('timeline-item-3');
+    if (timeline3 && status === 'completed') {
+      timeline3.classList.remove('hidden');
+      timeline3.style.display = 'block';
+      console.log('3つ目のタイムライン（解析完了）を表示 - ステータス:', status);
+    } else {
+      // 解析失敗やその他の場合は3つ目のタイムラインは非表示
+      if (timeline3) {
+        timeline3.className = 'hidden';
+        timeline3.style.display = 'none';
+        console.log('3つ目のタイムライン（非表示） - ステータス:', status);
+      }
+    }
+
+
+    // 4つ目と5つ目は再解析時のみ表示（初期状態では非表示のまま）
+    // これらは retryAnalysis() 関数内で制御される
+    const timeline4 = document.getElementById('timeline-item-4');
+    const timeline5 = document.getElementById('timeline-item-5');
+    if (timeline4) {
+      timeline4.className = 'hidden';
+      timeline4.style.display = 'none';
+      console.log('4つ目のタイムライン（再解析開始）を非表示にしました');
+    }
+    if (timeline5) {
+      timeline5.className = 'hidden';
+      timeline5.style.display = 'none';
+      console.log('5つ目のタイムライン（再解析完了）を非表示にしました');
+    }
+
+    // ボタンの表示制御
+    const analysisButton = document.getElementById('analysis-button-container');
+    if (analysisButton) {
+      // 再解析ボタンは常に表示
+      analysisButton.classList.remove('hidden');
+    }
+  }
+
+  // 再解析機能
+  function retryAnalysis() {
+    if (!window.currentImageId) {
+      console.error('画像IDが設定されていません');
+      alert('画像IDが設定されていません');
+      return;
+    }
+
+    console.log('再解析を開始します。画像ID:', window.currentImageId);
+
+    // 再解析フラグを設定（再解析専用ページなので常にtrue）
+    window.isRetryAnalysis = true;
+
+    // 4つ目のタイムライン（再解析開始）を表示
+    const timeline4 = document.getElementById('timeline-item-4');
+    if (timeline4) {
+      timeline4.classList.remove('hidden');
+      timeline4.style.display = 'block';
+      console.log('4つ目のタイムライン（再解析開始）を表示');
+
+      // 進捗バーを生成
+      generateRetryProgressBar();
+    }
+
+    // 再解析ボタンを無効化
+    const analysisButton = document.getElementById('analysis-button-container');
+    const button = analysisButton.querySelector('button');
+    if (button) {
+      button.disabled = true;
+      button.innerHTML = '<span class="icon-[tabler--loader-2] size-5 mr-2 animate-spin"></span>再解析中...';
+    }
+
+    // 再解析APIを呼び出し
+    fetch('/api/analysis/retry/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCSRFToken()
+      },
+      body: JSON.stringify({
+        image_id: window.currentImageId
+      })
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log('再解析API応答:', data);
+        if (data.success) {
+          // 再解析開始成功 - 進捗監視を開始
+          console.log('再解析が開始されました。進捗を監視します。');
+          startRetryProgressMonitoring();
+        } else {
+          alert('再解析の開始に失敗しました: ' + (data.error || '不明なエラー'));
+          // ボタンを元に戻す
+          if (button) {
+            button.disabled = false;
+            button.innerHTML = '<span class="icon-[tabler--refresh] size-5 mr-2"></span>再解析';
+          }
+        }
+      })
+      .catch(error => {
+        console.error('再解析エラー:', error);
+        alert('再解析の開始に失敗しました: ' + error.message);
+        // ボタンを元に戻す
+        if (button) {
+          button.disabled = false;
+          button.innerHTML = '<span class="icon-[tabler--refresh] size-5 mr-2"></span>再解析';
+        }
+      });
+  }
+
+
+  // 再解析進捗バーを生成する関数（image_uploadの2つ目のタイムラインと同じUI）
+  function generateRetryProgressBar() {
+    console.log('generateRetryProgressBar関数が呼び出されました');
+    const progressContainer = document.getElementById('retry-analysis-progress-previews');
+    console.log('進捗コンテナ:', progressContainer);
+
+    if (!progressContainer) {
+      console.error('retry-analysis-progress-previews要素が見つかりません');
+      return;
+    }
+
+    // 既存の進捗バーをクリア
+    progressContainer.innerHTML = '';
+
+    // image_uploadの2つ目のタイムラインと同じ構造で進捗バーを生成
+    const progressHTML = `
+      <div class="rounded-box bg-base-100 shadow-base-300/20 p-3 shadow-lg">
+        <div class="mb-1 flex items-center justify-between">
+          <div class="flex items-center gap-x-3">
+            <span class="text-base-content/80 border-base-content/20 flex size-8 items-center justify-center rounded-lg border p-0.5">
+              <img src="/uploads/images/${window.currentImageId || 'placeholder'}.jpg" alt="再解析中" class="rounded-md w-full h-full object-cover">
+            </span>
+            <div>
+              <p class="text-base-content text-sm font-medium">
+                <span class="inline-block truncate align-bottom">再解析中...</span>
+              </p>
+              <p class="text-base-content/50 text-xs">AIによる画像再解析を実行中</p>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-x-3 whitespace-nowrap">
+          <div class="progress h-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="retry-progress-bar">
+            <div class="progress-bar progress-primary transition-all duration-500" style="width:0" id="retry-progress-bar-pane"></div>
+          </div>
+          <span class="text-base-content mb-0.5 text-sm">
+            <span id="retry-progress-bar-value">0</span>%
+          </span>
+        </div>
+      </div>
+    `;
+
+    progressContainer.innerHTML = progressHTML;
+    console.log('進捗バーのHTMLを挿入しました');
+
+    // 進捗アニメーションを開始
+    animateRetryProgress();
+  }
+
+
+  // 再解析進捗アニメーション
+  function animateRetryProgress() {
+    console.log('animateRetryProgress関数が呼び出されました');
+    const progressBar = document.getElementById('retry-progress-bar-pane');
+    const progressValue = document.getElementById('retry-progress-bar-value');
+
+    console.log('進捗バー要素:', progressBar);
+    console.log('進捗値要素:', progressValue);
+
+    if (!progressBar || !progressValue) {
+      console.error('進捗バーまたは進捗値要素が見つかりません');
+      return;
+    }
+
+    console.log('進捗アニメーションを開始します');
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.random() * 10;
+      if (progress > 100) progress = 100;
+
+      progressBar.style.width = progress + '%';
+      progressValue.textContent = Math.round(progress);
+
+      if (progress >= 100) {
+        clearInterval(interval);
+        console.log('進捗アニメーション完了');
+        // 進捗完了時の処理
+        progressBar.classList.add('progress-success');
+      }
+    }, 200);
+  }
+
+  // 再解析進捗監視機能
+  function startRetryProgressMonitoring() {
+    console.log('再解析進捗監視を開始します');
+
+    // 進捗監視の間隔（3秒）
+    const interval = setInterval(() => {
+      checkRetryProgress();
+    }, 3000);
+
+    // 30秒後にタイムアウト
+    setTimeout(() => {
+      clearInterval(interval);
+      console.log('再解析進捗監視をタイムアウトしました');
+    }, 30000);
+  }
+
+  // 再解析進捗確認
+  function checkRetryProgress() {
+    if (!window.currentImageId) {
+      console.log('画像IDが設定されていません');
+      return;
+    }
+
+    fetch(`/api/analysis/progress/${window.currentImageId}/`)
+      .then(response => response.json())
+      .then(data => {
+        console.log('再解析進捗:', data);
+
+        if (data.status === 'completed') {
+          // 再解析完了（再解析の場合のみ表示）
+          console.log('再解析が完了しました');
+          if (window.isRetryAnalysis) {
+            showRetryCompletedTimeline();
+          }
+        } else if (data.status === 'failed') {
+          // 再解析失敗
+          console.log('再解析が失敗しました');
+          alert('再解析に失敗しました: ' + (data.error || '不明なエラー'));
+        }
+        // analyzingの場合は継続監視
+      })
+      .catch(error => {
+        console.error('進捗確認エラー:', error);
+      });
+  }
+
+  // 再解析完了タイムライン表示
+  function showRetryCompletedTimeline() {
+    const timeline5 = document.getElementById('timeline-item-5');
+    if (timeline5) {
+      timeline5.classList.remove('hidden');
+      timeline5.style.display = 'block';
+      console.log('5つ目のタイムライン（再解析完了）を表示');
+    }
+  }
+
+  // アップロードUIを流用した解析進捗表示を生成
+  function createAnalysisProgressPreviews() {
+    console.log('📊 解析進捗表示開始');
+
+    const container = document.getElementById('analysis-progress-previews');
+    if (!container) {
+      console.error('analysis-progress-previews コンテナが見つかりません');
+      return;
+    }
+
+    container.innerHTML = '';
+
+    // 選択された画像の情報を取得
+    const selectedImage = {
+      id: '{{ selected_image.id|default:"" }}',
+      filename: '{{ selected_image.filename|default:"" }}',
+      thumbnail_url: '{{ selected_image.thumbnail_url|default:"" }}',
+      status: '{{ selected_image_status|default:"" }}',
+      // DBから取得した進捗情報
+      progress_percentage: {{ timeline_log.analysis_progress_percentage|default: 0
+  }},
+  progress_stage: '{{ timeline_log.analysis_progress_stage|default:"preparing" }}'
+    };
+
+  if (!selectedImage.id) {
+    console.error('選択された画像IDがありません');
+    return;
+  }
+
+  console.log('📊 選択された画像詳細:', selectedImage);
+
+  // ファイル名と拡張子を分離
+  const lastDot = selectedImage.filename.lastIndexOf('.');
+  const filename = lastDot > 0 ? selectedImage.filename.substring(0, lastDot) : selectedImage.filename;
+  const fileExt = lastDot > 0 ? selectedImage.filename.substring(lastDot + 1) : '';
+
+  // アップロード時のUIテンプレートを完全に流用
+  const progressItem = document.createElement('div');
+  progressItem.className = 'mb-2';
+  progressItem.id = `analysis-progress-item-${selectedImage.id}`;
+
+  progressItem.innerHTML = `
+      <div class="rounded-box bg-base-100 shadow-base-300/20 p-3 shadow-lg">
+        <div class="mb-1 flex items-center justify-between">
+          <div class="flex items-center gap-x-3">
+            <span class="text-base-content/80 border-base-content/20 flex size-8 items-center justify-center rounded-lg border p-0.5">
+              <img class="rounded-md w-full h-full object-cover" data-analysis-thumbnail="${selectedImage.id}" src="${selectedImage.thumbnail_url || ''}" alt="" style="display: ${selectedImage.thumbnail_url ? 'block' : 'none'}">
+              <span class="icon-[tabler--photo] text-base-content/70 size-5" data-analysis-icon="${selectedImage.id}" style="display: ${selectedImage.thumbnail_url ? 'none' : 'block'}"></span>
+            </span>
+            <div>
+              <p class="text-base-content text-sm font-medium">
+                <span class="inline-block truncate align-bottom" data-analysis-file-name="${selectedImage.id}">${filename}</span>.
+                <span data-analysis-file-ext="${selectedImage.id}">${fileExt}</span>
+              </p>
+              <p class="text-base-content/50 text-xs" data-analysis-file-size="${selectedImage.id}">解析中</p>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-x-3 whitespace-nowrap">
+          <div class="progress h-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-analysis-progress-bar="${selectedImage.id}">
+            <div class="progress-bar progress-primary transition-all duration-500" style="width:0%" data-analysis-progress-bar-pane="${selectedImage.id}"></div>
+          </div>
+          <span class="text-base-content mb-0.5 text-sm">
+            <span data-analysis-progress-bar-value="${selectedImage.id}">0</span>%
+          </span>
+        </div>
+      </div>
+    `;
+
+  container.appendChild(progressItem);
+
+  // ステータスに応じて進捗バーを更新
+  updateIndividualProgress(selectedImage.id, selectedImage.status, selectedImage.progress_percentage, selectedImage.progress_stage);
+  }
+
+  // 個別進捗を更新（アップロードUI構造に合わせて）
+  function updateIndividualProgress(imageId, status, progressPercentage = 0, progressStage = 'preparing') {
+    const progressBar = document.querySelector(`[data-analysis-progress-bar-pane="${imageId}"]`);
+    const progressValue = document.querySelector(`[data-analysis-progress-bar-value="${imageId}"]`);
+    const statusText = document.querySelector(`[data-analysis-file-ext="${imageId}"]`);
+
+    if (!progressBar || !progressValue || !statusText) return;
+
+    // DBから取得した進捗情報を使用
+    if (progressPercentage > 0) {
+      progressBar.style.width = `${progressPercentage}%`;
+      progressValue.textContent = progressPercentage;
+    }
+
+    switch (status) {
+      case 'uploaded':
+        if (progressPercentage === 0) {
+          progressBar.style.width = '100%';
+          progressValue.textContent = '100';
+        }
+        statusText.textContent = '解析中';
+        progressBar.className = 'progress-bar progress-success transition-all duration-500';
+        break;
+      case 'preparing':
+        if (progressPercentage === 0) {
+          progressBar.style.width = '25%';
+          progressValue.textContent = '25';
+        }
+        statusText.textContent = '準備中';
+        progressBar.className = 'progress-bar progress-warning transition-all duration-500';
+        break;
+      case 'analyzing':
+        if (progressPercentage === 0) {
+          progressBar.style.width = '50%';
+          progressValue.textContent = '50';
+        }
+        statusText.textContent = '解析中';
+        progressBar.className = 'progress-bar progress-info transition-all duration-500';
+        break;
+      case 'completed':
+        progressBar.style.width = '100%';
+        progressValue.textContent = '100';
+        statusText.textContent = '解析完了';
+        progressBar.className = 'progress-bar progress-success transition-all duration-500';
+        break;
+      case 'failed':
+        console.log(`ステータス: failed - 画像ID: ${imageId}, 進捗: ${progressPercentage}%`);
+        progressBar.style.width = `${progressPercentage}%`;
+        progressValue.textContent = progressPercentage;
+        statusText.textContent = '解析失敗';
+        progressBar.className = 'progress-bar progress-error transition-all duration-500';
+        break;
+      case 'error':
+        progressBar.style.width = '0%';
+        progressValue.textContent = '0';
+        statusText.textContent = 'エラー';
+        progressBar.className = 'progress-bar progress-error transition-all duration-500';
+        break;
+    }
+  }
+
+  // CSRFトークン取得関数
+  function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+  }
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* タイムラインの表示を有効化 */
+  #timeline-container .timeline-middle {
+    display: flex !important;
+  }
+
+  /* タイムラインのスタイル調整 */
+  #timeline-container .timeline-end {
+    margin-left: 1rem !important;
+  }
+</style>
+{% endblock %}

@@ -106,7 +106,7 @@ function resetAnalysisUI() {
   // タイムラインアイテム3を非表示
   const item3 = document.getElementById('timeline-item-3');
   if (item3) {
-    item3.classList.add('hidden');
+    item3.className = 'hidden';
     item3.style.display = 'none';
   }
 
@@ -268,13 +268,17 @@ function updateIndividualProgress(imageId, status) {
       statusText.textContent = '解析失敗';
       progressBar.className = 'progress-bar progress-error transition-all duration-500';
 
-      // 解析失敗タイムラインを表示
+      // 解析失敗タイムラインを表示（解析が開始されている場合のみ）
       setTimeout(() => {
-        const errorTimeline = document.getElementById('timeline-item-1-error');
-        if (errorTimeline) {
-          errorTimeline.classList.remove('hidden');
-          errorTimeline.style.display = 'block';
-          console.log('解析失敗タイムラインを表示');
+        // 解析が開始されているかチェック
+        const timeline2 = document.getElementById('timeline-item-2');
+        if (timeline2 && timeline2.style.display !== 'none') {
+          const errorTimeline = document.getElementById('timeline-item-3-error');
+          if (errorTimeline) {
+            errorTimeline.className = '';
+            errorTimeline.style.display = 'block';
+            console.log('解析失敗タイムラインを表示');
+          }
         }
       }, 100);
       break;
@@ -496,6 +500,9 @@ function getUploadedImages() {
   console.log('🔍 最終的に取得された画像数:', uploadedImages.length);
   return uploadedImages;
 }
+
+// グローバル関数として定義（他のスクリプトからもアクセス可能にする）
+window.getUploadedImages = getUploadedImages;
 
 // アップロード成功後にテンプレート要素を更新
 function updateTemplateAfterUpload(file, resp) {
@@ -971,8 +978,25 @@ window.addEventListener('load', () => {
 
 
   function showUploadSuccess(message, force = false) {
-    if (!force && window.uploadSuccessShown) return;
+    console.log('🔄 デバッグ: showUploadSuccess関数が呼び出されました');
+    console.log('🔄 デバッグ: message:', message);
+    console.log('🔄 デバッグ: force:', force);
+    console.log('🔄 デバッグ: window.uploadSuccessShown:', window.uploadSuccessShown);
+    console.log('🔄 デバッグ: window.isRestoringState:', window.isRestoringState);
+
+    if (!force && window.uploadSuccessShown) {
+      console.log('🔄 デバッグ: 既に表示済みのため、showUploadSuccessをスキップ');
+      return;
+    }
+
+    // リロード時の状態復元中は実行しない
+    if (window.isRestoringState) {
+      console.log('🔄 デバッグ: 状態復元中なのでshowUploadSuccessをスキップ');
+      return;
+    }
+
     window.uploadSuccessShown = true;
+    console.log('🔄 デバッグ: uploadSuccessShownフラグをtrueに設定');
     const successTimeline = document.getElementById('timeline-item-1-success');
     const errorTimeline = document.getElementById('timeline-item-1-error');
     const timelineDescription = document.getElementById('timeline-description');
@@ -980,22 +1004,98 @@ window.addEventListener('load', () => {
     const timelineContainer = document.getElementById('timeline-container');
     const uploadButtonContainer = document.getElementById('upload-button-container');
 
+    console.log('🔄 デバッグ: UI要素の取得結果:');
+    console.log('🔄 デバッグ: successTimeline:', successTimeline);
+    console.log('🔄 デバッグ: errorTimeline:', errorTimeline);
+    console.log('🔄 デバッグ: timelineDescription:', timelineDescription);
+    console.log('🔄 デバッグ: analysisButton:', analysisButton);
+    console.log('🔄 デバッグ: timelineContainer:', timelineContainer);
+    console.log('🔄 デバッグ: uploadButtonContainer:', uploadButtonContainer);
+
+    // 1つ目のタイムライン（アップロード完了）のみを表示
     if (successTimeline) {
       successTimeline.classList.remove('hidden');
       successTimeline.style.display = 'block';
+      console.log('🔄 デバッグ: アップロード成功タイムラインを表示しました');
+    } else {
+      console.log('🔄 デバッグ: アップロード成功タイムラインが見つかりません');
     }
+
     if (errorTimeline) {
       errorTimeline.classList.add('hidden');
       errorTimeline.style.display = 'none';
+      console.log('🔄 デバッグ: エラータイムラインを非表示にしました');
+    } else {
+      console.log('🔄 デバッグ: エラータイムラインが見つかりません');
     }
-    if (timelineDescription) timelineDescription.textContent = message;
-    if (analysisButton) analysisButton.classList.remove('hidden');
-    if (timelineContainer) timelineContainer.classList.remove('hidden');
+
+    if (timelineDescription) {
+      timelineDescription.textContent = message;
+      console.log('🔄 デバッグ: タイムライン説明を更新しました:', message);
+    } else {
+      console.log('🔄 デバッグ: タイムライン説明要素が見つかりません');
+    }
+
+    if (analysisButton) {
+      analysisButton.classList.remove('hidden');
+      console.log('🔄 デバッグ: 解析ボタンを表示しました');
+    } else {
+      console.log('🔄 デバッグ: 解析ボタンが見つかりません');
+    }
+
+    if (timelineContainer) {
+      timelineContainer.classList.remove('hidden');
+      console.log('🔄 デバッグ: タイムラインコンテナを表示しました');
+    } else {
+      console.log('🔄 デバッグ: タイムラインコンテナが見つかりません');
+    }
 
     // アップロードボタンを非表示にして、解析ボタンを強調
-    if (uploadButtonContainer) uploadButtonContainer.classList.add('hidden');
+    if (uploadButtonContainer) {
+      uploadButtonContainer.classList.add('hidden');
+      console.log('🔄 デバッグ: アップロードボタンを非表示にしました');
+    } else {
+      console.log('🔄 デバッグ: アップロードボタンが見つかりません');
+    }
 
+    // 解析タイムラインを確実に非表示にする
+    console.log('🔄 デバッグ: 解析タイムライン非表示処理開始');
+    const timeline2 = document.getElementById('timeline-item-2');
+    const timeline2Error = document.getElementById('timeline-item-2-error');
+    const timeline3 = document.getElementById('timeline-item-3');
+
+    console.log('🔄 デバッグ: 解析タイムライン要素の取得結果:');
+    console.log('🔄 デバッグ: timeline2:', timeline2);
+    console.log('🔄 デバッグ: timeline2Error:', timeline2Error);
+    console.log('🔄 デバッグ: timeline3:', timeline3);
+
+    if (timeline2) {
+      timeline2.className = 'hidden';
+      timeline2.style.display = 'none';
+      console.log('🔄 デバッグ: showUploadSuccessで解析開始タイムラインを非表示にしました');
+    } else {
+      console.log('🔄 デバッグ: 解析開始タイムラインが見つかりません');
+    }
+
+    if (timeline2Error) {
+      timeline2Error.className = 'hidden';
+      timeline2Error.style.display = 'none';
+      console.log('🔄 デバッグ: showUploadSuccessで解析失敗タイムラインを非表示にしました');
+    } else {
+      console.log('🔄 デバッグ: 解析失敗タイムラインが見つかりません');
+    }
+
+    if (timeline3) {
+      timeline3.className = 'hidden';
+      timeline3.style.display = 'none';
+      console.log('🔄 デバッグ: showUploadSuccessで解析完了タイムラインを非表示にしました');
+    } else {
+      console.log('🔄 デバッグ: 解析完了タイムラインが見つかりません');
+    }
+
+    console.log('🔄 デバッグ: 解析タイムライン非表示処理完了');
     setUploadBtn(START_TEXT, false);
+    console.log('🔄 デバッグ: showUploadSuccess関数完了');
   }
 
   function showUploadError(errorMessage) {
@@ -1031,10 +1131,10 @@ window.addEventListener('load', () => {
     const timelineContainer = document.getElementById('timeline-container');
     if (timelineContainer) timelineContainer.classList.add('hidden');
     ['timeline-item-1-success', 'timeline-item-1-error',
-      'timeline-item-2', 'timeline-item-3'].forEach(id => {
+      'timeline-item-2', 'timeline-item-2-error', 'timeline-item-3', 'timeline-item-3-error'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-          el.classList.add('hidden');
+          el.className = 'hidden';
           el.style.display = 'none';
         }
       });
@@ -1133,6 +1233,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       // モーダルを正しく閉じる
       closeModelSelectionModal();
+      // 初回解析を実行
+      window.isRetryAnalysis = false;
       startAnalysis(model);
     });
   }
@@ -1204,7 +1306,7 @@ function startAnalysis(modelName) {
         // API成功時のみ解析開始UIを表示
         const item2 = document.getElementById('timeline-item-2');
         if (item2) {
-          item2.classList.remove('hidden');
+          item2.className = '';
           item2.style.display = 'block';
         }
 
@@ -1298,12 +1400,15 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
             // 全画像を失敗状態に更新
             updateAllImagesToFailed();
 
-            // 失敗時のタイムライン表示
-            const errorTimeline = document.getElementById('timeline-item-1-error');
-            if (errorTimeline) {
-              errorTimeline.classList.remove('hidden');
-              errorTimeline.style.display = 'block';
-              console.log('❌ 解析失敗タイムラインを表示');
+            // 失敗時のタイムライン表示（解析が開始されている場合のみ）
+            const timeline2 = document.getElementById('timeline-item-2');
+            if (timeline2 && timeline2.style.display !== 'none') {
+              const errorTimeline = document.getElementById('timeline-item-3-error');
+              if (errorTimeline) {
+                errorTimeline.className = '';
+                errorTimeline.style.display = 'block';
+                console.log('❌ 解析失敗タイムラインを表示');
+              }
             }
 
             return; // 失敗時は処理を終了
@@ -1423,7 +1528,7 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
             setTimeout(() => {
               const item3 = document.getElementById('timeline-item-3');
               if (item3) {
-                item3.classList.remove('hidden');
+                item3.className = '';
                 item3.style.display = 'block';
               }
               // 解析完了後にセッションカウンターをリセット
@@ -1445,8 +1550,12 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
         console.error('❌ 進捗取得エラー:', error);
         console.error('❌ エラー詳細:', error.message);
         console.error('❌ エラー発生時の進捗:', progress + '%');
-        // エラー時は失敗ステータスに更新
-        updateAllImagesToFailed();
+
+        // 解析が開始されていない場合は失敗ステータスに更新しない
+        if (progress > 0 || progressMonitoringInterval) {
+          updateAllImagesToFailed();
+        }
+
         clearInterval(progressMonitoringInterval);
         clearInterval(animInterval);
         progressMonitoringInterval = null;
