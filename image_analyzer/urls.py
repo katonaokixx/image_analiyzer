@@ -22,6 +22,7 @@ urlpatterns = [
     path('api/select-model/', views.api_select_model, name='api_select_model'),
     path('api/analysis/start/', views.api_start_analysis, name='api_start_analysis'),
     path('api/analysis/progress/', views.api_analysis_progress, name='api_analysis_progress'),
+    path('api/analysis/complete/', views.api_complete_analysis, name='api_complete_analysis'),
     path('api/analysis/retry/', views.api_retry_analysis, name='api_retry_analysis'),
     path('api/update-status/', views.api_update_status, name='api_update_status'),
     path('api/timeline/<int:image_id>/', views.api_get_timeline, name='api_get_timeline'),

@@ -740,10 +740,59 @@
 
       if (progress >= 100) {
         clearInterval(interval);
+        console.log('進捗100%に達しました。カードを更新します。');
+        // カードの内容を「解析完了」に変更
+        updateAnalysisCardToCompleted();
         // 解析完了タイムラインを表示
         showAnalysisCompletedTimeline();
       }
     }, 500);
+  }
+
+  // カードの内容を「解析完了」に変更
+  function updateAnalysisCardToCompleted() {
+    console.log('カード更新開始');
+
+    // より具体的なセレクターで要素を取得
+    const container = document.getElementById('analysis-progress-previews');
+    console.log('container:', container);
+
+    if (container) {
+      // すべてのp要素を取得して「解析中」を含むものを非表示にする
+      const allTexts = container.querySelectorAll('p');
+      console.log('見つかったp要素の数:', allTexts.length);
+
+      allTexts.forEach((p, index) => {
+        console.log(`p要素 ${index}:`, p.textContent, 'クラス:', p.className);
+        if (p.textContent.includes('解析中')) {
+          p.style.display = 'none';
+          console.log('「解析中」を含むテキストを非表示にしました');
+        }
+        if (p.textContent.includes('AIによる画像解析を実行中です')) {
+          p.textContent = '画像のカテゴリー分類が完了しました';
+          console.log('説明テキストを変更しました');
+        }
+      });
+
+      // 従来の方法も試す
+      const statusText = container.querySelector('.text-sm.font-medium');
+      const descriptionText = container.querySelector('.text-xs');
+
+      console.log('statusText要素:', statusText);
+      console.log('descriptionText要素:', descriptionText);
+
+      if (statusText) {
+        statusText.style.display = 'none';
+        console.log('「解析中...」テキストを非表示にしました（従来の方法）');
+      }
+
+      if (descriptionText) {
+        descriptionText.textContent = '画像のカテゴリー分類が完了しました';
+        console.log('説明テキストを変更しました（従来の方法）');
+      }
+    } else {
+      console.error('analysis-progress-previewsコンテナが見つかりません');
+    }
   }
 
   // 初回解析完了タイムライン表示

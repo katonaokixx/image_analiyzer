@@ -650,8 +650,7 @@
 
   // 再解析の実行中フラグ
   let isRetryAnalysisRunning = false;
-  
-  // 進捗監視のinterval ID
+  // 再解析進捗監視のinterval
   let retryProgressInterval = null;
 
   // 再解析機能
@@ -838,6 +837,11 @@
   // 既存の進捗バーをクリア
   progressContainer.innerHTML = '';
 
+  // ファイル名と拡張子を分離
+  const lastDot = selectedImage.filename.lastIndexOf('.');
+  const filename = lastDot > 0 ? selectedImage.filename.substring(0, lastDot) : selectedImage.filename;
+  const fileExt = lastDot > 0 ? selectedImage.filename.substring(lastDot + 1) : '';
+
   // image_uploadの2つ目のタイムラインと同じ構造で進捗バーを生成
   const progressHTML = `
       <div class="rounded-box bg-base-100 shadow-base-300/20 p-3 shadow-lg">
@@ -848,7 +852,9 @@
             </span>
             <div>
               <p class="text-base-content text-sm font-medium">
-                <span class="inline-block truncate align-bottom">再解析中...</span>
+                <span class="inline-block truncate align-bottom" data-analysis-file-name="${selectedImage.id}">${filename}.${fileExt}</span>
+                <span data-analysis-file-ext="${selectedImage.id}" style="display: none;">${fileExt}</span>
+                <span data-analysis-status="${selectedImage.id}">再解析中</span>
               </p>
               <p class="text-base-content/50 text-xs">AIによる画像再解析を実行中</p>
             </div>
@@ -872,6 +878,32 @@
   animateRetryProgress();
   }
 
+
+  // 再解析進捗バーを更新する関数
+  function updateRetryProgressBar(percentage) {
+    console.log('再解析進捗バーを更新:', percentage + '%');
+
+    const progressBar = document.getElementById('retry-progress-bar-pane');
+    const progressValue = document.getElementById('retry-progress-bar-value');
+
+    if (progressBar) {
+      progressBar.style.width = percentage + '%';
+      console.log('進捗バーの幅を更新:', percentage + '%');
+    }
+
+    if (progressValue) {
+      progressValue.textContent = percentage;
+      console.log('進捗値を更新:', percentage);
+    }
+
+    // 100%の場合は成功スタイルを適用
+    if (percentage >= 100) {
+      if (progressBar) {
+        progressBar.classList.add('progress-success');
+        console.log('進捗バーに成功スタイルを適用');
+      }
+    }
+  }
 
   // 再解析進捗アニメーション
   function animateRetryProgress() {
@@ -942,23 +974,41 @@
       .then(data => {
         console.log('再解析進捗:', data);
 
+        // 進捗パーセンテージを更新
+        if (data.progress_percentage !== undefined) {
+          updateRetryProgressBar(data.progress_percentage);
+        }
+
         if (data.status === 'completed') {
           // 再解析完了（再解析の場合のみ表示）
           console.log('再解析が完了しました');
           if (window.isRetryAnalysis) {
-            // 進捗監視を停止
-            if (retryProgressInterval) {
-              clearInterval(retryProgressInterval);
-              retryProgressInterval = null;
-              console.log('再解析進捗監視を停止しました');
-            }
+            // 再解析の進捗バーを100%に更新
+            updateRetryProgressBar(100);
+            // カードの表示を「再解析完了」に更新
+            updateAnalysisCardToCompleted();
             showRetryCompletedTimeline();
+
+            // 再解析ボタンの状態を復元
+            const analysisButton = document.getElementById('analysis-button-container');
+            const button = analysisButton ? analysisButton.querySelector('button') : null;
+            if (button) {
+              button.disabled = false;
+              button.innerHTML = '<span class="icon-[tabler--refresh] size-5 mr-2"></span>再解析';
+            }
+          }
+
+          // 進捗監視を停止
+          if (retryProgressInterval) {
+            clearInterval(retryProgressInterval);
+            retryProgressInterval = null;
           }
           isRetryAnalysisRunning = false; // フラグをリセット
         } else if (data.status === 'failed') {
           // 再解析失敗
           console.log('再解析が失敗しました');
           alert('再解析に失敗しました: ' + (data.error || '不明なエラー'));
+
           // 進捗監視を停止
           if (retryProgressInterval) {
             clearInterval(retryProgressInterval);
@@ -970,6 +1020,7 @@
       })
       .catch(error => {
         console.error('進捗確認エラー:', error);
+
         // 進捗監視を停止
         if (retryProgressInterval) {
           clearInterval(retryProgressInterval);
@@ -979,71 +1030,81 @@
       });
   }
 
-  // 再解析完了タイムライン表示
-  function showRetryCompletedTimeline() {
-    // 4つ目のタイムライン（再解析開始）を完了状態に更新
-    const timeline4 = document.getElementById('timeline-item-4');
-    if (timeline4) {
-      // プログレスバーを削除
-      const progressContainer = document.getElementById('retry-analysis-progress-previews');
-      if (progressContainer) {
-        progressContainer.innerHTML = '';
-      }
+  // カードの内容を「解析完了」に変更
+  function updateAnalysisCardToCompleted() {
+    console.log('カード更新開始');
 
-      // タイムラインの内容を完了状態に更新
-      const titleElement = timeline4.querySelector('.text-sm.sm\\:text-base');
-      const descriptionElement = timeline4.querySelector('.mb-2.text-xs.sm\\:text-sm');
-      
-      if (titleElement) {
-        // ファイル名を取得
-        const filename = '{{ selected_image.filename|default:"" }}';
-        const lastDot = filename.lastIndexOf('.');
-        const nameWithoutExt = lastDot > 0 ? filename.substring(0, lastDot) : filename;
-        titleElement.textContent = `${nameWithoutExt}. 再解析完了`;
-      }
-      
-      if (descriptionElement) {
-        descriptionElement.innerHTML = `
-          <div class="mb-2 text-xs sm:text-sm">
-            <div class="flex items-center gap-2 mb-2">
-              <div class="progress-bar progress-primary w-full" style="width: 100%"></div>
-              <span class="text-xs sm:text-sm font-medium">100%</span>
-            </div>
-            <div class="text-sm sm:text-base font-medium">再解析完了</div>
-            <div class="text-base-content/50 text-xs sm:text-sm font-normal">今すぐ</div>
-            <div class="text-xs sm:text-sm">画像の再解析が完了しました</div>
-            <div class="flex items-center gap-2 mt-2">
-              <span class="icon-[tabler--check-circle] text-success size-4 sm:size-5">✅</span>
-              <span class="text-xs sm:text-sm text-success font-medium">完了</span>
-            </div>
-          </div>
-        `;
-      }
+    // 再解析の場合は4つ目のタイムラインのコンテナを更新
+    const container = window.isRetryAnalysis ?
+      document.getElementById('retry-analysis-progress-previews') :
+      document.getElementById('analysis-progress-previews');
 
-      // 背景色を成功色に変更
-      const timelineEnd = timeline4.querySelector('.timeline-end');
-      if (timelineEnd) {
-        timelineEnd.className = 'timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-success/5 border border-success/20';
-      }
-
-      console.log('4つ目のタイムライン（再解析完了）を更新しました');
+    if (!container) {
+      console.error('進捗コンテナが見つかりません:', window.isRetryAnalysis ? 'retry-analysis-progress-previews' : 'analysis-progress-previews');
+      return;
     }
 
-    // 5つ目のタイムライン（再解析完了）も表示
+    // ファイル名部分（ファイル名 + 拡張子）を取得
+    const fileNameElement = container.querySelector('[data-analysis-file-name]');
+    const fileExtElement = container.querySelector('[data-analysis-file-ext]');
+    const statusElement = container.querySelector('[data-analysis-file-size]');
+    const analysisStatusElement = container.querySelector('[data-analysis-status]');
+
+    // ファイル名要素はそのまま保持（完了テキストは別の要素で管理）
+    if (fileNameElement) {
+      console.log('ファイル名要素はそのまま保持:', fileNameElement.textContent);
+    }
+
+    // ステータス要素のテキストを空にする（再解析完了時はステータステキストを表示しない）
+    if (analysisStatusElement) {
+      analysisStatusElement.textContent = '';
+      console.log('ステータス要素のテキストを空にしました');
+    }
+
+    // ステータス部分を非表示にする
+    if (statusElement) {
+      statusElement.style.display = 'none';
+      console.log('ステータス部分を非表示にしました');
+    }
+
+    // 説明テキストを更新
+    const descriptionElement = container.querySelector('.text-xs');
+    if (descriptionElement) {
+      const descriptionText = window.isRetryAnalysis ? '画像の再解析が完了しました' : '画像のカテゴリー分類が完了しました';
+      descriptionElement.textContent = descriptionText;
+      console.log('説明テキストを更新しました:', descriptionText);
+    }
+
+    // より確実に「解析中」を含む要素を非表示にする
+    const allElements = container.querySelectorAll('*');
+    allElements.forEach((element, index) => {
+      if (element.textContent && element.textContent.includes('解析中') && !element.textContent.includes('解析完了')) {
+        console.log(`「解析中」を含む要素を発見 (${index}):`, element.textContent, 'タグ:', element.tagName, 'クラス:', element.className);
+        element.style.display = 'none';
+        console.log('「解析中」を含む要素を非表示にしました');
+      }
+    });
+
+    // 「再解析中」を「再解析完了」に変更
+    const retryElements = container.querySelectorAll('*');
+    retryElements.forEach((element, index) => {
+      if (element.textContent && element.textContent.includes('再解析中') && !element.textContent.includes('再解析完了')) {
+        console.log(`「再解析中」を含む要素を発見 (${index}):`, element.textContent);
+        element.textContent = element.textContent.replace('再解析中', '再解析完了');
+        console.log('「再解析中」を「再解析完了」に変更しました');
+      }
+    });
+
+    console.log('カード更新完了');
+  }
+
+  // 再解析完了タイムライン表示
+  function showRetryCompletedTimeline() {
     const timeline5 = document.getElementById('timeline-item-5');
     if (timeline5) {
       timeline5.classList.remove('hidden');
       timeline5.style.display = 'block';
       console.log('5つ目のタイムライン（再解析完了）を表示');
-    }
-
-    // 再解析ボタンの状態を復元
-    const analysisButton = document.getElementById('analysis-button-container');
-    const button = analysisButton?.querySelector('button');
-    if (button) {
-      button.disabled = false;
-      button.innerHTML = '<span class="icon-[tabler--refresh] size-5 mr-2"></span>再解析';
-      console.log('再解析ボタンの状態を復元しました');
     }
   }
 
@@ -1098,10 +1159,10 @@
             </span>
             <div>
               <p class="text-base-content text-sm font-medium">
-                <span class="inline-block truncate align-bottom" data-analysis-file-name="${selectedImage.id}">${filename}</span>.
-                <span data-analysis-file-ext="${selectedImage.id}">${fileExt}</span>
+                <span class="inline-block truncate align-bottom" data-analysis-file-name="${selectedImage.id}">${filename}.${fileExt}</span>
+                <span data-analysis-file-ext="${selectedImage.id}" style="display: none;">${fileExt}</span>
               </p>
-              <p class="text-base-content/50 text-xs" data-analysis-file-size="${selectedImage.id}">解析中</p>
+              <p class="text-base-content/50 text-xs" data-analysis-file-size="${selectedImage.id}">解析完了</p>
             </div>
           </div>
         </div>
@@ -1142,7 +1203,8 @@
           progressBar.style.width = '100%';
           progressValue.textContent = '100';
         }
-        statusText.textContent = '解析中';
+        // ファイル拡張子は保持し、ステータスは別の要素で管理
+        // statusText.textContent = '解析中';
         progressBar.className = 'progress-bar progress-success transition-all duration-500';
         break;
       case 'preparing':
@@ -1158,7 +1220,8 @@
           progressBar.style.width = '50%';
           progressValue.textContent = '50';
         }
-        statusText.textContent = '解析中';
+        // ファイル拡張子は保持し、ステータスは別の要素で管理
+        // statusText.textContent = '解析中';
         progressBar.className = 'progress-bar progress-info transition-all duration-500';
         break;
       case 'completed':

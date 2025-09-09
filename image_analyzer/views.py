@@ -358,7 +358,7 @@ def api_set_selected_image(request: HttpRequest):
         return JsonResponse({'ok': True, 'message': '画像IDと状態が保存されました'})
         
     except Exception as e:
-        logger.error(f"選択画像ID保存エラー: {e}")
+        print(f"選択画像ID保存エラー: {e}")
         return JsonResponse({'ok': False, 'error': str(e)}, status=500)
 
 @require_POST
@@ -1397,6 +1397,61 @@ def complete_queue_processing_view(request):
     except AnalysisQueue.DoesNotExist:
         return JsonResponse({'ok': False, 'error': 'キューアイテムが見つかりません'}, status=404)
     except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+
+
+@require_POST
+@csrf_protect
+@login_required
+def api_complete_analysis(request: HttpRequest):
+    """解析完了API"""
+    import json
+    import logging
+    from django.utils import timezone
+    
+    logger = logging.getLogger(__name__)
+    
+    try:
+        data = json.loads(request.body)
+        image_id = data.get('image_id')
+        
+        if not image_id:
+            return JsonResponse({'ok': False, 'error': '画像IDが指定されていません'}, status=400)
+        
+        try:
+            image = Image.objects.get(id=image_id, user=request.user)
+        except Image.DoesNotExist:
+            return JsonResponse({'ok': False, 'error': '画像が見つかりません'}, status=404)
+        
+        # 画像のステータスを完了に更新
+        image.status = 'completed'
+        image.save()
+        
+        # タイムラインログを更新
+        timeline_log, created = TimelineLog.objects.get_or_create(
+            image=image,
+            defaults={
+                'upload_started_at': timezone.now(),
+                'upload_completed_at': timezone.now(),
+                'analysis_started_at': timezone.now(),
+                'analysis_completed_at': timezone.now()
+            }
+        )
+        if not created:
+            timeline_log.analysis_completed_at = timezone.now()
+            timeline_log.save()
+        
+        logger.info(f"解析完了: 画像ID={image_id}, ファイル名={image.filename}")
+        
+        return JsonResponse({
+            'ok': True,
+            'message': f'画像 {image.filename} の解析が完了しました',
+            'image_id': image_id,
+            'status': 'completed'
+        })
+        
+    except Exception as e:
+        logger.error(f"解析完了APIでエラー: {e}")
         return JsonResponse({'ok': False, 'error': str(e)}, status=500)
 
 

@@ -143,7 +143,7 @@ function createAnalysisProgressPreviews(uploadedImages) {
 
     // アップロード時のUIテンプレートを完全に流用
     const progressItem = document.createElement('div');
-    progressItem.className = 'mb-2';
+    progressItem.className = 'mb-2 progress-container';
     progressItem.id = `analysis-progress-item-${image.id}`;
 
     progressItem.innerHTML = `
@@ -156,8 +156,8 @@ function createAnalysisProgressPreviews(uploadedImages) {
             </span>
             <div>
               <p class="text-base-content text-sm font-medium">
-                <span class="inline-block truncate align-bottom" data-analysis-file-name="${image.id}">${filename}</span>.
-                <span data-analysis-file-ext="${image.id}">${fileExt}</span>
+                <span class="inline-block truncate align-bottom" data-analysis-file-name="${image.id}">${filename}.${fileExt}</span>
+                <span data-analysis-file-ext="${image.id}" style="display: none;">${fileExt}</span>
               </p>
               <p class="text-base-content/50 text-xs" data-analysis-file-size="${image.id}">解析中</p>
             </div>
@@ -224,7 +224,7 @@ function checkIndividualProgress() {
 function updateIndividualProgress(imageId, status) {
   const progressBar = document.querySelector(`[data-analysis-progress-bar-pane="${imageId}"]`);
   const progressValue = document.querySelector(`[data-analysis-progress-bar-value="${imageId}"]`);
-  const statusText = document.querySelector(`[data-analysis-file-ext="${imageId}"]`);
+  const statusText = document.querySelector(`[data-analysis-file-size="${imageId}"]`);
 
   if (!progressBar || !progressValue || !statusText) return;
 
@@ -232,7 +232,8 @@ function updateIndividualProgress(imageId, status) {
     case 'uploaded':
       progressBar.style.width = '100%';
       progressValue.textContent = '100';
-      statusText.textContent = '解析中';
+      // ファイル拡張子は保持し、ステータスは別の要素で管理
+      // statusText.textContent = '解析中';
       progressBar.className = 'progress-bar progress-success transition-all duration-500';
       break;
     case 'preparing':
@@ -243,23 +244,30 @@ function updateIndividualProgress(imageId, status) {
       progressBar.style.width = `${progressPercent}%`;
       progressValue.textContent = Math.round(progressPercent);
 
-      // 準備中の場合は「準備中（あとX枚）」を表示
-      const remainingImages = Math.max(0, totalImages - currentPosition);
-      statusText.textContent = `準備中（あと${remainingImages}枚）`;
+      // ファイル拡張子は保持し、ステータスは別の要素で管理
+      // statusText.textContent = `準備中（あと${remainingImages}枚）`;
       progressBar.className = 'progress-bar progress-warning transition-all duration-500';
       break;
     case 'analyzing':
       // 解析中の進捗は実際の進捗値を使用
       progressBar.style.width = '50%';
       progressValue.textContent = '50';
+      // 解析中のステータステキストを設定
       statusText.textContent = '解析中';
       progressBar.className = 'progress-bar progress-info transition-all duration-500';
       break;
     case 'completed':
+      console.log(`画像ID ${imageId} が解析完了しました`);
       progressBar.style.width = '100%';
       progressValue.textContent = '100';
-      statusText.textContent = '解析完了';
+      // 解析完了時のステータステキストを設定
+      console.log(`画像ID ${imageId} のステータステキストを設定: 画像の解析が完了しました。`);
+      statusText.textContent = '画像の解析が完了しました。';
+      console.log(`画像ID ${imageId} のステータステキスト設定後:`, statusText.textContent);
       progressBar.className = 'progress-bar progress-success transition-all duration-500';
+
+      // 個別の画像が完了した時にカードを更新（特定の画像IDを指定）
+      updateAnalysisCardToCompletedForImage(imageId);
       break;
     case 'failed':
       console.log(`ステータス: failed - 画像ID: ${imageId}`);
@@ -548,11 +556,9 @@ function updateTemplateAfterUpload(file, resp) {
     // サムネイルを更新
     const thumbnailImg = searchElement.querySelector('[data-dz-thumbnail]');
     console.log('サムネイル要素:', thumbnailImg);
-    console.log('ファイルプレビュー:', file.preview);
     if (thumbnailImg && file.preview) {
       thumbnailImg.src = file.preview;
       thumbnailImg.style.display = 'block';
-      console.log('サムネイルを更新:', file.preview);
     } else {
       console.log('サムネイル要素またはプレビューが見つかりません');
     }
@@ -1435,6 +1441,12 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
             console.log('🛑 進捗監視を停止しました');
             console.log('🛑 個別進捗監視も停止しました');
 
+            // カードの内容を「解析完了」に変更
+            updateAnalysisCardToCompleted();
+
+            // DBの状態を更新
+            updateDatabaseStatus();
+
             // 3点アニメーションを停止して完了アイコンを表示
             console.log('🔄 3点アニメーションを停止します');
 
@@ -1674,6 +1686,150 @@ function saveModelSelection(modelName) {
 }
 
 // CSRFトークン取得関数
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+function updateDatabaseStatus() {
+  console.log('DB状態更新開始');
+
+  // アップロードされた画像IDを取得
+  const uploadedImageIds = getUploadedImages().map(img => img.id);
+
+  if (uploadedImageIds.length === 0) {
+    console.log('アップロードされた画像がありません');
+    return;
+  }
+
+  // 各画像のステータスをDBで更新
+  uploadedImageIds.forEach(imageId => {
+    fetch('/api/analysis/complete/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCSRFToken()
+      },
+      body: JSON.stringify({
+        image_id: imageId
+      })
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.ok) {
+          console.log(`✅ DB更新完了: 画像ID=${imageId}, ステータス=${data.status}`);
+        } else {
+          console.error(`❌ DB更新失敗: 画像ID=${imageId}, エラー=${data.error}`);
+        }
+      })
+      .catch(error => {
+        console.error(`❌ DB更新エラー: 画像ID=${imageId}, エラー=${error}`);
+      });
+  });
+}
+
+// 特定の画像IDのカードを「解析完了」に変更
+function updateAnalysisCardToCompletedForImage(imageId) {
+  console.log(`画像ID ${imageId} のカード更新開始`);
+
+  // 特定の画像IDのプログレスコンテナを取得
+  const progressBarPane = document.querySelector(`[data-analysis-progress-bar-pane="${imageId}"]`);
+  console.log(`画像ID ${imageId} のプログレスバーペイン:`, progressBarPane);
+
+  const container = progressBarPane?.closest('.progress-container');
+  console.log(`画像ID ${imageId} のコンテナ:`, container);
+
+  if (!container) {
+    console.log(`画像ID ${imageId} のプログレスコンテナが見つかりません`);
+    return;
+  }
+
+  // ファイル名部分（ファイル名 + 拡張子）を取得
+  const fileNameElement = container.querySelector(`[data-analysis-file-name="${imageId}"]`);
+  const fileExtElement = container.querySelector(`[data-analysis-file-ext="${imageId}"]`);
+  const statusElement = container.querySelector(`[data-analysis-file-size="${imageId}"]`);
+
+  console.log(`画像ID ${imageId} の要素検索結果:`);
+  console.log(`- fileNameElement:`, fileNameElement);
+  console.log(`- fileExtElement:`, fileExtElement);
+  console.log(`- statusElement:`, statusElement);
+
+  if (fileNameElement) {
+    // ファイル名はそのまま保持（ステータスは別の要素で管理）
+    console.log(`画像ID ${imageId} のファイル名部分はそのまま保持:`, fileNameElement.textContent);
+  }
+
+  // ステータス部分は表示したまま（updateIndividualProgressで設定した内容を表示）
+  if (statusElement) {
+    console.log(`画像ID ${imageId} のステータス部分は表示したまま保持:`, statusElement.textContent);
+    console.log(`画像ID ${imageId} のステータス要素のスタイル:`, statusElement.style.display);
+  }
+
+  // 説明テキストを更新
+  const descriptionElement = container.querySelector('.text-xs');
+  if (descriptionElement) {
+    descriptionElement.textContent = '画像のカテゴリー分類が完了しました';
+    console.log(`画像ID ${imageId} の説明テキストを更新しました`);
+  }
+
+  // より確実に「解析中」を含む要素を非表示にする
+  const allElements = container.querySelectorAll('*');
+  allElements.forEach((element, index) => {
+    if (element.textContent && element.textContent.includes('解析中') && !element.textContent.includes('解析完了')) {
+      console.log(`画像ID ${imageId} で「解析中」を含む要素を発見 (${index}):`, element.textContent, 'タグ:', element.tagName, 'クラス:', element.className);
+      element.style.display = 'none';
+      console.log(`画像ID ${imageId} で「解析中」を含む要素を非表示にしました`);
+    }
+  });
+
+  console.log(`画像ID ${imageId} のカード更新完了`);
+}
+
+// カードの内容を「解析完了」に変更
+function updateAnalysisCardToCompleted() {
+  console.log('カード更新開始');
+
+  const container = document.getElementById('analysis-progress-previews');
+  if (!container) {
+    console.error('analysis-progress-previewsコンテナが見つかりません');
+    return;
+  }
+
+  // ファイル名部分（ファイル名 + 拡張子）を取得
+  const fileNameElement = container.querySelector('[data-analysis-file-name]');
+  const fileExtElement = container.querySelector('[data-analysis-file-ext]');
+  const statusElement = container.querySelector('[data-analysis-file-size]');
+
+  if (fileNameElement) {
+    // ファイル名はそのまま保持（ステータスは別の要素で管理）
+    console.log('ファイル名部分はそのまま保持:', fileNameElement.textContent);
+  }
+
+  // ステータス部分は表示したまま（updateIndividualProgressで設定した内容を表示）
+  if (statusElement) {
+    console.log('ステータス部分は表示したまま保持:', statusElement.textContent);
+  }
+
+  // 説明テキストを更新
+  const descriptionElement = container.querySelector('.text-xs');
+  if (descriptionElement) {
+    descriptionElement.textContent = '画像のカテゴリー分類が完了しました';
+    console.log('説明テキストを更新しました');
+  }
+
+  console.log('カード更新完了');
+}
+
 function getCSRFToken() {
   const token = document.querySelector('[name=csrfmiddlewaretoken]');
   if (token) {
