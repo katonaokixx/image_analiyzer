@@ -163,12 +163,7 @@ function createAnalysisProgressPreviews(uploadedImages) {
             </div>
           </div>
           <div class="flex items-center">
-            <button type="button" class="btn btn-sm btn-circle btn-text" data-analysis-reload="${image.id}">
-              <span class="icon-[tabler--refresh] size-4 shrink-0"></span>
-            </button>
-            <button type="button" class="btn btn-sm btn-circle btn-text" data-analysis-remove="${image.id}">
-              <span class="icon-[tabler--x] size-4 shrink-0"></span>
-            </button>
+            <!-- アイコンを削除 -->
           </div>
         </div>
         <div class="flex items-center gap-x-3 whitespace-nowrap">
@@ -1268,6 +1263,24 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // タイムラインの時刻表示を補完（テンプレートで未設定の場合は現在時刻を表示）
+  function setTimeIfEmpty(elementId) {
+    const el = document.getElementById(elementId);
+    if (el && (!el.textContent || el.textContent.trim() === '')) {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      el.textContent = `${y}-${m}-${d} ${hh}:${mm}`;
+    }
+  }
+
+  // 再解析開始/完了時にも動的に時刻設定
+  function setRetryStartedTime() { setTimeIfEmpty('timeline-retry-started-at'); }
+  function setRetryCompletedTime() { setTimeIfEmpty('timeline-retry-completed-at'); }
 });
 
 function startAnalysis(modelName) {
@@ -1446,6 +1459,12 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
 
             // DBの状態を更新
             updateDatabaseStatus();
+
+            // 解析完了後、3秒後に画像一覧ページにリダイレクト
+            setTimeout(() => {
+              console.log('🔄 解析完了: 画像一覧ページにリダイレクトします');
+              window.location.href = '/user_image_table/';
+            }, 3000);
 
             // 3点アニメーションを停止して完了アイコンを表示
             console.log('🔄 3点アニメーションを停止します');

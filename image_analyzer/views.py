@@ -290,17 +290,18 @@ def re_image_upload(request: HttpRequest):
         return redirect('login')
     
     # セッションから選択された画像IDと状態を取得（バッジクリック時）
-    selected_image_id = request.session.get('selected_image_id')
+    # GETパラメータからも取得可能にする
+    selected_image_id = request.GET.get('selected_image_id') or request.session.get('selected_image_id')
     selected_image_status = request.session.get('selected_image_status')
     
     print(f"DEBUG: selected_image_id = {selected_image_id}")
-    print(f"DEBUG: selected_image_status = {selected_image_status}")
     print(f"DEBUG: user = {request.user}")
     
     selected_image = None
     if selected_image_id:
         try:
             selected_image = Image.objects.get(id=selected_image_id, user=request.user)
+            selected_image_status = selected_image.status  # 画像の状態を設定
             print(f"DEBUG: selected_image found = {selected_image.filename}, status = {selected_image.status}")
         except Image.DoesNotExist:
             selected_image = None
@@ -321,6 +322,13 @@ def re_image_upload(request: HttpRequest):
         except Exception as e:
             print(f"DEBUG: Error getting latest image: {e}")
     
+    # selected_image_statusがNoneの場合は、selected_imageの状態を使用
+    if selected_image and selected_image_status is None:
+        selected_image_status = selected_image.status
+        print(f"DEBUG: selected_image_status was None, using image status: {selected_image_status}")
+    
+    print(f"DEBUG: selected_image_status = {selected_image_status}")
+    
     # タイムライン情報を取得
     timeline_log = None
     if selected_image:
@@ -329,10 +337,25 @@ def re_image_upload(request: HttpRequest):
         except TimelineLog.DoesNotExist:
             timeline_log = None
     
+    # 前回の解析結果を取得
+    previous_results = AnalysisResult.objects.filter(image=selected_image).order_by('rank')[:3] if selected_image else []
+    
+    # 解析完了済みの場合のみ、3つ目のタイムライン（解析完了）に前回の解析結果を表示
+    if timeline_log and previous_results.exists() and selected_image_status == 'completed':
+        results_text = "前回の解析結果: "
+        for i, r in enumerate(previous_results):
+            results_text += f"{r.rank}位: {r.label} ({r.confidence}%)"
+            if i < len(previous_results) - 1:
+                results_text += " / "
+        timeline_log.completion_step_description = results_text
+        timeline_log.save()
+    
     context = {
         'selected_image': selected_image,
         'selected_image_status': selected_image_status,
         'timeline_log': timeline_log,
+        # 直近の解析結果（上位3件まで）をテンプレートに渡す
+        'previous_results': previous_results,
     }
     
     return render(request, 'main/re_image_upload.html', context)

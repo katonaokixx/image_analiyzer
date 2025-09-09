@@ -74,20 +74,7 @@
                 </div>
               </div>
               <div class="flex items-center">
-                <div class="tooltip [--placement:top]" style="display:none" data-file-upload-file-error="">
-                  <button type="button" class="tooltip-toggle btn btn-sm btn-circle btn-text btn-error">
-                    <span class="icon-[tabler--alert-circle] size-4 shrink-0"></span>
-                  </button>
-                  <span class="tooltip-content tooltip-shown:opacity-100 tooltip-shown:visible" role="tooltip">
-                    <span class="tooltip-body">Please try to upload a file smaller than 1MB.</span>
-                  </span>
-                </div>
-                <button type="button" class="btn btn-sm btn-circle btn-text" data-file-upload-reload="">
-                  <span class="icon-[tabler--refresh] size-4 shrink-0"></span>
-                </button>
-                <button type="button" class="btn btn-sm btn-circle btn-text" data-file-upload-remove="">
-                  <span class="icon-[tabler--trash] size-4 shrink-0"></span>
-                </button>
+                <!-- アイコンを削除 -->
               </div>
             </div>
             <div class="flex items-center gap-x-3 whitespace-nowrap">
@@ -158,7 +145,10 @@
               <div
                 class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
                 <span class="text-sm sm:text-base">ファイルアップロード完了</span>
-                <span class="text-base-content/50 text-xs sm:text-sm font-normal">今すぐ</span>
+                <span class="text-base-content/50 text-xs sm:text-sm font-normal">
+                  {% if images and images.0.timeline_log.upload_completed_at %}{{
+                  images.0.timeline_log.upload_completed_at|date:'Y-m-d H:i' }}{% endif %}
+                </span>
               </div>
               <p id="timeline-description" class="mb-2 text-xs sm:text-sm">ファイルのアップロードに成功しました</p>
               <div class="flex items-center gap-2">
@@ -180,7 +170,10 @@
               <div
                 class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
                 <span class="text-sm sm:text-base">アップロード失敗</span>
-                <span class="text-base-content/50 text-xs sm:text-sm font-normal">今すぐ</span>
+                <span class="text-base-content/50 text-xs sm:text-sm font-normal" id="timeline-analysis-started-at">
+                  {% if images and images.0.timeline_log.analysis_started_at %}{{
+                  images.0.timeline_log.analysis_started_at|date:'Y-m-d H:i' }}{% endif %}
+                </span>
               </div>
               <p id="timeline-error-description" class="mb-2 text-xs sm:text-sm">ファイルのアップロードに失敗しました</p>
               <div class="flex items-center gap-2">
@@ -198,7 +191,10 @@
               <div
                 class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
                 <span class="text-sm sm:text-base">解析開始</span>
-                <span class="text-base-content/50 text-xs sm:text-sm font-normal">今すぐ</span>
+                <span class="text-base-content/50 text-xs sm:text-sm font-normal" id="timeline-analysis-completed-at">
+                  {% if images and images.0.timeline_log.analysis_completed_at %}{{
+                  images.0.timeline_log.analysis_completed_at|date:'Y-m-d H:i' }}{% endif %}
+                </span>
               </div>
               <p class="mb-2 text-xs sm:text-sm">AIによる画像解析を開始しました。</p>
 
@@ -240,9 +236,22 @@
               <div
                 class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
                 <span class="text-sm sm:text-base">解析完了</span>
-                <span class="text-base-content/50 text-xs sm:text-sm font-normal">今すぐ</span>
+                <span class="text-base-content/50 text-xs sm:text-sm font-normal" id="timeline-analysis-completed-at">
+                  {% if images and images.0.timeline_log.analysis_completed_at %}{{
+                  images.0.timeline_log.analysis_completed_at|date:'Y-m-d H:i' }}{% endif %}
+                </span>
               </div>
-              <p class="mb-2 text-xs sm:text-sm">画像のカテゴリー分類が完了しました</p>
+              <p class="mb-2 text-xs sm:text-sm">
+                {% if images and images.0.analysis_results.all %}
+                直近の解析結果:
+                {% for r in images.0.analysis_results.all|dictsort:"rank" %}
+                {{ r.rank }}位: {{ r.label }} ({{ r.confidence }}%)
+                {% if not forloop.last %} / {% endif %}
+                {% endfor %}
+                {% else %}
+                画像のカテゴリー分類が完了しました
+                {% endif %}
+              </p>
               <div class="flex items-center gap-2">
                 <span class="icon-[tabler--brain] text-success size-4 sm:size-5"></span>
                 <span class="text-xs sm:text-sm text-success font-medium">完了</span>
