@@ -1,0 +1,8 @@
+{
+  "doctype-first": false,
+  "extend": "htmlhint-angular",
+  "rules": {
+    "doctype-first": false
+  }
+}
+
