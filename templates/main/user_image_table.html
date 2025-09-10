@@ -202,30 +202,25 @@
             <td>{{ image.upload_date|date:"Y-m-d H:i" }}</td>
             <td>
               {% if image.status == 'completed' %}
-              <span class="badge badge-outline border-dashed badge-success me-2 cursor-pointer"
-                title="クリックしてアップロードページに遷移" onclick="navigateToUploadPage({{ image.id }}, 'completed')">解析成功</span>
+              <span class="badge badge-outline border-dashed badge-success me-2">解析成功</span>
               {% elif image.status == 'analyzing' %}
-              <span class="badge badge-outline border-dashed badge-info me-2 cursor-pointer" title="クリックしてアップロードページに遷移"
-                onclick="navigateToUploadPage({{ image.id }}, 'analyzing')">解析中</span>
+              <span class="badge badge-outline border-dashed badge-info me-2">解析中</span>
               {% elif image.status == 'upload' %}
-              <span class="badge badge-outline border-dashed badge-primary me-2 cursor-pointer"
-                title="クリックしてアップロードページに遷移" onclick="navigateToUploadPage({{ image.id }}, 'upload')">アップロード</span>
+              <span class="badge badge-outline border-dashed badge-primary me-2">アップロード</span>
               {% elif image.status == 'uploaded' %}
-              <span class="badge badge-outline border-dashed badge-warning me-2 cursor-pointer"
-                title="クリックしてアップロードページに遷移" onclick="navigateToUploadPage({{ image.id }}, 'uploaded')">アップロード完了</span>
+              <span class="badge badge-outline border-dashed badge-warning me-2">アップロード完了</span>
               {% elif image.status == 'preparing' %}
               {% if image.queue_item %}
-              <span class="badge badge-outline border-dashed badge-secondary me-2 cursor-pointer"
-                title="クリックしてタイムラインを確認" data-overlay="#timeline-modal">
+              <span class="badge badge-outline border-dashed badge-secondary me-2" title="クリックしてタイムラインを確認"
+                data-overlay="#timeline-modal">
                 準備中 → あと{{ image.queue_item.waiting_position }}枚
               </span>
               {% else %}
-              <span class="badge badge-outline border-dashed badge-secondary me-2 cursor-pointer"
-                title="クリックしてタイムラインを確認" data-overlay="#timeline-modal">準備中</span>
+              <span class="badge badge-outline border-dashed badge-secondary me-2" title="クリックしてタイムラインを確認"
+                data-overlay="#timeline-modal">準備中</span>
               {% endif %}
               {% elif image.status == 'failed' %}
-              <span class="badge badge-outline border-dashed badge-error me-2 cursor-pointer" title="クリックしてアップロードページに遷移"
-                onclick="navigateToUploadPage({{ image.id }}, 'failed')">失敗</span>
+              <span class="badge badge-outline border-dashed badge-error me-2">失敗</span>
               {% endif %}
             </td>
             <td>
@@ -358,6 +353,9 @@
         </div>
       </div>
       <div class="modal-footer">
+        <button type="button" class="btn btn-soft btn-primary" id="reanalysis-button" onclick="navigateToReanalysis()">
+          再解析
+        </button>
         <button type="button" class="btn btn-soft btn-secondary" data-overlay="#slide-down-animated-modal">
           閉じる
         </button>
@@ -615,8 +613,22 @@
     window.location.href = `/re_image_upload/?selected_image_id=${imageId}&image_status=${imageStatus}`;
   }
 
+  // 再解析ページに遷移する関数
+  function navigateToReanalysis() {
+    const currentImageId = window.currentModalImageId;
+    if (currentImageId) {
+      console.log('navigateToReanalysis called with imageId:', currentImageId);
+      window.location.href = `/re_image_upload/?selected_image_id=${currentImageId}&image_status=completed`;
+    } else {
+      console.error('画像IDが取得できません');
+    }
+  }
+
   // モーダルに画像データを設定する関数
-  function openImageModal(filename, imageSrc, uploadTime, status, labels, confidence) {
+  function openImageModal(filename, imageSrc, uploadTime, status, labels, confidence, imageId) {
+    // 現在の画像IDを保存
+    window.currentModalImageId = imageId;
+
     // モーダルの内容を設定
     document.getElementById('modal-filename').textContent = filename;
     document.getElementById('modal-image').src = imageSrc;
@@ -682,6 +694,7 @@
       avatar.addEventListener('click', function () {
         const row = this.closest('tr');
         if (row) {
+          const imageId = row.getAttribute('data-image-id');
           const filename = row.querySelector('td:nth-child(1) .font-medium')?.textContent || '';
           const uploadTime = row.querySelector('td:nth-child(2)')?.textContent || '';
           const status = row.querySelector('td:nth-child(3) .badge')?.textContent || '';
@@ -692,8 +705,8 @@
           const thumbnailImg = row.querySelector('img');
           const imageSrc = thumbnailImg ? thumbnailImg.src : '';
 
-          // モーダルを開く
-          openImageModal(filename, imageSrc, uploadTime, status, labels, confidence);
+          // モーダルを開く（画像IDも渡す）
+          openImageModal(filename, imageSrc, uploadTime, status, labels, confidence, imageId);
         }
       });
     });
