@@ -202,8 +202,10 @@
             </td>
             <td>
               {% if image.status == 'completed' %}
-              {% for result in image.analysis_results.all|slice:":3" %}
-              <span class="badge badge-primary me-1">{{ result.label }}</span>
+              {% for result in image.analysis_results.all %}
+                {% if result.rank == 1 %}
+                <span class="badge badge-primary">{{ result.label }}</span>
+                {% endif %}
               {% empty %}
               <span class="text-sm text-gray-500">-</span>
               {% endfor %}
