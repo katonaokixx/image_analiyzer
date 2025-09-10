@@ -314,13 +314,14 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="modal-title">画像詳細</h3>
-        <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
-          data-overlay="#slide-down-animated-modal">
-          <span class="icon-[tabler--x] size-4"></span>
+        <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Delete"
+          onclick="openDeleteConfirmModal()">
+          <span class="icon-[tabler--trash] size-4"></span>
         </button>
       </div>
       <div class="modal-body">
-        <div class="flex flex-col gap-4">
+        <!-- 通常状態: 画像詳細表示 -->
+        <div id="modal-image-detail" class="flex flex-col gap-4">
           <!-- Image -->
           <div class="flex justify-center">
             <img id="modal-image" src="" alt=""
@@ -351,14 +352,40 @@
             </div>
           </div>
         </div>
+
+        <!-- 削除確認状態: 削除確認表示 -->
+        <div id="modal-delete-confirm" class="flex flex-col gap-4 hidden">
+          <div class="flex items-center gap-3">
+            <span class="icon-[tabler--alert-triangle] size-8 text-warning"></span>
+            <div>
+              <h4 class="font-semibold text-lg">画像の削除</h4>
+              <p class="text-sm text-gray-600 mt-1">この画像を削除しますか？</p>
+              <p class="text-xs text-gray-500 mt-1">削除された画像は復元できません。解析結果も一緒に削除されます。</p>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-soft btn-primary" id="reanalysis-button" onclick="navigateToReanalysis()">
-          再解析
-        </button>
-        <button type="button" class="btn btn-soft btn-secondary" data-overlay="#slide-down-animated-modal">
-          閉じる
-        </button>
+        <!-- 通常状態のボタン -->
+        <div id="modal-normal-buttons" class="flex gap-2">
+          <button type="button" class="btn btn-soft btn-primary" id="reanalysis-button"
+            onclick="navigateToReanalysis()">
+            再解析
+          </button>
+          <button type="button" class="btn btn-soft btn-secondary" data-overlay="#slide-down-animated-modal">
+            閉じる
+          </button>
+        </div>
+
+        <!-- 削除確認状態のボタン -->
+        <div id="modal-delete-buttons" class="flex gap-2 hidden">
+          <button type="button" class="btn btn-soft btn-secondary" onclick="cancelDeleteConfirm()">
+            キャンセル
+          </button>
+          <button type="button" class="btn btn-error" onclick="confirmDeleteImage()">
+            削除
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -545,6 +572,7 @@
   </div>
 </div>
 
+
 <!-- 解析進捗モーダル -->
 <div id="analysis-progress-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden"
   role="dialog" tabindex="-1">
@@ -622,6 +650,162 @@
     } else {
       console.error('画像IDが取得できません');
     }
+  }
+
+  // 削除確認状態に切り替える関数
+  function openDeleteConfirmModal() {
+    const currentImageId = window.currentModalImageId;
+    if (currentImageId) {
+      console.log('削除確認状態に切り替え、画像ID:', currentImageId);
+
+      // 画像詳細表示を非表示
+      document.getElementById('modal-image-detail').classList.add('hidden');
+      document.getElementById('modal-normal-buttons').classList.add('hidden');
+
+      // 削除確認表示を表示
+      document.getElementById('modal-delete-confirm').classList.remove('hidden');
+      document.getElementById('modal-delete-buttons').classList.remove('hidden');
+
+      // モーダルタイトルを変更
+      document.querySelector('#slide-down-animated-modal .modal-title').textContent = '画像の削除';
+    } else {
+      console.error('画像IDが取得できません');
+      alert('画像IDが取得できませんでした');
+    }
+  }
+
+
+  // 画像削除を実行する関数
+  function confirmDeleteImage() {
+    const currentImageId = window.currentModalImageId;
+    if (!currentImageId) {
+      console.error('画像IDが取得できません');
+      alert('画像IDが取得できませんでした');
+      return;
+    }
+
+    console.log('confirmDeleteImage called with imageId:', currentImageId);
+
+    // CSRFトークンを取得
+    console.log('CSRFトークン取得開始...');
+    const csrfToken = getCSRFToken();
+    console.log('取得されたCSRFトークン:', csrfToken);
+    console.log('CSRFトークンの長さ:', csrfToken ? csrfToken.length : 'null');
+    console.log('CSRFトークンの型:', typeof csrfToken);
+
+    if (!csrfToken) {
+      alert('CSRFトークンが取得できません。ページを再読み込みしてください。');
+      return;
+    }
+
+    // 削除APIを呼び出し
+    console.log('削除API呼び出し開始:', `/api/images/${currentImageId}/delete/`);
+    console.log('使用するCSRFトークン:', csrfToken);
+
+    fetch(`/api/images/${currentImageId}/delete/`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken
+      }
+    })
+      .then(response => {
+        console.log('削除API応答:', response.status, response.statusText);
+        if (response.ok) {
+          return response.json();
+        } else {
+          return response.text().then(text => {
+            console.error('削除APIエラー:', text);
+            throw new Error(`削除に失敗しました (${response.status}): ${text}`);
+          });
+        }
+      })
+      .then(data => {
+        console.log('削除API応答データ:', data);
+        if (data.success || data.ok) {
+          // 成功時はモーダルを閉じてページをリロード
+          const modal = document.getElementById('slide-down-animated-modal');
+          if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('overlay-open');
+            modal.style.display = 'none';
+            modal.style.opacity = '0';
+            modal.style.visibility = 'hidden';
+          }
+          location.reload();
+        } else {
+          alert('削除に失敗しました: ' + (data.error || '不明なエラー'));
+        }
+      })
+      .catch(error => {
+        console.error('削除エラー:', error);
+        alert('削除に失敗しました: ' + error.message);
+      });
+  }
+
+  // CSRFトークンを取得する関数
+  function getCSRFToken() {
+    console.log('=== CSRFトークン取得開始 ===');
+
+    // 方法1: csrfmiddlewaretokenフィールドから取得
+    const token = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (token && token.value) {
+      console.log('CSRFトークンをフィールドから取得:', token.value);
+      console.log('フィールドトークンの長さ:', token.value.length);
+      return token.value;
+    }
+
+    // 方法2: Cookieから取得（Djangoの標準的な方法）
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+
+    const csrfToken = getCookie('csrftoken');
+    if (csrfToken) {
+      console.log('CSRFトークンをCookieから取得:', csrfToken);
+      console.log('Cookieトークンの長さ:', csrfToken.length);
+      return csrfToken;
+    }
+
+    // 方法3: メタタグから取得
+    const metaToken = document.querySelector('meta[name=csrf-token]');
+    if (metaToken) {
+      console.log('CSRFトークンをメタタグから取得:', metaToken.getAttribute('content'));
+      return metaToken.getAttribute('content');
+    }
+
+    console.error('CSRFトークンが見つかりません');
+    console.log('利用可能なCookie:', document.cookie);
+    console.log('利用可能なCSRFフィールド:', document.querySelectorAll('[name*="csrf"]'));
+    console.log('=== CSRFトークン取得終了 ===');
+    return null;
+  }
+
+  // 削除確認をキャンセルして通常状態に戻す関数
+  function cancelDeleteConfirm() {
+    console.log('削除確認をキャンセル、通常状態に戻します');
+
+    // 削除確認表示を非表示
+    document.getElementById('modal-delete-confirm').classList.add('hidden');
+    document.getElementById('modal-delete-buttons').classList.add('hidden');
+
+    // 画像詳細表示を表示
+    document.getElementById('modal-image-detail').classList.remove('hidden');
+    document.getElementById('modal-normal-buttons').classList.remove('hidden');
+
+    // モーダルタイトルを元に戻す
+    document.querySelector('#slide-down-animated-modal .modal-title').textContent = '画像詳細';
   }
 
   // モーダルに画像データを設定する関数
@@ -1313,32 +1497,6 @@
     });
   }
 
-  // CSRFトークン取得
-  function getCSRFToken() {
-    // 方法1: csrfmiddlewaretokenフィールドから取得
-    const token = document.querySelector('[name=csrfmiddlewaretoken]');
-    if (token) {
-      return token.value;
-    }
-
-    // 方法2: Cookieから取得
-    const cookies = document.cookie.split(';');
-    for (let cookie of cookies) {
-      const [name, value] = cookie.trim().split('=');
-      if (name === 'csrftoken') {
-        return value;
-      }
-    }
-
-    // 方法3: メタタグから取得
-    const metaToken = document.querySelector('meta[name=csrf-token]');
-    if (metaToken) {
-      return metaToken.getAttribute('content');
-    }
-
-    console.error('CSRFトークンが見つかりません');
-    return '';
-  }
 
   // Function to reset all filters
   function resetAllFilters() {

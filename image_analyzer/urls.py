@@ -26,6 +26,7 @@ urlpatterns = [
     path('api/analysis/retry/', views.api_retry_analysis, name='api_retry_analysis'),
     path('api/update-status/', views.api_update_status, name='api_update_status'),
     path('api/timeline/<int:image_id>/', views.api_get_timeline, name='api_get_timeline'),
+    path('api/images/<int:image_id>/delete/', views.api_delete_image, name='api_delete_image'),
     
     # 解析キュー管理システム
     path('queue/', views.queue_management_view, name='queue_management'),

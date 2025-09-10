@@ -5,7 +5,7 @@ from django.conf import settings
 from django.db import transaction
 from django.http import JsonResponse, HttpRequest, HttpResponseRedirect
 from django.shortcuts import render, redirect
-from django.views.decorators.http import require_POST, require_GET
+from django.views.decorators.http import require_POST, require_GET, require_http_methods
 from django.views.decorators.csrf import csrf_protect
 from django.core.paginator import Paginator
 from django.contrib.auth import authenticate, login, logout
@@ -951,6 +951,69 @@ def api_get_timeline(request: HttpRequest, image_id: int):
         return JsonResponse({
             'ok': False,
             'error': f'タイムライン取得エラー: {str(e)}'
+        }, status=500)
+
+
+@require_http_methods(["DELETE"])
+@csrf_protect
+@login_required
+def api_delete_image(request: HttpRequest, image_id: int):
+    """画像を削除するAPI"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # CSRFトークンのデバッグログ
+    csrf_token = request.META.get('HTTP_X_CSRFTOKEN', '')
+    logger.info(f"画像削除API呼び出し: 画像ID={image_id}, ユーザー={request.user.username}")
+    logger.info(f"CSRFトークン長: {len(csrf_token)}")
+    
+    try:
+        # 画像を取得（ユーザーが所有する画像のみ）
+        image = Image.objects.get(id=image_id, user=request.user)
+        
+        # 関連する解析結果を削除
+        image.analysis_results.all().delete()
+        
+        # 関連するタイムラインログを削除
+        if hasattr(image, 'timeline_log'):
+            image.timeline_log.delete()
+        
+        # 関連するキューアイテムを削除
+        if hasattr(image, 'queue_item'):
+            image.queue_item.delete()
+        
+        # ファイルを削除
+        if image.file_path and os.path.exists(image.file_path):
+            os.remove(image.file_path)
+            logger.info(f"メインファイルを削除: {image.file_path}")
+        
+        if image.thumbnail_path and os.path.exists(image.thumbnail_path):
+            os.remove(image.thumbnail_path)
+            logger.info(f"サムネイルファイルを削除: {image.thumbnail_path}")
+        
+        # 画像レコードを削除
+        image.delete()
+        
+        return JsonResponse({
+            'ok': True,
+            'success': True,
+            'message': '画像を削除しました'
+        })
+        
+    except Image.DoesNotExist:
+        return JsonResponse({
+            'ok': False,
+            'success': False,
+            'error': '画像が見つからないか、削除権限がありません'
+        }, status=404)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"画像削除エラー: {str(e)}")
+        return JsonResponse({
+            'ok': False,
+            'success': False,
+            'error': f'削除に失敗しました: {str(e)}'
         }, status=500)
 
 
