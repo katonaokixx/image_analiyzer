@@ -200,7 +200,7 @@
               </span>
               {% endif %}
             </td>
-            <td>
+            <td class="text-center">
               {% if image.status == 'completed' %}
               {% for result in image.analysis_results.all %}
                 {% if result.rank == 1 %}
