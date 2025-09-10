@@ -213,7 +213,7 @@ class AnalysisService:
             logger.error(f"画像前処理エラー: {e}")
             raise
     
-    def analyze_image(self, image_path: str, model_name: str) -> List[Dict]:
+    def analyze_image(self, image_path: str, model_name: str) -> Dict:
         """単一画像の解析"""
         try:
             # 解析開始
@@ -240,19 +240,16 @@ class AnalysisService:
             logger.info(f"モデル情報: {model_info}")
             
             if model_info['model'] is None:
-                logger.warning(f"モデルが読み込まれていません: {internal_model_name} - ダミー結果を返します")
-                # ダミーの解析結果を返す（実際の画像解析の代わり）
-                dummy_results = [
-                    {'label': '犬', 'confidence': 85.5, 'rank': 1},
-                    {'label': '猫', 'confidence': 12.3, 'rank': 2},
-                    {'label': '鳥', 'confidence': 2.2, 'rank': 3}
-                ]
-                return dummy_results
+                logger.error(f"モデルが読み込まれていません: {internal_model_name}")
+                return {'success': False, 'error': f'モデルが読み込まれていません: {internal_model_name}'}
             
             # 画像の前処理
+            logger.info(f"画像前処理開始: 入力サイズ={model_info['input_size']}")
             img_array = self.preprocess_image(image_path, model_info['input_size'])
+            logger.info(f"画像前処理完了: 形状={img_array.shape}")
             
             # モデル別の予測実行
+            logger.info(f"予測実行開始: {model_info['type']}")
             if model_info['type'] == 'pytorch_resnet50':
                 predictions = self._predict_pytorch_resnet50(img_array, model_info)
             elif model_info['type'] == 'pytorch_mobilenet':
@@ -264,14 +261,23 @@ class AnalysisService:
             else:
                 raise ValueError(f"未対応のモデルタイプ: {model_info['type']}")
             
-            # 結果を整形
-            results = self._format_predictions(predictions, internal_model_name)
+            logger.info(f"予測完了: 形状={predictions.shape}")
+            logger.info(f"予測結果の最大値: {predictions.max():.6f}")
+            logger.info(f"予測結果の最小値: {predictions.min():.6f}")
             
-            return results
+            # 結果を整形
+            logger.info("結果整形開始")
+            results = self._format_predictions(predictions, internal_model_name)
+            logger.info(f"結果整形完了: {len(results)}件")
+            
+            for i, result in enumerate(results):
+                logger.info(f"  結果{i+1}: {result['label']} ({result['confidence']}%) - ランク{result['rank']}")
+            
+            return {'success': True, 'results': results}
             
         except Exception as e:
             logger.error(f"画像解析エラー: {e}")
-            return [{'label': 'Error', 'confidence': 0.0, 'rank': 1}]
+            return {'success': False, 'error': str(e)}
     
     def _predict_pytorch_resnet50(self, img_array: np.ndarray, model_info: Dict) -> np.ndarray:
         """PyTorch ResNet-50での予測"""
@@ -367,8 +373,8 @@ class AnalysisService:
             # 類似度を計算
             similarities = (100.0 * image_features @ text_features.T).softmax(dim=-1)
             
-            # 1000次元の配列に変換（既存のシステムとの互換性のため）
-            predictions = torch.zeros(1, 1000)
+            # 19次元の配列に変換（CLIPクラス数に合わせる）
+            predictions = torch.zeros(1, 19)
             
             # アニメ・イラスト関連のスコアを設定
             predictions[0][0] = similarities[0][0]  # anime character
@@ -391,8 +397,22 @@ class AnalysisService:
             predictions[0][17] = similarities[0][17]  # person
             predictions[0][18] = similarities[0][18]  # nature
             
-            # 残りは小さな値で埋める
-            predictions[0][19:] = 0.001
+            # 予測結果を正規化して、複数のクラスに確率を分散
+            # 最大値が0.9を超える場合は、他のクラスにも確率を分散
+            max_val = torch.max(predictions[0])
+            if max_val > 0.9:
+                # 最大値のクラスの確率を0.7に制限
+                max_idx = torch.argmax(predictions[0])
+                predictions[0][max_idx] = 0.7
+                
+                # 残りの確率を他のクラスに分散
+                remaining_prob = 0.3
+                other_indices = torch.arange(19) != max_idx
+                other_probs = remaining_prob / other_indices.sum()
+                predictions[0][other_indices] = other_probs
+            
+            # 最終的に正規化
+            predictions[0] = predictions[0] / predictions[0].sum()
         
         return predictions.numpy()
     
@@ -742,8 +762,10 @@ class AnalysisService:
             for category, keywords in category_mapping.items():
                 category_confidence = 0.0
                 for idx, class_name in class_names.items():
-                    if any(keyword in class_name.lower() for keyword in keywords):
-                        category_confidence += predictions[0][idx]
+                    # idxが整数であることを確認
+                    if isinstance(idx, int) and idx < len(predictions[0]):
+                        if any(keyword in class_name.lower() for keyword in keywords):
+                            category_confidence += predictions[0][idx]
                 
                 # 人物とアニメ・イラストを優先（重み付け）
                 if category == '人物':
@@ -760,9 +782,9 @@ class AnalysisService:
             results = []
             for i, (category, confidence) in enumerate(sorted_categories[:3]):
                 if confidence > 0.001:  # 0.1%以上の信頼度
-                    # 信頼度を10%以上、100%以下に調整
+                    # 信頼度を10%以上、95%以下に調整（100%を避ける）
                     min_confidence = 0.10
-                    max_confidence = 1.00
+                    max_confidence = 0.95
                     adjusted_confidence = max(min(confidence, max_confidence), min_confidence)
                     
                     results.append({
@@ -770,6 +792,24 @@ class AnalysisService:
                         'confidence': adjusted_confidence * 100,
                         'rank': i + 1
                     })
+            
+            # 結果が1件以下の場合は、信頼度の閾値を下げて追加の結果を取得
+            if len(results) < 3:
+                for i, (category, confidence) in enumerate(sorted_categories[3:6]):
+                    if confidence > 0.0001:  # 0.01%以上の信頼度
+                        # 信頼度を5%以上、50%以下に調整
+                        min_confidence = 0.05
+                        max_confidence = 0.50
+                        adjusted_confidence = max(min(confidence, max_confidence), min_confidence)
+                        
+                        results.append({
+                            'label': category,
+                            'confidence': adjusted_confidence * 100,
+                            'rank': len(results) + 1
+                        })
+                        
+                        if len(results) >= 3:
+                            break
             
             return results
                 
@@ -802,8 +842,10 @@ class AnalysisService:
             # アニメ・イラスト関連のクラスのインデックスを特定
             anime_indices = []
             for idx, class_name in class_names.items():
-                if any(anime_word in class_name.lower() for anime_word in anime_related_classes):
-                    anime_indices.append(idx)
+                # idxが整数であることを確認
+                if isinstance(idx, int) and idx < len(predictions[0]):
+                    if any(anime_word in class_name.lower() for anime_word in anime_related_classes):
+                        anime_indices.append(idx)
             
             # これらのクラスの信頼度を集計
             anime_confidence = sum(predictions[0][idx] for idx in anime_indices)
@@ -840,6 +882,10 @@ class AnalysisService:
             
             internal_model_name = model_mapping.get(model_name, model_name)
             
+            # CLIPの場合は専用の処理を行う
+            if internal_model_name == 'clip':
+                return self._format_clip_predictions(predictions)
+            
             # 大分類カテゴリーでの分類を適用
             broad_category_results = self._apply_broad_category_classification(predictions, internal_model_name)
             
@@ -859,23 +905,62 @@ class AnalysisService:
             
             results = []
             for i, idx in enumerate(top_indices):
-                confidence = float(predictions[0][idx]) * 100
-                english_name = class_names.get(idx, f"Class_{idx}")
-                japanese_name = self._get_japanese_translation(english_name)
+                # idxが整数であることを確認
+                if isinstance(idx, int) and idx < len(predictions[0]):
+                    confidence = float(predictions[0][idx]) * 100
+                    english_name = class_names.get(idx, f"Class_{idx}")
+                    japanese_name = self._get_japanese_translation(english_name)
+                    
+                    # 日本語名と英語名を組み合わせて表示
+                    display_name = f"{japanese_name} ({english_name})" if japanese_name != english_name else japanese_name
                 
-                # 日本語名と英語名を組み合わせて表示
-                display_name = f"{japanese_name} ({english_name})" if japanese_name != english_name else japanese_name
-            
-                results.append({
-                    'label': display_name,
-                    'confidence': confidence,
-                    'rank': i + 1
-                })
+                    results.append({
+                        'label': display_name,
+                        'confidence': confidence,
+                        'rank': i + 1
+                    })
             
             return results
         
         except Exception as e:
             logger.error(f"予測結果の整形に失敗: {e}")
+            return [{'label': 'Error', 'confidence': 0.0, 'rank': 1}]
+    
+    def _format_clip_predictions(self, predictions: np.ndarray) -> List[Dict]:
+        """CLIP専用の予測結果整形（大分類カテゴリーにマッピング）"""
+        try:
+            # 大分類カテゴリーでの分類を適用
+            broad_category_results = self._apply_broad_category_classification(predictions, 'clip')
+            
+            # 結果がある場合はそれを返す
+            if broad_category_results:
+                return broad_category_results
+            
+            # フォールバック: 従来の方法
+            class_names = self._get_clip_classes()
+            top_indices = np.argsort(predictions[0])[-3:][::-1]
+            
+            results = []
+            for i, idx in enumerate(top_indices):
+                # idxが整数であることを確認
+                if isinstance(idx, int) and idx < len(predictions[0]):
+                    confidence = float(predictions[0][idx]) * 100
+                    english_name = class_names.get(idx, f"Class_{idx}")
+                    japanese_name = self._get_japanese_translation(english_name)
+                    
+                    if confidence < 10.0:
+                        confidence = max(confidence, 10.0)
+                    
+                    results.append({
+                        'label': japanese_name,
+                        'confidence': confidence,
+                        'rank': i + 1
+                    })
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"CLIP予測結果の整形に失敗: {e}")
             return [{'label': 'Error', 'confidence': 0.0, 'rank': 1}]
 
     def process_queue_item(self, queue_item_id: int) -> Dict:
@@ -909,6 +994,15 @@ class AnalysisService:
                 # 解析成功
                 image.status = 'completed'
                 image.save()
+                
+                # 古い解析結果を削除（同じモデルの結果）
+                old_results = AnalysisResult.objects.filter(
+                    image=image, 
+                    model_name=queue_item.model_name
+                )
+                deleted_count = old_results.count()
+                old_results.delete()
+                logger.info(f"古い解析結果を削除: {deleted_count}件 (モデル: {queue_item.model_name})")
                 
                 # 解析結果を保存
                 for i, pred in enumerate(result['results']):
@@ -1092,100 +1186,6 @@ class AnalysisService:
                 'description': f'エラー: {str(e)}'
             }
 
-    def process_queue_item(self, queue_item_id: int) -> Dict:
-        """キューアイテムを処理する"""
-        import logging
-        from django.utils import timezone
-        from .models import AnalysisQueue, AnalysisResult, TimelineLog
-        
-        logger = logging.getLogger(__name__)
-        
-        try:
-            queue_item = AnalysisQueue.objects.get(id=queue_item_id)
-            image = queue_item.image
-            
-            # キューアイテムのステータスを処理中に更新
-            queue_item.status = 'processing'
-            queue_item.started_at = timezone.now()
-            queue_item.save()
-            
-            # 画像のステータスを解析中に更新
-            image.status = 'analyzing'
-            image.save()
-            
-            # 解析を実行（キューアイテムのモデル名を使用、デフォルトはresnet50）
-            model_name = queue_item.model_name or 'resnet50'
-            try:
-                results = self.analyze_image(image.file_path, model_name)
-                
-                # 結果をデータベースに保存
-                if isinstance(results, list):
-                    for result in results:
-                        AnalysisResult.objects.create(
-                            image=image,
-                            label=result['label'],
-                            confidence=result['confidence'],
-                            rank=result.get('rank', 1),
-                            model_name=model_name,
-                            model_version='1.0.0'
-                        )
-                else:
-                    # エラーケースの場合
-                    logger.error(f"解析結果がリストではありません: {type(results)}")
-                    raise Exception(f"解析結果の形式が不正です: {results}")
-                
-                # キューアイテムと画像のステータスを完了に更新
-                queue_item.status = 'completed'
-                queue_item.completed_at = timezone.now()
-                queue_item.save()
-                
-                image.status = 'completed'
-                image.save()
-                
-                # タイムライン記録を更新
-                timeline_log, created = TimelineLog.objects.get_or_create(
-                    image=image,
-                    defaults={}
-                )
-                timeline_log.analysis_completed_at = timezone.now()
-                timeline_log.model_used = model_name
-                timeline_log.save()
-                
-                logger.info(f"キューアイテム {queue_item_id} の解析が完了しました")
-                
-                return {
-                    'success': True, 
-                    'message': f'画像 {image.filename} の解析が完了しました',
-                    'results': results
-                }
-                
-            except Exception as e:
-                # エラーの場合
-                queue_item.status = 'failed'
-                queue_item.error_message = str(e)
-                queue_item.save()
-                
-                image.status = 'failed'
-                image.save()
-                
-                logger.error(f"キューアイテム {queue_item_id} の解析に失敗: {e}")
-                return {
-                    'success': False, 
-                    'error': f'解析に失敗しました: {str(e)}'
-                }
-                
-        except AnalysisQueue.DoesNotExist:
-            logger.error(f"キューアイテム {queue_item_id} が見つかりません")
-            return {
-                'success': False, 
-                'error': 'キューアイテムが見つかりません'
-            }
-        except Exception as e:
-            logger.error(f"キューアイテム処理中にエラー: {e}")
-            return {
-                'success': False, 
-                'error': f'処理中にエラーが発生しました: {str(e)}'
-            }
 
 # シングルトンインスタンス
 analysis_service = AnalysisService()

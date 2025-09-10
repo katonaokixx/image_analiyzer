@@ -711,7 +711,7 @@ window.addEventListener('load', () => {
     try {
       fileUpload = new HSFileUpload(uploadEl, {
         dropzone: {
-          parallelUploads: 5,
+          parallelUploads: 5,  // 並列アップロードを5に設定
           maxFiles: 5,
           autoProcessQueue: false,
           headers: {
@@ -739,7 +739,7 @@ window.addEventListener('load', () => {
   // autoProcessQueue 強制 (安全化)
   if (dz.options) {
     dz.options.autoProcessQueue = false;
-    dz.options.parallelUploads = 5;
+    dz.options.parallelUploads = 5;  // 並列アップロードを5に設定
     dz.options.maxFiles = 5;
     dz.options.headers = dz.options.headers || {};
     dz.options.headers['X-CSRFToken'] = getCSRFToken();
@@ -747,7 +747,7 @@ window.addEventListener('load', () => {
     dz.on && dz.on('init', function () {
       if (this.options) {
         this.options.autoProcessQueue = false;
-        this.options.parallelUploads = 5;
+        this.options.parallelUploads = 1;  // 並列アップロードを1に制限
         this.options.maxFiles = 5;
         this.options.headers = this.options.headers || {};
         this.options.headers['X-CSRFToken'] = getCSRFToken();
@@ -770,6 +770,23 @@ window.addEventListener('load', () => {
     console.log('=== addedfile ===', file && file.name);
     if (!firstFileAddedAt) firstFileAddedAt = Date.now();
     showUploadButton();
+
+    // ファイル追加時にエラータイムラインを非表示にする
+    const errorTimeline = document.getElementById('timeline-item-1-error');
+    if (errorTimeline) {
+      errorTimeline.classList.add('hidden');
+      errorTimeline.style.display = 'none';
+    }
+
+    // 成功タイムラインも非表示にする（新しいアップロードのため）
+    const successTimeline = document.getElementById('timeline-item-1-success');
+    if (successTimeline) {
+      successTimeline.classList.add('hidden');
+      successTimeline.style.display = 'none';
+    }
+
+    // アップロード成功フラグをリセット
+    window.uploadSuccessShown = false;
 
     // サムネイルを生成
     if (file.type.startsWith('image/')) {
@@ -984,11 +1001,6 @@ window.addEventListener('load', () => {
     console.log('🔄 デバッグ: force:', force);
     console.log('🔄 デバッグ: window.uploadSuccessShown:', window.uploadSuccessShown);
     console.log('🔄 デバッグ: window.isRestoringState:', window.isRestoringState);
-
-    if (!force && window.uploadSuccessShown) {
-      console.log('🔄 デバッグ: 既に表示済みのため、showUploadSuccessをスキップ');
-      return;
-    }
 
     // リロード時の状態復元中は実行しない
     if (window.isRestoringState) {
@@ -1253,7 +1265,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'efficientnet': 'TensorFlow EfficientNetは、効率性を重視した軽量モデルです。少ないパラメータ数で高い性能を実現し、高速な推論が可能です。（現在エラー中）',
         'mobilenet': 'PyTorch MobileNetは、モバイル環境に特化した軽量モデルです。実際のライブラリを使用して、スマートフォンでも高速な画像認識が可能です。',
         'vgg16': 'PyTorch VGG-16は、深いネットワーク構造を持つ高精度モデルです。実際のライブラリを使用して、詳細な特徴抽出と複雑な画像パターンの識別が可能です。',
-        'custom': 'CLIPは、OpenAIが開発した柔軟なテキストラベル分類モデルです。アニメ/実写の区別や、カスタムラベルの生成が可能で、最も人間に近い解析が期待できます。'
+        'clip': 'CLIPは、OpenAIが開発した革新的な画像-テキスト理解モデルです。アニメ・イラストの検出に特化しており、従来のモデルでは困難だったイラストやアニメキャラクターの識別が得意です。',
+        'custom': 'カスタムモデルは、特定の用途やデータセットに特化して学習されたモデルです。ドメイン固有の特徴を捉えることができ、専門的な画像解析タスクに最適です。'
       };
 
       if (selectedModel && descriptions[selectedModel]) {

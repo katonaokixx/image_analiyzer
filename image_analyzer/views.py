@@ -152,7 +152,7 @@ def admin_image_table(request: HttpRequest):
         messages.error(request, '管理者権限が必要です。')
         return redirect('admin_image_table')
     
-    images = Image.objects.select_related('queue_item').order_by('-upload_date')
+    images = Image.objects.select_related('queue_item').prefetch_related('analysis_results').order_by('-upload_date')
     
     # ユーザーリストを取得（フィルター用）
     users = User.objects.all().order_by('username')
@@ -467,25 +467,25 @@ def api_form_upload(request: HttpRequest):
         img.status = 'uploaded'
         img.save()
         
-        # 自動でキューに追加
-        try:
-            # 次の位置を計算
-            next_position = AnalysisQueue.objects.filter(
-                status__in=['waiting', 'processing']
-            ).count() + 1
-            
-            # キューアイテムを作成
-            AnalysisQueue.objects.create(
-                image=img,
-                user=request.user if request.user.is_authenticated else None,
-                position=next_position,
-                priority='normal',
-                status='waiting',
-                model_name='resnet50'  # デフォルトモデル
-            )
-        except Exception as e:
-            # キュー追加に失敗してもアップロードは成功とする
-            print(f"Failed to add image to queue: {e}")
+        # 自動でキューに追加しない（ユーザーが明示的に解析を開始するまで待機）
+        # try:
+        #     # 次の位置を計算
+        #     next_position = AnalysisQueue.objects.filter(
+        #         status__in=['waiting', 'processing']
+        #     ).count() + 1
+        #     
+        #     # キューアイテムを作成
+        #     AnalysisQueue.objects.create(
+        #         image=img,
+        #         user=request.user if request.user.is_authenticated else None,
+        #         position=next_position,
+        #         priority='normal',
+        #         status='waiting',
+        #         model_name='resnet50'  # デフォルトモデル
+        #     )
+        # except Exception as e:
+        #     # キュー追加に失敗してもアップロードは成功とする
+        #     print(f"Failed to add image to queue: {e}")
         
         saved.append(img)
     
@@ -534,6 +534,14 @@ def api_start_analysis(request: HttpRequest):
             except Image.DoesNotExist:
                 logger.error(f"指定された画像が見つからないか、解析対象ではありません: ID={image_id}")
                 return JsonResponse({'ok': False, 'error': '指定された画像が見つからないか、解析対象ではありません'}, status=400)
+            
+            # 再解析の場合、古い解析結果を削除
+            if image.status == 'completed':
+                logger.info(f"再解析のため、古い解析結果を削除: 画像ID={image.id}")
+                old_results = image.analysis_results.all()
+                deleted_count = old_results.count()
+                old_results.delete()
+                logger.info(f"削除された解析結果数: {deleted_count}")
             
             # 解析開始時にタイムライン情報を保存
             timeline_log, created = TimelineLog.objects.get_or_create(

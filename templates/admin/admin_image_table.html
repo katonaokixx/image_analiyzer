@@ -63,6 +63,7 @@
         <div class="select-floating w-40">
           <select class="select" aria-label="Select floating label" id="selectFloating">
             <option>すべて</option>
+            <option>アップロード完了</option>
             <option>解析成功</option>
             <option>解析中</option>
             <option>準備中</option>
@@ -86,11 +87,10 @@
         <div class="select-floating w-40">
           <select class="select" aria-label="Model filter" id="modelFilter">
             <option>すべて</option>
-            <option>ResNet-50</option>
-            <option>EfficientNet-B0</option>
-            <option>MobileNet v2</option>
-            <option>VGG-16</option>
-            <option>Custom</option>
+            <option>PyTorch ResNet-50</option>
+            <option>PyTorch VGG-16</option>
+            <option>PyTorch MobileNet</option>
+            <option>CLIP</option>
           </select>
           <label class="select-floating-label" for="modelFilter">使用モデル</label>
         </div>
@@ -98,11 +98,16 @@
         <div class="select-floating w-40">
           <select class="select" aria-label="Label filter" id="labelFilter">
             <option>すべて</option>
-            <option>犬</option>
-            <option>屋外</option>
-            <option>公園</option>
-            <option>風景</option>
             <option>人物</option>
+            <option>アニメ・イラスト</option>
+            <option>動物</option>
+            <option>テクノロジー</option>
+            <option>ファッション</option>
+            <option>食べ物</option>
+            <option>建物</option>
+            <option>乗り物</option>
+            <option>自然</option>
+            <option>スポーツ</option>
           </select>
           <label class="select-floating-label" for="labelFilter">ラベル</label>
         </div>
@@ -136,6 +141,8 @@
             <th>サムネイル画像</th>
             <th>アップロード日時</th>
             <th>ステータス</th>
+            <th>機械学習によってつけられたラベル</th>
+            <th>信頼度</th>
             <th>エラーログ</th>
             <th>解析開始日時</th>
             <th>解析終了日時</th>
@@ -165,9 +172,12 @@
             </td>
             <td>{{ image.upload_date|date:"Y-m-d H:i" }}</td>
             <td>
-              {% if image.status == 'success' %}
+              {% if image.status == 'completed' %}
               <span class="badge badge-outline border-dashed badge-success me-2 cursor-pointer" title="クリックしてタイムラインを確認"
                 data-overlay="#timeline-modal">解析成功</span>
+              {% elif image.status == 'uploaded' %}
+              <span class="badge badge-outline border-dashed badge-warning me-2 cursor-pointer"
+                title="クリックしてアップロードページに遷移" onclick="navigateToUploadPage({{ image.id }}, 'uploaded')">アップロード完了</span>
               {% elif image.status == 'analyzing' %}
               <span class="badge badge-outline border-dashed badge-info me-2 cursor-pointer" title="クリックしてタイムラインを確認"
                 data-overlay="#timeline-modal">解析中</span>
@@ -188,6 +198,30 @@
               <span class="badge badge-outline border-dashed badge-secondary me-2">
                 準備中
               </span>
+              {% endif %}
+            </td>
+            <td>
+              {% if image.status == 'completed' %}
+              {% for result in image.analysis_results.all|slice:":3" %}
+              <span class="badge badge-primary me-1">{{ result.label }}</span>
+              {% empty %}
+              <span class="text-sm text-gray-500">-</span>
+              {% endfor %}
+              {% else %}
+              <span class="text-sm text-gray-500">-</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if image.status == 'completed' %}
+              {% with first_result=image.analysis_results.first %}
+              {% if first_result %}
+              <span class="badge badge-outline">{{ first_result.confidence }}%</span>
+              {% else %}
+              <span class="text-sm text-gray-500">-</span>
+              {% endif %}
+              {% endwith %}
+              {% else %}
+              <span class="text-sm text-gray-500">-</span>
               {% endif %}
             </td>
             <td>
@@ -214,8 +248,24 @@
               {% endif %}
             </td>
             <td>
-              {% if image.timeline_log.model_used %}
-              <span class="badge badge-info">{{ image.timeline_log.model_used }}</span>
+              {% if image.status == 'completed' %}
+              {% with first_result=image.analysis_results.first %}
+              {% if first_result %}
+              {% if first_result.model_name == 'pytorch_resnet50' %}
+              <span class="badge badge-info">PyTorch ResNet-50</span>
+              {% elif first_result.model_name == 'pytorch_vgg16' %}
+              <span class="badge badge-info">PyTorch VGG-16</span>
+              {% elif first_result.model_name == 'pytorch_mobilenet' %}
+              <span class="badge badge-info">PyTorch MobileNet</span>
+              {% elif first_result.model_name == 'clip' %}
+              <span class="badge badge-info">CLIP</span>
+              {% else %}
+              <span class="badge badge-info">{{ first_result.model_name }}</span>
+              {% endif %}
+              {% else %}
+              <span class="text-sm text-gray-500">-</span>
+              {% endif %}
+              {% endwith %}
               {% else %}
               <span class="text-sm text-gray-500">-</span>
               {% endif %}
@@ -247,10 +297,10 @@
     <div class="text-sm text-base-content/80">
       {% if has_data %}
       {% if view_all %}
-      Showing all <span class="font-semibold">{{ images|length }}</span> images
+      全 <span class="font-semibold">{{ images|length }}</span>件の画像を表示中
       {% else %}
-      Showing <span class="font-semibold">{{ page_obj.start_index }}-{{ page_obj.end_index }}</span> of
-      <span class="font-semibold">{{ page_obj.paginator.count }}</span> images
+      <span class="font-semibold">{{ page_obj.start_index }}-{{ page_obj.end_index }}</span>件目 / 全
+      <span class="font-semibold">{{ page_obj.paginator.count }}</span>件の画像を表示中
       {% endif %}
       {% else %}
       {% endif %}
@@ -537,6 +587,58 @@
   </div>
 </div>
 
+<!-- 解析進捗モーダル -->
+<div id="analysis-progress-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden"
+  role="dialog" tabindex="-1">
+  <div
+    class="modal-dialog overlay-open:mt-4 sm:overlay-open:mt-8 lg:overlay-open:mt-12 overlay-open:duration-300 transition-all ease-out max-w-sm sm:max-w-md lg:max-w-lg">
+    <div class="modal-content">
+      <div class="modal-header p-4 sm:p-6">
+        <h3 class="modal-title text-lg sm:text-xl">解析進捗</h3>
+        <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
+          data-overlay="#analysis-progress-modal">
+          <span class="icon-[tabler--x] size-4"></span>
+        </button>
+      </div>
+      <div class="modal-body p-4 sm:p-6">
+        <div class="flex flex-col gap-4 sm:gap-6">
+          <div class="text-center">
+            <p class="text-sm sm:text-base text-gray-600 mb-4">画像解析の進捗状況を表示しています。</p>
+
+            <!-- ローディングアニメーション -->
+            <div class="flex justify-center items-center gap-2 mb-4">
+              <div class="flex gap-1">
+                <span class="w-1.5 h-1.5 bg-info rounded-full animate-pulse"></span>
+                <span class="w-1.5 h-1.5 bg-info rounded-full animate-pulse"></span>
+                <span class="w-1.5 h-1.5 bg-info rounded-full animate-pulse"></span>
+              </div>
+            </div>
+
+            <!-- 進捗バー -->
+            <div class="flex items-center gap-x-3 whitespace-nowrap mb-4">
+              <div class="progress h-2 flex-1" id="timeline-progress">
+                <div class="progress-bar progress-info transition-all duration-500" style="width:0%"
+                  id="timeline-progress-bar"></div>
+              </div>
+              <span class="text-base-content mb-0.5 text-sm">
+                <span id="timeline-progress-value">0</span>%
+              </span>
+            </div>
+            <div class="text-center">
+              <span class="text-xs text-gray-600" id="timeline-progress-description">解析中...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="flex justify-end gap-3">
+          <button type="button" class="btn btn-soft btn-secondary" data-overlay="#analysis-progress-modal">閉じる</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_css %}
@@ -656,6 +758,7 @@
       if (statusFilter !== 'すべて') {
         const statusBadge = row.querySelector('.badge');
         const statusText = statusBadge.textContent.trim();
+        if (statusFilter === 'アップロード完了' && statusText !== 'アップロード完了') showRow = false;
         if (statusFilter === '解析成功' && statusText !== '解析成功') showRow = false;
         if (statusFilter === '解析中' && statusText !== '解析中') showRow = false;
         if (statusFilter === '準備中' && statusText !== '準備中') showRow = false;
@@ -670,12 +773,50 @@
 
       // Model filter
       if (modelFilter !== 'すべて') {
-        const modelBadge = row.querySelector('td:last-child .badge');
+        const modelBadge = row.querySelector('td:nth-child(10) .badge');
         if (modelBadge) {
           const modelText = modelBadge.textContent.trim();
-          if (modelText !== modelFilter) showRow = false;
+          // データベースの値と表示名の対応
+          const modelMapping = {
+            'resnet50': 'PyTorch ResNet-50',
+            'vgg16': 'PyTorch VGG-16',
+            'mobilenet': 'PyTorch MobileNet',
+            'clip': 'CLIP'
+          };
+          const expectedDisplayName = modelMapping[modelText] || modelText;
+          if (expectedDisplayName !== modelFilter) showRow = false;
         } else {
           showRow = false;
+        }
+      }
+
+      // Label filter
+      if (labelFilter !== 'すべて') {
+        const labelCell = row.querySelector('td:nth-child(5)'); // ラベル列
+        if (labelCell) {
+          const labelText = labelCell.textContent.trim();
+          if (!labelText.includes(labelFilter)) {
+            showRow = false;
+          }
+        } else {
+          showRow = false; // ラベルがない場合は非表示
+        }
+      }
+
+      // Confidence filter
+      if (confidenceFilter !== 'すべて') {
+        const confidenceCell = row.querySelector('td:nth-child(6)'); // 信頼度列
+        if (confidenceCell) {
+          const confidenceText = confidenceCell.textContent.trim();
+          const confidenceValue = parseFloat(confidenceText.replace('%', ''));
+
+          if (confidenceFilter === '90%以上' && confidenceValue < 90) showRow = false;
+          else if (confidenceFilter === '80-89%' && (confidenceValue < 80 || confidenceValue >= 90)) showRow = false;
+          else if (confidenceFilter === '70-79%' && (confidenceValue < 70 || confidenceValue >= 80)) showRow = false;
+          else if (confidenceFilter === '60-69%' && (confidenceValue < 60 || confidenceValue >= 70)) showRow = false;
+          else if (confidenceFilter === '60%未満' && confidenceValue >= 60) showRow = false;
+        } else {
+          showRow = false; // 信頼度がない場合は非表示
         }
       }
 
@@ -684,10 +825,20 @@
         const uploadDateText = row.querySelector('td:nth-child(3)').textContent.trim();
         const uploadDate = new Date(uploadDateText);
 
+        // Get confidence for sorting
+        const confidenceCell = row.querySelector('td:nth-child(6)');
+        const confidenceValue = confidenceCell ? parseFloat(confidenceCell.textContent.replace('%', '')) : 0;
+
+        // Get label for sorting
+        const labelCell = row.querySelector('td:nth-child(5)');
+        const labelText = labelCell ? labelCell.textContent.trim() : '';
+
         rowData.push({
           row: row,
           uploadDate: uploadDate,
-          uploadDateText: uploadDateText
+          uploadDateText: uploadDateText,
+          confidence: confidenceValue,
+          label: labelText
         });
         visibleCount++;
       } else {
@@ -695,14 +846,36 @@
       }
     });
 
-    // Sort by date if needed
-    if (dateSort === '古い順') {
-      console.log('古い順でソート');
-      rowData.sort((a, b) => a.uploadDate - b.uploadDate);
-    } else if (dateSort === '新しい順') {
-      console.log('新しい順でソート');
-      rowData.sort((a, b) => b.uploadDate - a.uploadDate);
-    }
+    // Apply sorting based on multiple criteria
+    console.log('複合ソート適用:', { dateSort, labelFilter, confidenceFilter });
+
+    rowData.sort((a, b) => {
+      // Primary sort: Label (if label filter is active)
+      if (labelFilter !== 'すべて') {
+        const labelA = a.label.toLowerCase();
+        const labelB = b.label.toLowerCase();
+        if (labelA !== labelB) {
+          return labelA.localeCompare(labelB);
+        }
+      }
+
+      // Secondary sort: Confidence (if confidence filter is active)
+      if (confidenceFilter !== 'すべて') {
+        if (a.confidence !== b.confidence) {
+          return b.confidence - a.confidence; // Higher confidence first
+        }
+      }
+
+      // Tertiary sort: Date
+      if (dateSort === '古い順') {
+        return a.uploadDate - b.uploadDate;
+      } else if (dateSort === '新しい順') {
+        return b.uploadDate - a.uploadDate;
+      }
+
+      // Default: upload date (newest first)
+      return b.uploadDate - a.uploadDate;
+    });
 
     // Reorder and show rows
     const tbody = document.querySelector('tbody');
@@ -789,6 +962,9 @@
     } else if (status === '解析中') {
       statusBadge.className = 'badge badge-outline border-dashed badge-info me-2';
       console.log('Set info badge'); // デバッグ用
+    } else if (status === 'アップロード完了') {
+      statusBadge.className = 'badge badge-outline border-dashed badge-warning me-2';
+      console.log('Set warning badge'); // デバッグ用
     } else if (status === '準備中') {
       statusBadge.className = 'badge badge-outline border-dashed badge-secondary me-2';
       console.log('Set secondary badge'); // デバッグ用
@@ -801,7 +977,16 @@
     }
     document.getElementById('modal-analysis-start').textContent = analysisStart;
     document.getElementById('modal-analysis-end').textContent = analysisEnd;
-    document.getElementById('modal-model').textContent = model;
+
+    // モデル名の表示名変換
+    const modelDisplayMapping = {
+      'resnet50': 'PyTorch ResNet-50',
+      'vgg16': 'PyTorch VGG-16',
+      'mobilenet': 'PyTorch MobileNet',
+      'clip': 'CLIP'
+    };
+    const displayModel = modelDisplayMapping[model] || model;
+    document.getElementById('modal-model').textContent = displayModel;
 
     // ラベル
     const labelsContainer = document.getElementById('modal-labels');
@@ -871,11 +1056,11 @@
           const filename = row.querySelector('td:nth-child(2) .font-medium')?.textContent || '';
           const uploadTime = row.querySelector('td:nth-child(3)')?.textContent || '';
           const status = row.querySelector('td:nth-child(4) .badge')?.textContent?.trim() || '';
-          const analysisStart = row.querySelector('td:nth-child(6)')?.textContent || '-';
-          const analysisEnd = row.querySelector('td:nth-child(7)')?.textContent || '-';
-          const model = row.querySelector('td:nth-child(8) .badge')?.textContent || '-';
-          const labels = Array.from(row.querySelectorAll('td:nth-child(9) .badge')).map(badge => badge.textContent);
-          const confidence = row.querySelector('td:nth-child(10) .badge')?.textContent || '-';
+          const labels = Array.from(row.querySelectorAll('td:nth-child(5) .badge')).map(badge => badge.textContent);
+          const confidence = row.querySelector('td:nth-child(6) .badge')?.textContent || '-';
+          const analysisStart = row.querySelector('td:nth-child(8)')?.textContent || '-';
+          const analysisEnd = row.querySelector('td:nth-child(9)')?.textContent || '-';
+          const model = row.querySelector('td:nth-child(10) .badge')?.textContent || '-';
 
           // 画像URLを取得（サムネイルから）
           const thumbnailImg = row.querySelector('.image-placeholder-small');
@@ -959,6 +1144,162 @@
       }
     }
 
+    // 進捗監視用の変数
+    let progressInterval = null;
+
+    // 進捗監視開始
+    function startProgressMonitoring(imageId) {
+      console.log('管理者テーブル: 進捗監視開始:', imageId);
+
+      // 既存の監視を停止
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+
+      // 進捗モーダルを手動で開く
+      const modal = document.getElementById('analysis-progress-modal');
+      if (modal) {
+        modal.classList.add('show');
+        modal.style.display = 'block';
+      }
+
+      // 進捗監視を開始
+      progressInterval = setInterval(() => {
+        fetch(`/api/progress/${imageId}/`)
+          .then(response => response.json())
+          .then(data => {
+            console.log('管理者テーブル: 進捗データ取得:', data);
+
+            if (data.success && data.progress) {
+              const progress = data.progress;
+
+              // 進捗バーを更新
+              updateProgressBar(progress.percentage);
+
+              // 進捗説明を更新
+              const description = document.getElementById('timeline-progress-description');
+              if (description) {
+                description.textContent = progress.description || '解析中...';
+              }
+
+              // 完了チェック
+              if (progress.percentage >= 100 && progress.status === 'completed') {
+                console.log('管理者テーブル: 解析完了');
+                clearInterval(progressInterval);
+                progressInterval = null;
+
+                // モーダル表示を完了状態に変更
+                updateProgressModalToCompleted();
+
+                // バッジを自動で更新
+                updateBadgeStatus(imageId, 'success');
+              }
+            } else {
+              console.log('管理者テーブル: 進捗データが無効:', data);
+            }
+          })
+          .catch(error => {
+            console.error('管理者テーブル: 進捗取得エラー:', error);
+            // エラーが続く場合は監視を停止
+            clearInterval(progressInterval);
+            progressInterval = null;
+          });
+      }, 3000); // 3秒間隔で監視
+    }
+
+    // バッジステータスを更新
+    function updateBadgeStatus(imageId, status) {
+      const row = document.querySelector(`tr[data-image-id="${imageId}"]`);
+      if (!row) return;
+
+      const statusCell = row.querySelector('td:nth-child(4)'); // ステータス列
+      if (!statusCell) return;
+
+      // 既存のバッジを削除
+      const existingBadge = statusCell.querySelector('.badge');
+      if (existingBadge) {
+        existingBadge.remove();
+      }
+
+      // 新しいバッジを作成
+      let newBadge;
+      if (status === 'success') {
+        newBadge = document.createElement('span');
+        newBadge.className = 'badge badge-outline border-dashed badge-success me-2 cursor-pointer';
+        newBadge.textContent = '解析成功';
+        newBadge.title = 'クリックしてタイムラインを確認';
+        newBadge.setAttribute('data-overlay', '#timeline-modal');
+      } else if (status === 'failed') {
+        newBadge = document.createElement('span');
+        newBadge.className = 'badge badge-outline border-dashed badge-error me-2 cursor-pointer';
+        newBadge.textContent = '失敗';
+        newBadge.title = 'クリックしてタイムラインを確認';
+        newBadge.setAttribute('data-overlay', '#timeline-modal');
+      } else if (status === 'analyzing') {
+        newBadge = document.createElement('span');
+        newBadge.className = 'badge badge-outline border-dashed badge-info me-2 cursor-pointer';
+        newBadge.textContent = '解析中';
+        newBadge.title = 'クリックしてタイムラインを確認';
+        newBadge.setAttribute('data-overlay', '#timeline-modal');
+      }
+
+      if (newBadge) {
+        statusCell.appendChild(newBadge);
+
+        // FlyonUIを再初期化
+        if (typeof window.flyonui !== 'undefined') {
+          try {
+            window.flyonui.init();
+          } catch (error) {
+            console.log('FlyonUI再初期化エラー:', error);
+          }
+        }
+
+        // 解析中バッジの場合は手動でクリックイベントを追加
+        if (status === 'analyzing') {
+          newBadge.addEventListener('click', function () {
+            const row = this.closest('tr');
+            const imageId = row ? row.getAttribute('data-image-id') : null;
+            console.log('手動イベント: 解析中バッジクリック、画像ID:', imageId);
+
+            if (imageId) {
+              startProgressMonitoring(imageId);
+            }
+          });
+          console.log('解析中バッジに手動クリックイベントを追加しました');
+        }
+      }
+    }
+
+    // 解析中バッジのクリックイベントを追加
+    document.addEventListener('click', function (event) {
+      // 解析中バッジがクリックされた場合
+      if (event.target.classList.contains('badge-info') &&
+        event.target.getAttribute('data-overlay') === '#timeline-modal') {
+        const row = event.target.closest('tr');
+        const imageId = row ? row.getAttribute('data-image-id') : null;
+        console.log('管理者テーブル: 解析中バッジクリック、画像ID:', imageId);
+
+        // 進捗監視を開始
+        if (imageId) {
+          startProgressMonitoring(imageId);
+        } else {
+          console.error('管理者テーブル: 解析中バッジ: 画像IDを取得できませんでした');
+        }
+      }
+    });
+
+    // モーダルが閉じられた時に進捗監視を停止
+    const progressModal = document.getElementById('analysis-progress-modal');
+    if (progressModal) {
+      progressModal.addEventListener('hidden.bs.modal', function () {
+        if (progressInterval) {
+          clearInterval(progressInterval);
+          progressInterval = null;
+          console.log('管理者テーブル: 進捗監視を停止しました');
+        }
+      });
+    }
 
   });
 
@@ -1001,5 +1342,14 @@
     document.getElementById('error-message').textContent = errorMessage;
     document.getElementById('error-timestamp').textContent = errorTimestamp;
   }
+
+  // アップロードページに遷移する関数
+  function navigateToUploadPage(imageId, imageStatus) {
+    console.log('navigateToUploadPage called with:', imageId, imageStatus);
+
+    // URLパラメータで画像IDを渡す（CSRFトークン不要）
+    window.location.href = `/re_image_upload/?selected_image_id=${imageId}&image_status=${imageStatus}`;
+  }
+
 </script>
 {% endblock %}

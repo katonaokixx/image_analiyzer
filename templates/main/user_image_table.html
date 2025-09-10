@@ -125,6 +125,7 @@
         <div class="select-floating w-40">
           <select class="select" aria-label="Select floating label" id="selectFloating">
             <option>すべて</option>
+            <option>アップロード</option>
             <option>解析成功</option>
             <option>解析中</option>
             <option>準備中</option>
@@ -136,11 +137,16 @@
         <div class="select-floating w-40">
           <select class="select" aria-label="Label filter" id="labelFilter">
             <option>すべて</option>
-            <option>犬</option>
-            <option>屋外</option>
-            <option>公園</option>
-            <option>風景</option>
             <option>人物</option>
+            <option>アニメ・イラスト</option>
+            <option>動物</option>
+            <option>テクノロジー</option>
+            <option>ファッション</option>
+            <option>食べ物</option>
+            <option>建物</option>
+            <option>乗り物</option>
+            <option>自然</option>
+            <option>スポーツ</option>
           </select>
           <label class="select-floating-label" for="labelFilter">ラベル</label>
         </div>
@@ -201,6 +207,9 @@
               {% elif image.status == 'analyzing' %}
               <span class="badge badge-outline border-dashed badge-info me-2 cursor-pointer" title="クリックしてアップロードページに遷移"
                 onclick="navigateToUploadPage({{ image.id }}, 'analyzing')">解析中</span>
+              {% elif image.status == 'upload' %}
+              <span class="badge badge-outline border-dashed badge-primary me-2 cursor-pointer"
+                title="クリックしてアップロードページに遷移" onclick="navigateToUploadPage({{ image.id }}, 'upload')">アップロード</span>
               {% elif image.status == 'uploaded' %}
               <span class="badge badge-outline border-dashed badge-warning me-2 cursor-pointer"
                 title="クリックしてアップロードページに遷移" onclick="navigateToUploadPage({{ image.id }}, 'uploaded')">アップロード完了</span>
@@ -220,9 +229,11 @@
               {% endif %}
             </td>
             <td>
-              {% if image.analysis_results.all %}
-              {% for result in image.analysis_results.all %}
-              <span class="badge badge-{% cycle 'error' 'secondary' 'success' %} me-1">{{ result.label }}</span>
+              {% if image.status == 'completed' %}
+              {% for result in image.analysis_results.all|slice:":3" %}
+              <span class="badge badge-primary me-1">{{ result.label }}</span>
+              {% empty %}
+              <span class="text-sm text-gray-500">-</span>
               {% endfor %}
               {% else %}
               <span class="text-sm text-gray-500">-</span>
@@ -262,8 +273,8 @@
   {% if has_data %}
   <div class="flex flex-wrap items-center justify-between gap-2 py-4">
     <div class="text-sm text-base-content/80">
-      Showing <span class="font-semibold">{{ page_obj.start_index }}-{{ page_obj.end_index }}</span> of
-      <span class="font-semibold">{{ page_obj.paginator.count }}</span> images
+      <span class="font-semibold">{{ page_obj.start_index }}-{{ page_obj.end_index }}</span>件目 / 全
+      <span class="font-semibold">{{ page_obj.paginator.count }}</span>件の画像を表示中
     </div>
     {% if page_obj.has_other_pages %}
     <nav class="join">
@@ -336,7 +347,7 @@
               <span id="modal-status-badge" class="badge badge-outline border-dashed me-2"></span>
             </div>
             <div class="flex justify-between items-center">
-              <span class="font-semibold">機械学習によってつけられたラベル:</span>
+              <span class="font-semibold">ラベル:</span>
               <div id="modal-labels" class="flex flex-wrap gap-1"></div>
             </div>
             <div class="flex justify-between items-center">
@@ -376,6 +387,7 @@
               <option value="efficientnet">EfficientNet-B0 (軽量・高速)</option>
               <option value="mobilenet">MobileNet v2 (モバイル最適化)</option>
               <option value="vgg16">VGG-16 (高精度・詳細分析)</option>
+              <option value="clip">CLIP (アニメ・イラスト検出特化)</option>
               <option value="custom">カスタムモデル (特定用途特化)</option>
             </select>
           </div>
@@ -599,29 +611,8 @@
   function navigateToUploadPage(imageId, imageStatus) {
     console.log('navigateToUploadPage called with:', imageId, imageStatus);
 
-    // Djangoのセッションに画像IDと状態を保存
-    fetch('/api/set-selected-image/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-      },
-      body: JSON.stringify({
-        image_id: imageId,
-        image_status: imageStatus
-      })
-    }).then(response => {
-      console.log('API response:', response);
-      return response.json();
-    }).then(data => {
-      console.log('API data:', data);
-      // 再解析ページに遷移
-      window.location.href = '/re_image_upload/';
-    }).catch(error => {
-      console.error('Error setting selected image:', error);
-      // エラーが発生しても遷移は実行
-      window.location.href = '/re_image_upload/';
-    });
+    // URLパラメータで画像IDを渡す（CSRFトークン不要）
+    window.location.href = `/re_image_upload/?selected_image_id=${imageId}&image_status=${imageStatus}`;
   }
 
   // モーダルに画像データを設定する関数
@@ -1406,10 +1397,41 @@
       if (statusFilter !== 'すべて') {
         const statusBadge = row.querySelector('.badge');
         const statusText = statusBadge.textContent.trim();
+        if (statusFilter === 'アップロード' && statusText !== 'アップロード完了') showRow = false;
         if (statusFilter === '解析成功' && statusText !== '解析成功') showRow = false;
         if (statusFilter === '解析中' && statusText !== '解析中') showRow = false;
         if (statusFilter === '準備中' && statusText !== '準備中') showRow = false;
         if (statusFilter === '失敗' && statusText !== '失敗') showRow = false;
+      }
+
+      // Label filter
+      if (labelFilter !== 'すべて') {
+        const labelCell = row.querySelector('td:nth-child(4)'); // ラベル列
+        if (labelCell) {
+          const labelText = labelCell.textContent.trim();
+          if (!labelText.includes(labelFilter)) {
+            showRow = false;
+          }
+        } else {
+          showRow = false; // ラベルがない場合は非表示
+        }
+      }
+
+      // Confidence filter
+      if (confidenceFilter !== 'すべて') {
+        const confidenceCell = row.querySelector('td:nth-child(5)'); // 信頼度列
+        if (confidenceCell) {
+          const confidenceText = confidenceCell.textContent.trim();
+          const confidenceValue = parseFloat(confidenceText.replace('%', ''));
+
+          if (confidenceFilter === '90%以上' && confidenceValue < 90) showRow = false;
+          else if (confidenceFilter === '80-89%' && (confidenceValue < 80 || confidenceValue >= 90)) showRow = false;
+          else if (confidenceFilter === '70-79%' && (confidenceValue < 70 || confidenceValue >= 80)) showRow = false;
+          else if (confidenceFilter === '60-69%' && (confidenceValue < 60 || confidenceValue >= 70)) showRow = false;
+          else if (confidenceFilter === '60%未満' && confidenceValue >= 60) showRow = false;
+        } else {
+          showRow = false; // 信頼度がない場合は非表示
+        }
       }
 
       if (showRow) {
@@ -1417,10 +1439,20 @@
         const uploadDateText = row.querySelector('td:nth-child(2)').textContent.trim();
         const uploadDate = new Date(uploadDateText);
 
+        // Get confidence for sorting
+        const confidenceCell = row.querySelector('td:nth-child(5)');
+        const confidenceValue = confidenceCell ? parseFloat(confidenceCell.textContent.replace('%', '')) : 0;
+
+        // Get label for sorting
+        const labelCell = row.querySelector('td:nth-child(4)');
+        const labelText = labelCell ? labelCell.textContent.trim() : '';
+
         rowData.push({
           row: row,
           uploadDate: uploadDate,
-          uploadDateText: uploadDateText
+          uploadDateText: uploadDateText,
+          confidence: confidenceValue,
+          label: labelText
         });
         visibleCount++;
       } else {
@@ -1428,14 +1460,36 @@
       }
     });
 
-    // Sort by date if needed
-    if (dateSort === '古い順') {
-      console.log('古い順でソート');
-      rowData.sort((a, b) => a.uploadDate - b.uploadDate);
-    } else if (dateSort === '新しい順') {
-      console.log('新しい順でソート');
-      rowData.sort((a, b) => b.uploadDate - a.uploadDate);
-    }
+    // Apply sorting based on multiple criteria
+    console.log('複合ソート適用:', { dateSort, labelFilter, confidenceFilter });
+
+    rowData.sort((a, b) => {
+      // Primary sort: Label (if label filter is active)
+      if (labelFilter !== 'すべて') {
+        const labelA = a.label.toLowerCase();
+        const labelB = b.label.toLowerCase();
+        if (labelA !== labelB) {
+          return labelA.localeCompare(labelB);
+        }
+      }
+
+      // Secondary sort: Confidence (if confidence filter is active)
+      if (confidenceFilter !== 'すべて') {
+        if (a.confidence !== b.confidence) {
+          return b.confidence - a.confidence; // Higher confidence first
+        }
+      }
+
+      // Tertiary sort: Date
+      if (dateSort === '古い順') {
+        return a.uploadDate - b.uploadDate;
+      } else if (dateSort === '新しい順') {
+        return b.uploadDate - a.uploadDate;
+      }
+
+      // Default: filename alphabetical
+      return a.filename.localeCompare(b.filename);
+    });
 
     // Reorder and show rows
     const tbody = document.querySelector('tbody');
@@ -1544,6 +1598,7 @@
   // ステータス表示名を取得する関数
   function getStatusDisplayName(status) {
     const statusMap = {
+      'upload': 'アップロード',
       'uploaded': 'アップロード完了',
       'preparing': '準備中',
       'analyzing': '解析中',

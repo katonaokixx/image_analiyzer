@@ -69,6 +69,7 @@ class MLModel(models.Model):
         ('efficientnet', 'EfficientNet-B0'),
         ('mobilenet', 'MobileNet v2'),
         ('vgg16', 'VGG-16'),
+        ('clip', 'CLIP'),
         ('custom', 'カスタムモデル'),
     ]
     
@@ -119,6 +120,7 @@ class Image(models.Model):
     
     # ステータスの選択肢
     STATUS_CHOICES = [
+        ('upload', 'アップロード'),
         ('uploaded', 'アップロード完了'),
         ('preparing', '準備中'),
         ('analyzing', '解析中'),
