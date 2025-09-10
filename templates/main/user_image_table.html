@@ -236,9 +236,13 @@
             </td>
             <td>
               {% if image.analysis_results.all %}
-              {% with first_result=image.analysis_results.first %}
-              <span class="badge badge-success">{{ first_result.confidence }}%</span>
-              {% endwith %}
+              {% for result in image.analysis_results.all %}
+                {% if result.rank == 1 %}
+                <span class="badge badge-success">{{ result.confidence }}%</span>
+                {% endif %}
+              {% empty %}
+              <span class="badge badge-secondary">-</span>
+              {% endfor %}
               {% else %}
               <span class="badge badge-secondary">-</span>
               {% endif %}
