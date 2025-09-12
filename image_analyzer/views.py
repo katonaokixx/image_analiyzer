@@ -191,10 +191,14 @@ def image_upload(request: HttpRequest):
         messages.error(request, 'ログインが必要です。')
         return redirect('login')
     
-    # セッションからアップロードした画像IDを取得
-    uploaded_image_ids = request.session.get('uploaded_image_ids', [])
-    print(f"DEBUG: uploaded_image_ids = {uploaded_image_ids}")
+    # 新しいセッションとして開始するため、アップロード画像IDをクリア
+    request.session['uploaded_image_ids'] = []
+    request.session.modified = True
+    print(f"DEBUG: 新しいセッションとして開始 - uploaded_image_ids = []")
     print(f"DEBUG: user = {request.user.username if request.user.is_authenticated else 'Anonymous'}")
+    
+    # セッションからアップロードした画像IDを取得（空のリスト）
+    uploaded_image_ids = request.session.get('uploaded_image_ids', [])
     
     # セッションから選択された画像IDと状態を取得（バッジクリック時）
     selected_image_id = request.session.get('selected_image_id')
@@ -228,20 +232,9 @@ def image_upload(request: HttpRequest):
         ).order_by('-id')
         print(f"DEBUG: セッションから画像を取得: {[img.id for img in uploaded_images]}")
     else:
-        # セッションが空の場合は、最新のアップロード済み画像を取得してセッションに保存
-        uploaded_images = Image.objects.filter(
-            user=request.user,
-            status__in=['uploaded', 'completed', 'failed']
-        ).order_by('-id')[:5]  # 最新5件
-        
-        if uploaded_images:
-            # 取得した画像IDをセッションに保存
-            uploaded_image_ids = [img.id for img in uploaded_images]
-            request.session['uploaded_image_ids'] = uploaded_image_ids
-            request.session.modified = True
-            print(f"DEBUG: セッションが空のため、最新の画像を取得してセッションに保存: {uploaded_image_ids}")
-        else:
-            print("DEBUG: アップロード済み画像がありません")
+        # セッションが空の場合は、空のリストを使用（自動取得しない）
+        uploaded_images = []
+        print("DEBUG: セッションが空のため、アップロード済み画像なし")
     
     
     # 選択されたモデルを取得
@@ -490,6 +483,7 @@ def api_form_upload(request: HttpRequest):
         saved.append(img)
     
     # セッションにアップロードした画像IDを保存
+    # 複数ファイル同時アップロード時の競合を避けるため、既存のセッション画像IDに追加
     uploaded_image_ids = request.session.get('uploaded_image_ids', [])
     for img in saved:
         if img.id not in uploaded_image_ids:
@@ -604,9 +598,26 @@ def api_start_analysis(request: HttpRequest):
             logger.info(f"個別画像をキューに追加: ID={image.id}, 位置={next_position}")
             
         else:
-            # 一括解析の場合
-            images = Image.objects.filter(status__in=['uploaded', 'preparing', 'analyzing']).order_by('-upload_date')
-            logger.info(f"一括解析対象画像数: {images.count()}")
+            # 一括解析の場合（このセッションでアップロードした画像のみを対象）
+            uploaded_image_ids = request.session.get('uploaded_image_ids', [])
+            if not uploaded_image_ids:
+                logger.error("このセッションでアップロードした画像が見つかりません")
+                return JsonResponse({'ok': False, 'error': 'このセッションでアップロードした画像が見つかりません'}, status=400)
+            
+            # セッション画像IDのうち、解析可能な状態の画像のみを取得
+            available_images = Image.objects.filter(
+                id__in=uploaded_image_ids,
+                status__in=['uploaded', 'preparing', 'analyzing']
+            ).order_by('-upload_date')
+            
+            # セッションから解析済みの画像IDを除外して更新
+            active_image_ids = [img.id for img in available_images]
+            request.session['uploaded_image_ids'] = active_image_ids
+            request.session.modified = True
+            
+            logger.info(f"一括解析対象画像数: {available_images.count()} (セッション画像IDs: {uploaded_image_ids} -> 有効画像IDs: {active_image_ids})")
+            
+            images = available_images
             
             if not images.exists():
                 logger.error("解析対象の画像が見つかりません")

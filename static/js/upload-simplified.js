@@ -711,7 +711,7 @@ window.addEventListener('load', () => {
     try {
       fileUpload = new HSFileUpload(uploadEl, {
         dropzone: {
-          parallelUploads: 5,  // 並列アップロードを5に設定
+          parallelUploads: 1,  // 並列アップロードを1に制限（確実な順次処理）
           maxFiles: 5,
           autoProcessQueue: false,
           headers: {
@@ -739,7 +739,7 @@ window.addEventListener('load', () => {
   // autoProcessQueue 強制 (安全化)
   if (dz.options) {
     dz.options.autoProcessQueue = false;
-    dz.options.parallelUploads = 5;  // 並列アップロードを5に設定
+    dz.options.parallelUploads = 1;  // 並列アップロードを1に制限（確実な順次処理）
     dz.options.maxFiles = 5;
     dz.options.headers = dz.options.headers || {};
     dz.options.headers['X-CSRFToken'] = getCSRFToken();
@@ -747,7 +747,7 @@ window.addEventListener('load', () => {
     dz.on && dz.on('init', function () {
       if (this.options) {
         this.options.autoProcessQueue = false;
-        this.options.parallelUploads = 1;  // 並列アップロードを1に制限
+        this.options.parallelUploads = 1;  // 並列アップロードを1に制限（確実な順次処理）
         this.options.maxFiles = 5;
         this.options.headers = this.options.headers || {};
         this.options.headers['X-CSRFToken'] = getCSRFToken();
@@ -833,15 +833,35 @@ window.addEventListener('load', () => {
   // 個別成功 (集計のみ)
   emitter.on('success', (file, resp) => {
     console.log('=== success ===', file && file.name, resp);
+    console.log('残りキュー内ファイル数:', dz.getQueuedFiles().length);
+    console.log('残りキュー内ファイル名:', dz.getQueuedFiles().map(f => f.name));
     batchSuccessCount++;
 
     // アップロード成功時にテンプレート要素を更新
     updateTemplateAfterUpload(file, resp);
+
+    // キューに残りファイルがある場合は強制的にキュー処理を再開
+    if (dz.getQueuedFiles().length > 0) {
+      console.log('=== キュー処理再開 ===');
+      console.log('残りファイル数:', dz.getQueuedFiles().length);
+      setTimeout(() => {
+        dz.processQueue();
+      }, 100); // 100ms後にキュー処理を再開
+    }
   });
 
   // Dropzoneの直接イベントも追加
   dz.on('success', function (file, resp) {
     console.log('=== Dropzone success ===', file && file.name, resp);
+
+    // キューに残りファイルがある場合は強制的にキュー処理を再開
+    if (dz.getQueuedFiles().length > 0) {
+      console.log('=== Dropzone キュー処理再開 ===');
+      console.log('残りファイル数:', dz.getQueuedFiles().length);
+      setTimeout(() => {
+        dz.processQueue();
+      }, 100); // 100ms後にキュー処理を再開
+    }
 
     // アップロード成功時にテンプレート要素を更新
     updateTemplateAfterUpload(file, resp);
@@ -963,6 +983,10 @@ window.addEventListener('load', () => {
       progressIntervalId = startProgressWatcher();
 
       try {
+        console.log('=== キュー処理開始 ===');
+        console.log('キュー内ファイル数:', dz.getQueuedFiles().length);
+        console.log('キュー内ファイル名:', dz.getQueuedFiles().map(f => f.name));
+        console.log('並列アップロード設定:', dz.options.parallelUploads);
         dz.processQueue();
       } catch (e) {
         console.error('processQueue 実行エラー:', e);
