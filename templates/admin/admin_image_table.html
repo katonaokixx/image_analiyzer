@@ -29,7 +29,7 @@
           </p>
           <div class="group flex items-center justify-center gap-2 pt-2 pb-2"
             style="padding-top: 8px !important; padding-bottom: 8px !important;">
-            <a href="image.upload.html" class="link link-animated link-primary font-normal">ログアウト</a>
+            <a href="{% url 'logout' %}" class="link link-animated link-primary font-normal">ログアウト</a>
             <span
               class="icon-[tabler--chevron-right] text-primary size-5 shrink-0 transition-transform group-hover:translate-x-1 rtl:rotate-180"></span>
           </div>
@@ -203,9 +203,9 @@
             <td class="text-center">
               {% if image.status == 'completed' %}
               {% for result in image.analysis_results.all %}
-                {% if result.rank == 1 %}
-                <span class="badge badge-primary">{{ result.label }}</span>
-                {% endif %}
+              {% if result.rank == 1 %}
+              <span class="badge badge-primary">{{ result.label }}</span>
+              {% endif %}
               {% empty %}
               <span class="text-sm text-gray-500">-</span>
               {% endfor %}
@@ -216,9 +216,9 @@
             <td>
               {% if image.status == 'completed' %}
               {% for result in image.analysis_results.all %}
-                {% if result.rank == 1 %}
-                <span class="badge badge-outline">{{ result.confidence }}%</span>
-                {% endif %}
+              {% if result.rank == 1 %}
+              <span class="badge badge-outline">{{ result.confidence }}%</span>
+              {% endif %}
               {% empty %}
               <span class="text-sm text-gray-500">-</span>
               {% endfor %}
