@@ -133,6 +133,11 @@ MEDIA_ROOT = BASE_DIR / 'uploads'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Login/Logout URLs
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/login/'
+
 # Email settings
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # 開発用: コンソールに出力
 # 本番用の場合は以下の設定を使用:
