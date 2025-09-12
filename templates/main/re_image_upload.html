@@ -947,20 +947,42 @@
       clearInterval(retryProgressInterval);
     }
 
-    // 進捗監視の間隔（3秒）
+    // 進捗監視の間隔（1秒）
     retryProgressInterval = setInterval(() => {
       checkRetryProgress();
-    }, 3000);
+    }, 1000);
 
-    // 30秒後にタイムアウト
+    // 5秒後にタイムアウト（強制的に完了タイムラインを表示）
     setTimeout(() => {
       if (retryProgressInterval) {
         clearInterval(retryProgressInterval);
         retryProgressInterval = null;
       }
-      console.log('再解析進捗監視をタイムアウトしました');
+      console.log('再解析進捗監視をタイムアウトしました - 強制的に完了タイムラインを表示します');
+
+      // 強制的に完了タイムラインを表示
+      if (window.isRetryAnalysis) {
+        updateIndividualProgress(window.currentImageId, 'completed', 100, 'completed');
+        updateAnalysisCardToCompleted();
+        showRetryCompletedTimeline();
+
+        // 再解析ボタンの状態を復元
+        const analysisButton = document.getElementById('analysis-button-container');
+        const button = analysisButton ? analysisButton.querySelector('button') : null;
+        if (button) {
+          button.disabled = false;
+          button.innerHTML = '<span class="icon-[tabler--refresh] size-5 mr-2"></span>再解析';
+        }
+
+        // 3秒後にリダイレクト
+        setTimeout(() => {
+          console.log('🔄 再解析完了: 画像一覧ページにリダイレクトします');
+          window.location.href = '/user_image_table/';
+        }, 3000);
+      }
+
       isRetryAnalysisRunning = false; // フラグをリセット
-    }, 30000);
+    }, 5000);
   }
 
   // 再解析進捗確認
@@ -980,9 +1002,9 @@
           updateIndividualProgress(window.currentImageId, data.status, data.progress_percentage, data.progress_stage);
         }
 
-        if (data.status === 'completed') {
-          // 再解析完了（再解析の場合のみ表示）
-          console.log('再解析が完了しました');
+        if (data.status === 'completed' && (data.progress >= 100 || data.progress_percentage >= 100)) {
+          // 再解析完了（API進捗または進捗パーセンテージが100%になった時）
+          console.log('再解析が完了しました: API進捗=' + data.progress + '%, 進捗パーセンテージ=' + (data.progress_percentage || 0) + '%');
           if (window.isRetryAnalysis) {
             // 再解析の進捗バーを100%に更新（最初のアップロード時と同じロジックを使用）
             updateIndividualProgress(window.currentImageId, 'completed', 100, 'completed');
@@ -1022,6 +1044,9 @@
             retryProgressInterval = null;
           }
           isRetryAnalysisRunning = false; // フラグをリセット
+        } else if (data.status === 'completed' && data.progress < 100 && (data.progress_percentage === undefined || data.progress_percentage < 100)) {
+          // 進捗が100%未満の場合は継続監視
+          console.log(`⏳ 再解析継続: API進捗=${data.progress}%, 進捗パーセンテージ=${data.progress_percentage || 0}% (completedステータスだが100%未満)`);
         }
         // analyzingの場合は継続監視
       })

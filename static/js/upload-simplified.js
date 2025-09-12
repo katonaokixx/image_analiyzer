@@ -362,9 +362,19 @@ function updateIndividualProgressBasedOnStage(currentStage, status, actualProgre
         progressValue = Math.round(actualProgress);
         break;
       case 'completed':
-        progressStatus = 'completed';
-        progressWidth = '100%';
-        progressValue = '100';
+        // 実際の進捗が100%になった時のみ完了状態にする
+        if (actualProgress >= 100) {
+          progressStatus = 'completed';
+          progressWidth = '100%';
+          progressValue = '100';
+          console.log(`🎯 個別進捗完了: 画像ID=${image.id}, 進捗=${actualProgress}%`);
+        } else {
+          // 100%未満の場合は現在の進捗を維持
+          progressStatus = 'analyzing';
+          progressWidth = `${actualProgress}%`;
+          progressValue = Math.round(actualProgress);
+          console.log(`⏳ 個別進捗継続: 画像ID=${image.id}, 進捗=${actualProgress}% (completedステージだが100%未満)`);
+        }
         break;
       case 'failed':
         progressStatus = 'failed';
@@ -1424,10 +1434,11 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
 
           if (bar) {
             bar.style.width = progress + '%';
-            // 進捗に応じて色を変更
+            // 進捗に応じて色を変更（確実に100%になった時のみ完了色に）
             if (progress >= 100) {
               bar.classList.remove('bg-info', 'bg-warning');
               bar.classList.add('bg-success');
+              console.log('🎯 進捗バー100%達成: 完了色に変更');
             } else if (progress > 0) {
               bar.classList.remove('bg-success', 'bg-warning');
               bar.classList.add('bg-info');
@@ -1442,6 +1453,7 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
           }
 
           // 個別進捗も更新（実際の進捗値を渡す）
+          // ただし、完了タイムラインの表示はメインの進捗監視でのみ行う
           updateIndividualProgressBasedOnStage(data.current_stage, data.status, progress);
 
           // 失敗時の処理
@@ -1476,8 +1488,8 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
             updatePreparingProgress(progress);
           }
 
-          // 完了時の処理
-          if (progress >= 100 || data.status === 'completed') {
+          // 完了時の処理（進捗が100%になった時のみ）
+          if (progress >= 100) {
             clearInterval(progressMonitoringInterval);
             clearInterval(animInterval);
             progressMonitoringInterval = null;
@@ -1497,7 +1509,7 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
             // DBの状態を更新
             updateDatabaseStatus();
 
-            // 解析完了後、3秒後に画像一覧ページにリダイレクト
+            // 解析完了後、リダイレクト機能を無効化（テスト用）
             setTimeout(() => {
               console.log('🔄 解析完了: 画像一覧ページにリダイレクトします');
               window.location.href = '/user_image_table/';
@@ -1593,11 +1605,33 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
               }
             }
 
+            // 進捗監視が確実に停止した後に完了タイムラインを表示
             setTimeout(() => {
-              const item3 = document.getElementById('timeline-item-3');
-              if (item3) {
-                item3.className = '';
-                item3.style.display = 'block';
+              // 進捗監視が停止していることを確認
+              if (progressMonitoringInterval === null) {
+                console.log('🎯 再解析完了タイムライン表示: 進捗100%達成・監視停止確認済み');
+                const item3 = document.getElementById('timeline-item-3');
+                if (item3) {
+                  item3.className = '';
+                  item3.style.display = 'block';
+                  console.log('✅ 再解析完了タイムラインを表示しました');
+                } else {
+                  console.error('❌ 再解析完了タイムライン要素が見つかりません');
+                }
+              } else {
+                console.log('⏳ 進捗監視がまだ継続中、完了タイムライン表示を延期');
+                // 進捗監視が継続している場合は、再度チェック
+                setTimeout(() => {
+                  if (progressMonitoringInterval === null) {
+                    console.log('🎯 再解析完了タイムライン表示: 進捗100%達成・監視停止確認済み（再チェック）');
+                    const item3 = document.getElementById('timeline-item-3');
+                    if (item3) {
+                      item3.className = '';
+                      item3.style.display = 'block';
+                      console.log('✅ 再解析完了タイムラインを表示しました（再チェック）');
+                    }
+                  }
+                }, 1000); // 1秒後に再チェック
               }
               // 解析完了後にセッションカウンターをリセット
               if (typeof sessionUploadCount !== 'undefined') {
