@@ -28,6 +28,9 @@ class AnalysisService:
             # PyTorch VGG-16
             self._load_pytorch_vgg16()
             
+            # PyTorch EfficientNet
+            self._load_pytorch_efficientnet()
+            
             # CLIP
             self._load_clip()
             
@@ -107,6 +110,42 @@ class AnalysisService:
                 'transform': None,
                 'input_size': (224, 224),
                 'type': 'pytorch_mobilenet'
+            }
+    
+    def _load_pytorch_efficientnet(self):
+        """PyTorch EfficientNetモデルを読み込む"""
+        try:
+            import torch
+            import torchvision.transforms as transforms
+            from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
+            
+            # モデル読み込み
+            model = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
+            model.eval()
+            
+            # 前処理定義
+            transform = transforms.Compose([
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            ])
+            
+            self.models['pytorch_efficientnet'] = {
+                'model': model,
+                'transform': transform,
+                'input_size': (224, 224),
+                'type': 'pytorch_efficientnet'
+            }
+            # PyTorch EfficientNet 読み込み完了
+            
+        except Exception as e:
+            logger.error(f"PyTorch EfficientNet 読み込みエラー: {e}")
+            self.models['pytorch_efficientnet'] = {
+                'model': None,
+                'transform': None,
+                'input_size': (224, 224),
+                'type': 'pytorch_efficientnet'
             }
     
     def _load_pytorch_vgg16(self):
@@ -221,10 +260,11 @@ class AnalysisService:
             # フロントエンドのモデル名を内部モデル名にマッピング
             model_mapping = {
                 'resnet50': 'pytorch_resnet50',
-                'efficientnet': 'tensorflow_efficientnet',
+                'efficientnet': 'pytorch_efficientnet',
                 'mobilenet': 'pytorch_mobilenet',
                 'vgg16': 'pytorch_vgg16',
-                'clip': 'clip'
+                'clip': 'clip',
+                'custom': 'clip'  # customモデルをCLIPにマッピング
             }
             
             internal_model_name = model_mapping.get(model_name, model_name)
@@ -256,6 +296,8 @@ class AnalysisService:
                 predictions = self._predict_pytorch_mobilenet(img_array, model_info)
             elif model_info['type'] == 'pytorch_vgg16':
                 predictions = self._predict_pytorch_vgg16(img_array, model_info)
+            elif model_info['type'] == 'pytorch_efficientnet':
+                predictions = self._predict_pytorch_efficientnet(img_array, model_info)
             elif model_info['type'] == 'clip':
                 predictions = self._predict_clip(img_array, model_info)
             else:
@@ -317,6 +359,24 @@ class AnalysisService:
     
     def _predict_pytorch_vgg16(self, img_array: np.ndarray, model_info: Dict) -> np.ndarray:
         """PyTorch VGG-16での予測"""
+        import torch
+        
+        # PIL画像に変換
+        pil_image = PILImage.fromarray(img_array[0].astype('uint8'))
+        
+        # transformを適用
+        img_tensor = model_info['transform'](pil_image)
+        img_tensor = img_tensor.unsqueeze(0)
+        
+        # 予測実行
+        with torch.no_grad():
+            outputs = model_info['model'](img_tensor)
+            predictions = torch.softmax(outputs, dim=1)
+        
+        return predictions.numpy()
+    
+    def _predict_pytorch_efficientnet(self, img_array: np.ndarray, model_info: Dict) -> np.ndarray:
+        """PyTorch EfficientNetでの予測"""
         import torch
         
         # PIL画像に変換
@@ -874,10 +934,11 @@ class AnalysisService:
             # フロントエンドのモデル名を内部モデル名にマッピング
             model_mapping = {
                 'resnet50': 'pytorch_resnet50',
-                'efficientnet': 'tensorflow_efficientnet',
+                'efficientnet': 'pytorch_efficientnet',
                 'mobilenet': 'pytorch_mobilenet',
                 'vgg16': 'pytorch_vgg16',
-                'clip': 'clip'
+                'clip': 'clip',
+                'custom': 'clip'  # customモデルをCLIPにマッピング
             }
             
             internal_model_name = model_mapping.get(model_name, model_name)
@@ -929,33 +990,41 @@ class AnalysisService:
     def _format_clip_predictions(self, predictions: np.ndarray) -> List[Dict]:
         """CLIP専用の予測結果整形（大分類カテゴリーにマッピング）"""
         try:
-            # 大分類カテゴリーでの分類を適用
-            broad_category_results = self._apply_broad_category_classification(predictions, 'clip')
+            # CLIP専用のカテゴリーマッピング
+            clip_categories = {
+                'アニメ・イラスト': [0, 1, 2, 3, 4, 5, 6, 7],  # anime, manga, cartoon, fantasy, elf, cute anime girl, anime art, illustration
+                'ファッション': [8, 9],  # realistic photo, safety equipment
+                '動物': [10],  # animal
+                '建物': [11],  # building
+                '車両': [12, 13, 14, 15, 16],  # car, vehicle, automobile, sports car, racing car
+                '人物': [17],  # person
+                '自然': [18]   # nature
+            }
             
-            # 結果がある場合はそれを返す
-            if broad_category_results:
-                return broad_category_results
+            # 各カテゴリーのスコアを計算
+            category_scores = {}
+            for category, indices in clip_categories.items():
+                total_score = 0.0
+                for idx in indices:
+                    if idx < len(predictions[0]):
+                        total_score += predictions[0][idx]
+                category_scores[category] = total_score * 100
             
-            # フォールバック: 従来の方法
-            class_names = self._get_clip_classes()
-            top_indices = np.argsort(predictions[0])[-3:][::-1]
+            # スコアが高い順にソート
+            sorted_categories = sorted(category_scores.items(), key=lambda x: x[1], reverse=True)
             
+            # 上位3つを結果として返す
             results = []
-            for i, idx in enumerate(top_indices):
-                # idxが整数であることを確認
-                if isinstance(idx, int) and idx < len(predictions[0]):
-                    confidence = float(predictions[0][idx]) * 100
-                    english_name = class_names.get(idx, f"Class_{idx}")
-                    japanese_name = self._get_japanese_translation(english_name)
-                    
-                    if confidence < 10.0:
-                        confidence = max(confidence, 10.0)
-                    
-                    results.append({
-                        'label': japanese_name,
-                        'confidence': confidence,
-                        'rank': i + 1
-                    })
+            for i, (category, score) in enumerate(sorted_categories[:3]):
+                # スコアが低い場合は最小値を設定
+                if score < 10.0:
+                    score = max(score, 10.0)
+                
+                results.append({
+                    'label': category,
+                    'confidence': round(score, 2),
+                    'rank': i + 1
+                })
             
             return results
             

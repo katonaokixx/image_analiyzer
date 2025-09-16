@@ -293,6 +293,9 @@
     window.currentImageId = selectedImageId;
     console.log('🔍 window.currentImageIdを設定しました:', window.currentImageId);
 
+    // 現在表示されている解析結果を確認
+    logCurrentDisplayedResults();
+
     // タイムラインコンテナを表示
     const timelineContainer = document.getElementById('timeline-container');
     console.log('🔍 タイムラインコンテナ要素:', timelineContainer);
@@ -753,9 +756,14 @@
     const csrfToken = getCSRFToken();
     console.log('🔍 CSRFトークン:', csrfToken);
 
+    // モーダルで選択されたモデルを取得
+    const modelSelector = document.getElementById('model-selector');
+    const selectedModel = modelSelector ? modelSelector.value : 'vgg16';
+    console.log('🔍 選択されたモデル:', selectedModel);
+
     const requestData = {
       image_id: window.currentImageId,
-      model: 'vgg16' // デフォルトモデルを使用
+      model: selectedModel // 選択されたモデルを使用
     };
     console.log('🔍 リクエストデータ:', requestData);
 
@@ -974,15 +982,115 @@
           button.innerHTML = '<span class="icon-[tabler--refresh] size-5 mr-2"></span>再解析';
         }
 
-        // 3秒後にリダイレクト
+        // 3秒後に自動でページリロード
         setTimeout(() => {
-          console.log('🔄 再解析完了: 画像一覧ページにリダイレクトします');
-          window.location.href = '/user_image_table/';
+          console.log('再解析完了（タイムアウト） - ページをリロードします');
+          window.location.reload();
         }, 3000);
       }
 
       isRetryAnalysisRunning = false; // フラグをリセット
     }, 5000);
+  }
+
+  // 解析結果を再取得して表示を更新する関数
+  function refreshAnalysisResults(imageId) {
+    console.log('🔄 解析結果を再取得します:', imageId);
+
+    fetch(`/api/timeline/${imageId}/`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.ok && data.timeline) {
+          console.log('✅ 新しい解析結果を取得しました:', data.timeline);
+
+          // 解析結果を表示エリアに更新
+          updateAnalysisResultsDisplay(data.timeline);
+        } else {
+          console.error('❌ 解析結果の取得に失敗:', data.error);
+        }
+      })
+      .catch(error => {
+        console.error('❌ 解析結果取得エラー:', error);
+      });
+  }
+
+  // 解析結果表示を更新する関数
+  function updateAnalysisResultsDisplay(timeline) {
+    console.log('🔄 既存の解析結果表示を更新します');
+    console.log('取得したタイムラインデータ:', timeline);
+
+    // 現在表示されている解析結果を確認
+    logCurrentDisplayedResults();
+
+    // 手動リロード用のボタンを表示
+    showManualReloadButton();
+  }
+
+  // 現在表示されている解析結果をログ出力する関数
+  function logCurrentDisplayedResults() {
+    console.log('📊 現在表示されている解析結果を確認します');
+
+    // ページ内のテキストから解析結果を抽出
+    const pageText = document.body.textContent;
+
+    // 「前回の解析結果」パターンを検索
+    const resultPattern = /前回の解析結果[：:]\s*([^]+?)(?=\n|$)/;
+    const match = pageText.match(resultPattern);
+
+    if (match) {
+      console.log('✅ 現在表示されている解析結果:', match[1].trim());
+    } else {
+      console.log('❌ 解析結果が見つかりません');
+    }
+
+    // 特定の要素から解析結果を探す
+    const possibleElements = [
+      document.querySelector('.timeline-description'),
+      document.querySelector('#timeline-description'),
+      document.querySelector('[class*="result"]'),
+      document.querySelector('[id*="result"]')
+    ];
+
+    possibleElements.forEach((element, index) => {
+      if (element && element.textContent) {
+        console.log(`🔍 要素${index + 1}の内容:`, element.textContent.trim());
+      }
+    });
+
+    // ページ全体のテキストから解析結果らしき部分を抽出
+    const resultKeywords = ['ファッション', 'アニメ', 'テクノロジー', '人物', '乗り物'];
+    resultKeywords.forEach(keyword => {
+      if (pageText.includes(keyword)) {
+        console.log(`🔍 キーワード "${keyword}" が見つかりました`);
+      }
+    });
+  }
+
+  // 手動リロードボタンを表示する関数
+  function showManualReloadButton() {
+    // 既存のボタンを削除
+    const existingBtn = document.getElementById('manual-reload-btn');
+    if (existingBtn) {
+      existingBtn.remove();
+    }
+
+    // 新しいリロードボタンを作成
+    const reloadBtn = document.createElement('button');
+    reloadBtn.id = 'manual-reload-btn';
+    reloadBtn.className = 'btn btn-primary btn-sm mt-2';
+    reloadBtn.innerHTML = '<span class="icon-[tabler--refresh] size-4 mr-2"></span>解析結果を更新';
+    reloadBtn.onclick = () => {
+      console.log('🔄 手動でページをリロードします');
+      window.location.reload();
+    };
+
+    // 再解析ボタンの下に追加
+    const buttonContainer = document.getElementById('analysis-button-container');
+    if (buttonContainer) {
+      buttonContainer.appendChild(reloadBtn);
+    }
+
+    console.log('✅ 手動リロードボタンを表示しました');
   }
 
   // 再解析進捗確認
@@ -1012,6 +1120,12 @@
             updateAnalysisCardToCompleted();
             showRetryCompletedTimeline();
 
+            // 3秒後に自動でページリロード
+            setTimeout(() => {
+              console.log('再解析完了（正常完了） - ページをリロードします');
+              window.location.reload();
+            }, 3000);
+
             // 再解析ボタンの状態を復元
             const analysisButton = document.getElementById('analysis-button-container');
             const button = analysisButton ? analysisButton.querySelector('button') : null;
@@ -1019,12 +1133,6 @@
               button.disabled = false;
               button.innerHTML = '<span class="icon-[tabler--refresh] size-5 mr-2"></span>再解析';
             }
-
-            // 再解析完了後、3秒後に画像一覧ページにリダイレクト
-            setTimeout(() => {
-              console.log('🔄 再解析完了: 画像一覧ページにリダイレクトします');
-              window.location.href = '/user_image_table/';
-            }, 3000);
           }
 
           // 進捗監視を停止
