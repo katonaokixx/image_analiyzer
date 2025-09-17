@@ -1,5 +1,4 @@
 function openImageModal(filename, imageSrc, uploadTime, status, labels, confidence) {
-  console.log('openImageModal called with:', { filename, imageSrc, uploadTime, status, labels, confidence });
 
   // モーダルの内容を設定
   document.getElementById('modal-filename').textContent = filename;
@@ -88,19 +87,14 @@ function openImageModal(filename, imageSrc, uploadTime, status, labels, confiden
     confidenceBadge.classList.add('badge-outline', 'badge-secondary'); // アウトライン + グレー - その他
   }
 
-  console.log('Modal content set, attempting to open modal...');
-
   // プレビューモーダルと同じ方法でモーダルを開く
   const modal = document.getElementById('image-detail-modal');
-  console.log('Modal element found:', modal);
 
   // まずFlyonUIのオーバーレイシステムを使用してみる
   const existingButton = document.querySelector('button[data-overlay="#image-detail-modal"]');
   if (existingButton) {
-    console.log('Using existing button with data-overlay');
     existingButton.click();
   } else {
-    console.log('No existing button found, creating temporary one');
     // フォールバック: 一時的なボタンを作成
     const triggerButton = document.createElement('button');
     triggerButton.setAttribute('data-overlay', '#image-detail-modal');
@@ -112,97 +106,42 @@ function openImageModal(filename, imageSrc, uploadTime, status, labels, confiden
 
   // 短い遅延後に手動でモーダルを開くことも試す
   setTimeout(() => {
-    console.log('Also trying manual modal opening...');
     modal.classList.remove('hidden');
     modal.style.display = 'block';
     modal.style.opacity = '1';
     modal.style.visibility = 'visible';
   }, 50);
 
-  console.log('Modal opened using FlyonUI system - should have background overlay');
-
   // FlyonUIがオーバーレイトリガーを処理するのを待つ
   setTimeout(() => {
-    console.log('Modal should now be visible with same state as preview modal');
-
     // FlyonUIが適切に処理しなかった場合は、手動でモーダルの状態を設定
     if (modal.classList.contains('hidden')) {
-      console.log('FlyonUI didn\'t open modal, manually opening...');
       modal.classList.remove('hidden');
       modal.style.display = 'block';
       modal.style.opacity = '1';
       modal.style.visibility = 'visible';
     }
-
-    // 設定後の詳細な状態をログに記録
-    console.log('Modal classes after setting:', modal.className);
-    console.log('Modal computed styles after setting:', {
-      display: window.getComputedStyle(modal).display,
-      opacity: window.getComputedStyle(modal).opacity,
-      visibility: window.getComputedStyle(modal).visibility,
-      zIndex: window.getComputedStyle(modal).zIndex
-    });
-
-    // モーダルが実際に表示されているかチェック
-    const rect = modal.getBoundingClientRect();
-    console.log('Modal bounding rect:', rect);
-    console.log('Modal is visible:', rect.width > 0 && rect.height > 0);
   }, 100); // FlyonUIが処理する時間を与える
 
-  // 複数回チェックして遷移を確認
-  for (let i = 1; i <= 5; i++) {
-    setTimeout(() => {
-      console.log(`Modal state after ${i * 200}ms:`, {
-        classes: modal.className,
-        display: window.getComputedStyle(modal).display,
-        opacity: window.getComputedStyle(modal).opacity,
-        hidden: modal.classList.contains('hidden')
-      });
-    }, i * 200);
-  }
 }
 
 function closeImageModal() {
-  console.log('closeImageModal called');
   const modal = document.getElementById('image-detail-modal');
-  console.log('Modal element found for closing:', modal);
-  console.log('Modal classes before closing:', modal.className);
 
   modal.classList.add('hidden');
   modal.classList.remove('overlay-open');
   modal.style.display = 'none';
   modal.style.opacity = '0';
   modal.style.visibility = 'hidden';
-
-  console.log('Modal classes after closing:', modal.className);
-  console.log('Modal should now be hidden');
 }
 
 function logCloseButtonClick(buttonType) {
-  console.log(`=== ${buttonType} Clicked ===`);
-  console.log('Button clicked at:', new Date().toISOString());
-
   const modal = document.getElementById('image-detail-modal');
-  console.log('Modal element found:', modal);
-  console.log('Modal classes before click:', modal.className);
-  console.log('Modal computed styles before click:', {
-    display: window.getComputedStyle(modal).display,
-    opacity: window.getComputedStyle(modal).opacity,
-    visibility: window.getComputedStyle(modal).visibility,
-    zIndex: window.getComputedStyle(modal).zIndex
-  });
 
   // data-overlay属性が存在するかチェック
   const button = event.target.closest('button');
-  console.log('Button data-overlay attribute:', button.getAttribute('data-overlay'));
-
-  // イベントの詳細をログに記録
-  console.log('Event type:', event.type);
-  console.log('Event target:', event.target);
-  console.log('Event currentTarget:', event.currentTarget);
 
   // FlyonUIが適切に動作しないため、手動でモーダルを閉じる
-  console.log('Manually closing modal...');
   modal.classList.add('hidden');
   modal.style.display = 'none';
   modal.style.opacity = '0';
@@ -212,7 +151,6 @@ function logCloseButtonClick(buttonType) {
   const overlays = document.querySelectorAll('.overlay:not(#image-detail-modal)');
   overlays.forEach(overlay => {
     if (overlay.style.display !== 'none') {
-      console.log('Removing background overlay:', overlay);
       overlay.style.display = 'none';
       overlay.style.opacity = '0';
       overlay.style.visibility = 'hidden';
@@ -222,36 +160,30 @@ function logCloseButtonClick(buttonType) {
   // FlyonUIのオーバーレイ要素も削除を試行
   const flyonuiOverlays = document.querySelectorAll('[data-overlay-backdrop]');
   flyonuiOverlays.forEach(overlay => {
-    console.log('Removing FlyonUI backdrop overlay:', overlay);
     overlay.remove();
   });
 
   // グレーの背景を引き起こしている4つの追加オーバーレイ要素を削除
   const extraOverlays = document.querySelectorAll('div.overlay.modal:not(#image-detail-modal)');
-  console.log('Found extra overlays:', extraOverlays.length);
   extraOverlays.forEach((overlay, index) => {
-    console.log(`Removing extra overlay ${index + 1}:`, overlay);
     overlay.remove();
   });
 
   // 'open'と'opened'クラスを持つ要素も削除を試行
   const openElements = document.querySelectorAll('.open.opened:not(#image-detail-modal)');
   openElements.forEach(element => {
-    console.log('Removing open/opened element:', element);
     element.remove();
   });
 
   // 安全なオーバーレイ削除: 特定のオーバーレイ要素のみ削除
   const safeOverlays = document.querySelectorAll('div.overlay.modal:not(#image-detail-modal)');
   safeOverlays.forEach((overlay, index) => {
-    console.log(`Removing safe overlay ${index + 1}:`, overlay);
     overlay.remove();
   });
 
   // バックドロップ要素も削除
   const backdrops = document.querySelectorAll('[class*="backdrop"], [class*="overlay-backdrop"]');
   backdrops.forEach(backdrop => {
-    console.log('Removing backdrop:', backdrop);
     backdrop.remove();
   });
 
@@ -260,27 +192,4 @@ function logCloseButtonClick(buttonType) {
   document.body.style.pointerEvents = '';
   document.documentElement.style.overflow = '';
   document.documentElement.style.pointerEvents = '';
-
-  console.log('Modal and background overlays manually closed');
-
-  // 少し待ってから手動で閉じた後のモーダルの状態をチェック
-  setTimeout(() => {
-    console.log(`Modal state 100ms after ${buttonType} click:`, {
-      classes: modal.className,
-      display: window.getComputedStyle(modal).display,
-      opacity: window.getComputedStyle(modal).opacity,
-      visibility: window.getComputedStyle(modal).visibility,
-      hidden: modal.classList.contains('hidden')
-    });
-  }, 100);
-
-  setTimeout(() => {
-    console.log(`Modal state 500ms after ${buttonType} click:`, {
-      classes: modal.className,
-      display: window.getComputedStyle(modal).display,
-      opacity: window.getComputedStyle(modal).opacity,
-      visibility: window.getComputedStyle(modal).visibility,
-      hidden: modal.classList.contains('hidden')
-    });
-  }, 500);
 }

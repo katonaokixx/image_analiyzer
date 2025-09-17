@@ -16,7 +16,6 @@ window.addEventListener('beforeunload', function () {
   if (progressMonitoringInterval) {
     clearInterval(progressMonitoringInterval);
     progressMonitoringInterval = null;
-    console.log('ページ離脱時に解析進捗監視を停止しました');
   }
 });
 
@@ -27,7 +26,6 @@ function startProgressWatcher() {
 
 // 解析完了後のUI状態を完全にリセットする関数
 function resetAnalysisUI() {
-  console.log('🔄 解析UI状態をリセットします');
 
   // 進捗バーをリセット
   const bar = document.getElementById('analysis-progress-bar');
@@ -110,32 +108,25 @@ function resetAnalysisUI() {
     item3.style.display = 'none';
   }
 
-  console.log('✅ 解析UI状態のリセット完了');
 }
 
 function stopProgressWatcher() {
   if (progressIntervalId) {
     clearInterval(progressIntervalId);
     progressIntervalId = null;
-    console.log('=== 進捗監視停止 ===');
   }
 }
 
 // アップロードUIを流用した解析進捗表示を生成
 function createAnalysisProgressPreviews(uploadedImages) {
-  console.log('📊 解析進捗表示開始 - 受け取った画像数:', uploadedImages.length);
-  console.log('📊 受け取った画像詳細:', uploadedImages);
-
   const container = document.getElementById('analysis-progress-previews');
   if (!container) {
-    console.error('analysis-progress-previews コンテナが見つかりません');
     return;
   }
 
   container.innerHTML = '';
 
   uploadedImages.forEach((image, index) => {
-    console.log(`📊 画像${index + 1}を処理中:`, image);
     // ファイル名と拡張子を分離
     const lastDot = image.filename.lastIndexOf('.');
     const filename = lastDot > 0 ? image.filename.substring(0, lastDot) : image.filename;
@@ -252,20 +243,16 @@ function updateIndividualProgress(imageId, status) {
       progressBar.className = 'progress-bar progress-info transition-all duration-500';
       break;
     case 'completed':
-      console.log(`画像ID ${imageId} が解析完了しました`);
       progressBar.style.width = '100%';
       progressValue.textContent = '100';
       // 解析完了時のステータステキストを設定
-      console.log(`画像ID ${imageId} のステータステキストを設定: 画像の解析が完了しました。`);
       statusText.textContent = '画像の解析が完了しました。';
-      console.log(`画像ID ${imageId} のステータステキスト設定後:`, statusText.textContent);
       progressBar.className = 'progress-bar progress-success transition-all duration-500';
 
       // 個別の画像が完了した時にカードを更新（特定の画像IDを指定）
       updateAnalysisCardToCompletedForImage(imageId);
       break;
     case 'failed':
-      console.log(`ステータス: failed - 画像ID: ${imageId}`);
       progressBar.style.width = '0%';
       progressValue.textContent = '0';
       statusText.textContent = '解析失敗';
@@ -280,7 +267,6 @@ function updateIndividualProgress(imageId, status) {
           if (errorTimeline) {
             errorTimeline.className = '';
             errorTimeline.style.display = 'block';
-            console.log('解析失敗タイムラインを表示');
           }
         }
       }, 100);
@@ -367,13 +353,11 @@ function updateIndividualProgressBasedOnStage(currentStage, status, actualProgre
           progressStatus = 'completed';
           progressWidth = '100%';
           progressValue = '100';
-          console.log(`🎯 個別進捗完了: 画像ID=${image.id}, 進捗=${actualProgress}%`);
         } else {
           // 100%未満の場合は現在の進捗を維持
           progressStatus = 'analyzing';
           progressWidth = `${actualProgress}%`;
           progressValue = Math.round(actualProgress);
-          console.log(`⏳ 個別進捗継続: 画像ID=${image.id}, 進捗=${actualProgress}% (completedステージだが100%未満)`);
         }
         break;
       case 'failed':
@@ -412,7 +396,6 @@ function getUploadedImages() {
   // キャッシュをチェック
   const now = Date.now();
   if (lastUploadedImagesCache && (now - lastCacheTime) < CACHE_DURATION) {
-    console.log('🔍 キャッシュから画像データを取得:', lastUploadedImagesCache.length);
     return lastUploadedImagesCache;
   }
 
@@ -426,13 +409,11 @@ function getUploadedImages() {
   if (previewsContainer) {
     // コンテナ内の実際の画像要素を取得
     imageElements = previewsContainer.querySelectorAll('.rounded-box.bg-base-100');
-    console.log('🔍 方法1 - プレビューコンテナ内の画像要素:', imageElements.length);
   }
 
   // フォールバック: Dropzoneの要素を検索
   if (imageElements.length === 0) {
     imageElements = document.querySelectorAll('.dz-preview, .file-upload-preview');
-    console.log('🔍 方法2 - Dropzone要素検索:', imageElements.length);
   }
 
   // さらにフォールバック: アップロードエリア内のすべての要素を検索
@@ -440,15 +421,12 @@ function getUploadedImages() {
     const uploadArea = document.querySelector('#file-upload-limit');
     if (uploadArea) {
       imageElements = uploadArea.querySelectorAll('.rounded-box, .dz-preview, [data-dz-thumbnail]');
-      console.log('🔍 方法3 - アップロードエリア内検索:', imageElements.length);
     }
   }
 
-  console.log('🔍 最終検索結果:', imageElements.length);
-  console.log('🔍 画像要素詳細:', imageElements);
+
 
   imageElements.forEach((element, index) => {
-    console.log(`🔍 要素${index + 1}を処理中:`, element);
 
     // ファイル名を取得（実際の要素から直接取得）
     const filenameElement = element.querySelector('[data-file-upload-file-name]');
@@ -457,7 +435,6 @@ function getUploadedImages() {
     let filename = filenameElement ? filenameElement.textContent.trim() : '';
     let fileExt = fileExtElement ? fileExtElement.textContent.trim() : '';
 
-    console.log(`🔍 要素${index + 1}のファイル名:`, filename, '拡張子:', fileExt);
 
     // ファイル名が空の場合は、要素の属性から取得を試行
     if (!filename) {
@@ -474,9 +451,9 @@ function getUploadedImages() {
           filename = fullName;
           fileExt = '';
         }
-        console.log(`🔍 要素${index + 1}の属性からファイル名を取得:`, filename, fileExt);
+
       } else {
-        console.log(`🔍 要素${index + 1}のファイル入力要素が見つかりません`);
+
       }
     }
 
@@ -510,7 +487,6 @@ function getUploadedImages() {
   lastUploadedImagesCache = uploadedImages;
   lastCacheTime = now;
 
-  console.log('🔍 最終的に取得された画像数:', uploadedImages.length);
   return uploadedImages;
 }
 
@@ -560,12 +536,9 @@ function updateTemplateAfterUpload(file, resp) {
 
     // サムネイルを更新
     const thumbnailImg = searchElement.querySelector('[data-dz-thumbnail]');
-    console.log('サムネイル要素:', thumbnailImg);
     if (thumbnailImg && file.preview) {
       thumbnailImg.src = file.preview;
       thumbnailImg.style.display = 'block';
-    } else {
-      console.log('サムネイル要素またはプレビューが見つかりません');
     }
   });
 
@@ -616,7 +589,6 @@ function checkUploadProgress() {
     const raw = bar.style.width || getComputedStyle(bar).width;
     const pct = normalizePercent(raw);
     if (raw !== bar.dataset.lastRaw) {
-      console.log(`progress[${idx}] ${pct.toFixed(1)}%`);
       bar.dataset.lastRaw = raw;
 
       // 進捗％表示を更新
@@ -653,7 +625,6 @@ function normalizePercent(widthStr) {
 }
 
 window.addEventListener('load', () => {
-  console.log('=== ファイルアップロード初期化開始 ===');
 
   window.uploadSuccessShown = false;
   window.uploadEnabled = false;
@@ -702,17 +673,14 @@ window.addEventListener('load', () => {
 
   // ライブラリ存在確認
   if (typeof Dropzone === 'undefined') {
-    console.error('Dropzone is not available');
     return;
   }
   if (typeof HSFileUpload === 'undefined') {
-    console.error('HSFileUpload is not available');
     return;
   }
 
   uploadEl = document.querySelector('#file-upload-limit');
   if (!uploadEl) {
-    console.error('#file-upload-limit 要素が見つかりません。初期化中断');
     return;
   }
 
@@ -730,7 +698,6 @@ window.addEventListener('load', () => {
         }
       });
     } catch (e) {
-      console.error('HSFileUpload 新規生成に失敗:', e);
       return;
     }
   }
@@ -739,7 +706,6 @@ window.addEventListener('load', () => {
     (fileUpload instanceof Dropzone ? fileUpload : null);
 
   if (!dz) {
-    console.error('Dropzone インスタンス特定失敗');
     return;
   }
 
@@ -767,7 +733,6 @@ window.addEventListener('load', () => {
 
   // ファイル送信時にCSRFトークンを確実に送信
   dz.on('sending', function (file, xhr, formData) {
-    console.log('=== sending ===', file.name);
     formData.append('csrfmiddlewaretoken', getCSRFToken());
     xhr.setRequestHeader('X-CSRFToken', getCSRFToken());
   });
@@ -777,7 +742,6 @@ window.addEventListener('load', () => {
 
   // イベント登録
   emitter.on('addedfile', (file) => {
-    console.log('=== addedfile ===', file && file.name);
     if (!firstFileAddedAt) firstFileAddedAt = Date.now();
     showUploadButton();
 
@@ -825,12 +789,10 @@ window.addEventListener('load', () => {
   });
 
   emitter.on('removedfile', (file) => {
-    console.log('=== removedfile ===', file && file.name);
     checkFilesAndUpdateButton();
   });
 
   emitter.on('error', (file, msg) => {
-    console.warn('=== Dropzone error ===', file && file.name, msg);
     batchFailCount++;
     showUploadError(typeof msg === 'string' ? msg : 'アップロードに失敗しました');
     uploadInProgress = false;
@@ -842,9 +804,6 @@ window.addEventListener('load', () => {
 
   // 個別成功 (集計のみ)
   emitter.on('success', (file, resp) => {
-    console.log('=== success ===', file && file.name, resp);
-    console.log('残りキュー内ファイル数:', dz.getQueuedFiles().length);
-    console.log('残りキュー内ファイル名:', dz.getQueuedFiles().map(f => f.name));
     batchSuccessCount++;
 
     // アップロード成功時にテンプレート要素を更新
@@ -852,8 +811,6 @@ window.addEventListener('load', () => {
 
     // キューに残りファイルがある場合は強制的にキュー処理を再開
     if (dz.getQueuedFiles().length > 0) {
-      console.log('=== キュー処理再開 ===');
-      console.log('残りファイル数:', dz.getQueuedFiles().length);
       setTimeout(() => {
         dz.processQueue();
       }, 100); // 100ms後にキュー処理を再開
@@ -862,12 +819,8 @@ window.addEventListener('load', () => {
 
   // Dropzoneの直接イベントも追加
   dz.on('success', function (file, resp) {
-    console.log('=== Dropzone success ===', file && file.name, resp);
-
     // キューに残りファイルがある場合は強制的にキュー処理を再開
     if (dz.getQueuedFiles().length > 0) {
-      console.log('=== Dropzone キュー処理再開 ===');
-      console.log('残りファイル数:', dz.getQueuedFiles().length);
       setTimeout(() => {
         dz.processQueue();
       }, 100); // 100ms後にキュー処理を再開
@@ -879,7 +832,6 @@ window.addEventListener('load', () => {
 
   // キュー完了 (集計表示に一本化)
   emitter.on('queuecomplete', () => {
-    console.log('=== queuecomplete ===');
     uploadInProgress = false;
 
     const succeededInBatch = batchSuccessCount;
@@ -932,7 +884,6 @@ window.addEventListener('load', () => {
       // フック対象か判定 (open のとき記録する方式が本来安全だが簡易で)
       this.addEventListener('load', function () {
         if (targetUrl && this.responseURL && !this.responseURL.includes(targetUrl)) return;
-        console.log('[XHR load]', this.status, this.responseURL);
         if (this.status === 200) {
           let data = null;
           try { data = JSON.parse(this.responseText); } catch { }
@@ -961,18 +912,14 @@ window.addEventListener('load', () => {
   function bindStartUploadButton() {
     const btn = document.getElementById('start-upload-btn');
     if (!btn) return;
-    console.log('[start-upload-btn] リスナー登録');
     btn.addEventListener('click', () => {
-      console.log('=== アップロード開始クリック ===');
       window.uploadEnabled = true;
 
       const queued = dz.getQueuedFiles ? dz.getQueuedFiles() : [];
       const accepted = dz.getAcceptedFiles ? dz.getAcceptedFiles() : [];
-      console.log('[クリック時] queued:', queued.length, 'accepted:', accepted.length,
-        'url:', dz.options && dz.options.url, 'autoProcessQueue:', dz.options && dz.options.autoProcessQueue);
 
       if (queued.length === 0) {
-        console.warn('送信キューが空');
+
         return;
       }
 
@@ -993,13 +940,8 @@ window.addEventListener('load', () => {
       progressIntervalId = startProgressWatcher();
 
       try {
-        console.log('=== キュー処理開始 ===');
-        console.log('キュー内ファイル数:', dz.getQueuedFiles().length);
-        console.log('キュー内ファイル名:', dz.getQueuedFiles().map(f => f.name));
-        console.log('並列アップロード設定:', dz.options.parallelUploads);
         dz.processQueue();
       } catch (e) {
-        console.error('processQueue 実行エラー:', e);
         btn.disabled = false;
         btn.textContent = START_TEXT;
       }
@@ -1030,20 +972,14 @@ window.addEventListener('load', () => {
 
 
   function showUploadSuccess(message, force = false) {
-    console.log('🔄 デバッグ: showUploadSuccess関数が呼び出されました');
-    console.log('🔄 デバッグ: message:', message);
-    console.log('🔄 デバッグ: force:', force);
-    console.log('🔄 デバッグ: window.uploadSuccessShown:', window.uploadSuccessShown);
-    console.log('🔄 デバッグ: window.isRestoringState:', window.isRestoringState);
+
 
     // リロード時の状態復元中は実行しない
     if (window.isRestoringState) {
-      console.log('🔄 デバッグ: 状態復元中なのでshowUploadSuccessをスキップ');
       return;
     }
 
     window.uploadSuccessShown = true;
-    console.log('🔄 デバッグ: uploadSuccessShownフラグをtrueに設定');
     const successTimeline = document.getElementById('timeline-item-1-success');
     const errorTimeline = document.getElementById('timeline-item-1-error');
     const timelineDescription = document.getElementById('timeline-description');
@@ -1051,98 +987,77 @@ window.addEventListener('load', () => {
     const timelineContainer = document.getElementById('timeline-container');
     const uploadButtonContainer = document.getElementById('upload-button-container');
 
-    console.log('🔄 デバッグ: UI要素の取得結果:');
-    console.log('🔄 デバッグ: successTimeline:', successTimeline);
-    console.log('🔄 デバッグ: errorTimeline:', errorTimeline);
-    console.log('🔄 デバッグ: timelineDescription:', timelineDescription);
-    console.log('🔄 デバッグ: analysisButton:', analysisButton);
-    console.log('🔄 デバッグ: timelineContainer:', timelineContainer);
-    console.log('🔄 デバッグ: uploadButtonContainer:', uploadButtonContainer);
+
 
     // 1つ目のタイムライン（アップロード完了）のみを表示
     if (successTimeline) {
       successTimeline.classList.remove('hidden');
       successTimeline.style.display = 'block';
-      console.log('🔄 デバッグ: アップロード成功タイムラインを表示しました');
     } else {
-      console.log('🔄 デバッグ: アップロード成功タイムラインが見つかりません');
+
     }
 
     if (errorTimeline) {
       errorTimeline.classList.add('hidden');
       errorTimeline.style.display = 'none';
-      console.log('🔄 デバッグ: エラータイムラインを非表示にしました');
     } else {
-      console.log('🔄 デバッグ: エラータイムラインが見つかりません');
+
     }
 
     if (timelineDescription) {
       timelineDescription.textContent = message;
-      console.log('🔄 デバッグ: タイムライン説明を更新しました:', message);
     } else {
-      console.log('🔄 デバッグ: タイムライン説明要素が見つかりません');
+
     }
 
     if (analysisButton) {
       analysisButton.classList.remove('hidden');
-      console.log('🔄 デバッグ: 解析ボタンを表示しました');
     } else {
-      console.log('🔄 デバッグ: 解析ボタンが見つかりません');
+
     }
 
     if (timelineContainer) {
       timelineContainer.classList.remove('hidden');
-      console.log('🔄 デバッグ: タイムラインコンテナを表示しました');
     } else {
-      console.log('🔄 デバッグ: タイムラインコンテナが見つかりません');
+
     }
 
     // アップロードボタンを非表示にして、解析ボタンを強調
     if (uploadButtonContainer) {
       uploadButtonContainer.classList.add('hidden');
-      console.log('🔄 デバッグ: アップロードボタンを非表示にしました');
     } else {
-      console.log('🔄 デバッグ: アップロードボタンが見つかりません');
+
     }
 
     // 解析タイムラインを確実に非表示にする
-    console.log('🔄 デバッグ: 解析タイムライン非表示処理開始');
     const timeline2 = document.getElementById('timeline-item-2');
     const timeline2Error = document.getElementById('timeline-item-2-error');
     const timeline3 = document.getElementById('timeline-item-3');
 
-    console.log('🔄 デバッグ: 解析タイムライン要素の取得結果:');
-    console.log('🔄 デバッグ: timeline2:', timeline2);
-    console.log('🔄 デバッグ: timeline2Error:', timeline2Error);
-    console.log('🔄 デバッグ: timeline3:', timeline3);
+
 
     if (timeline2) {
       timeline2.className = 'hidden';
       timeline2.style.display = 'none';
-      console.log('🔄 デバッグ: showUploadSuccessで解析開始タイムラインを非表示にしました');
     } else {
-      console.log('🔄 デバッグ: 解析開始タイムラインが見つかりません');
+
     }
 
     if (timeline2Error) {
       timeline2Error.className = 'hidden';
       timeline2Error.style.display = 'none';
-      console.log('🔄 デバッグ: showUploadSuccessで解析失敗タイムラインを非表示にしました');
     } else {
-      console.log('🔄 デバッグ: 解析失敗タイムラインが見つかりません');
+
     }
 
     if (timeline3) {
       timeline3.className = 'hidden';
       timeline3.style.display = 'none';
-      console.log('🔄 デバッグ: showUploadSuccessで解析完了タイムラインを非表示にしました');
     } else {
-      console.log('🔄 デバッグ: 解析完了タイムラインが見つかりません');
+
     }
 
-    console.log('🔄 デバッグ: 解析タイムライン非表示処理完了');
     setUploadBtn(START_TEXT, false);
-    console.log('🔄 デバッグ: showUploadSuccess関数完了');
   }
 
   function showUploadError(errorMessage) {
@@ -1191,11 +1106,9 @@ window.addEventListener('load', () => {
 
   // グローバルエラー
   window.addEventListener('error', (e) => {
-    console.error('Global error:', e.error);
     showUploadError('予期しないエラーが発生しました');
   });
   window.addEventListener('unhandledrejection', (e) => {
-    console.error('Unhandled rejection:', e.reason);
     showUploadError('アップロード処理でエラーが発生しました');
   });
 });
@@ -1242,7 +1155,6 @@ function closeModelSelectionModal() {
           return; // 成功したら終了
         }
       } catch (error) {
-        console.log('HSOverlay.close()でエラー:', error);
       }
     }
 
@@ -1331,13 +1243,11 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function startAnalysis(modelName) {
-  console.log('解析開始:', modelName);
 
   // 既存の解析進捗監視を停止
   if (progressMonitoringInterval) {
     clearInterval(progressMonitoringInterval);
     progressMonitoringInterval = null;
-    console.log('既存の解析進捗監視を停止しました');
   }
 
   // UI状態をリセット
@@ -1368,7 +1278,6 @@ function startAnalysis(modelName) {
     })
     .then(data => {
       if (data.ok) {
-        console.log('解析開始API成功:', data);
         // API成功時のみ解析開始UIを表示
         const item2 = document.getElementById('timeline-item-2');
         if (item2) {
@@ -1389,14 +1298,12 @@ function startAnalysis(modelName) {
         // 進捗監視を開始
         monitorAnalysisProgress(bar, valEl, animationInterval);
       } else {
-        console.error('解析開始API失敗:', data.error);
         showAnalysisError(data.error || '解析の開始に失敗しました');
         updateAllImagesToFailed();
         clearInterval(animationInterval);
       }
     })
     .catch(error => {
-      console.error('解析開始API呼び出しエラー:', error);
       showAnalysisError('解析の開始中にエラーが発生しました: ' + error.message);
       updateAllImagesToFailed();
       clearInterval(animationInterval);
@@ -1428,7 +1335,6 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
 
           // 進捗バーの動きをログ出力（5%刻みで変化があった時のみ）
           if (Math.floor(progress / 5) !== Math.floor(lastLoggedProgress / 5)) {
-            console.log(`📊 進捗バー更新: ${Math.round(progress)}% (ステージ: ${data.current_stage || 'unknown'})`);
             lastLoggedProgress = progress;
           }
 
@@ -1438,7 +1344,6 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
             if (progress >= 100) {
               bar.classList.remove('bg-info', 'bg-warning');
               bar.classList.add('bg-success');
-              console.log('🎯 進捗バー100%達成: 完了色に変更');
             } else if (progress > 0) {
               bar.classList.remove('bg-success', 'bg-warning');
               bar.classList.add('bg-info');
@@ -1461,9 +1366,6 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
             clearInterval(progressMonitoringInterval);
             clearInterval(animInterval);
             progressMonitoringInterval = null;
-            console.error('❌ 解析失敗:', data.error || '不明なエラー');
-            console.error('❌ 失敗時の進捗:', progress + '%');
-            console.error('❌ 失敗時のステージ:', data.current_stage || 'unknown');
 
             // 全画像を失敗状態に更新
             updateAllImagesToFailed();
@@ -1475,7 +1377,6 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
               if (errorTimeline) {
                 errorTimeline.className = '';
                 errorTimeline.style.display = 'block';
-                console.log('❌ 解析失敗タイムラインを表示');
               }
             }
 
@@ -1497,11 +1398,7 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
             // 個別進捗監視も停止
             stopIndividualProgressWatcher();
 
-            console.log('✅ 解析完了: 100%');
-            console.log('✅ 最終ステージ:', data.current_stage || 'unknown');
-            console.log('✅ 解析結果:', data.result || '結果データなし');
-            console.log('🛑 進捗監視を停止しました');
-            console.log('🛑 個別進捗監視も停止しました');
+
 
             // カードの内容を「解析完了」に変更
             updateAnalysisCardToCompleted();
@@ -1511,42 +1408,38 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
 
             // 解析完了後、リダイレクト機能を無効化（テスト用）
             setTimeout(() => {
-              console.log('🔄 解析完了: 画像一覧ページにリダイレクトします');
+
               window.location.href = '/user_image_table/';
             }, 3000);
 
             // 3点アニメーションを停止して完了アイコンを表示
-            console.log('🔄 3点アニメーションを停止します');
+
 
             // 方法1: IDで検索
             const dots = [document.getElementById('dot-1'), document.getElementById('dot-2'), document.getElementById('dot-3')];
-            console.log('🔍 IDで検索したドット要素:', dots);
+
 
             // 方法2: クラスで検索（フォールバック）
             const dotsByClass = document.querySelectorAll('.animate-pulse');
-            console.log('🔍 クラスで検索したドット要素:', dotsByClass);
 
             // 両方の方法でアニメーションを停止
             [...dots, ...dotsByClass].forEach((dot, index) => {
               if (dot && dot.classList.contains('animate-pulse')) {
-                console.log(`🔄 ドット${index + 1}を停止:`, dot);
-                console.log(`🔄 ドット${index + 1}の現在のクラス:`, dot.className);
+
                 dot.classList.remove('opacity-50', 'animate-pulse');
                 dot.style.opacity = '1';
-                console.log(`🔄 ドット${index + 1}の変更後のクラス:`, dot.className);
+
               }
             });
 
             // 完了アイコンを表示
             const dot1 = document.getElementById('dot-1') || document.querySelector('.animate-pulse');
             if (dot1) {
-              console.log('✅ 完了アイコンを表示:', dot1);
               dot1.innerHTML = '<i class="icon-[tabler--check] text-success size-3"></i>';
               dot1.classList.remove('bg-warning', 'animate-pulse');
               dot1.classList.add('text-success');
-              console.log('✅ 完了アイコン表示後のクラス:', dot1.className);
             } else {
-              console.warn('⚠️ 完了アイコンを表示する要素が見つかりません');
+
             }
 
             // 他のドットを非表示
@@ -1575,7 +1468,7 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
               analysisStatusText.textContent = '解析完了';
               analysisStatusText.classList.remove('text-warning');
               analysisStatusText.classList.add('text-success');
-              console.log('進捗バー横のステータスを更新:', analysisStatusText.textContent);
+
             }
 
             // 進捗バー下のステータステキストを更新
@@ -1584,14 +1477,14 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
               analysisStatusText2.textContent = '解析完了';
               analysisStatusText2.classList.remove('text-warning');
               analysisStatusText2.classList.add('text-success');
-              console.log('進捗バー下のステータスを更新:', analysisStatusText2.textContent);
+
             }
 
             // ステータスアイコンを更新
             const analysisStatusIcon = document.getElementById('analysis-status-icon');
             if (analysisStatusIcon) {
               analysisStatusIcon.innerHTML = '<i class="icon-[tabler--check] text-success size-4 sm:size-5"></i>';
-              console.log('ステータスアイコンを更新');
+
             }
 
             // 解析開始タイムラインの背景色を緑色に更新
@@ -1601,7 +1494,7 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
               if (timelineEnd2) {
                 timelineEnd2.classList.remove('bg-warning/5', 'border-warning/20');
                 timelineEnd2.classList.add('bg-success/5', 'border-success/20');
-                console.log('解析開始タイムラインの背景色を緑色に更新');
+
               }
             }
 
@@ -1609,26 +1502,21 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
             setTimeout(() => {
               // 進捗監視が停止していることを確認
               if (progressMonitoringInterval === null) {
-                console.log('🎯 再解析完了タイムライン表示: 進捗100%達成・監視停止確認済み');
                 const item3 = document.getElementById('timeline-item-3');
                 if (item3) {
                   item3.className = '';
                   item3.style.display = 'block';
-                  console.log('✅ 再解析完了タイムラインを表示しました');
                 } else {
-                  console.error('❌ 再解析完了タイムライン要素が見つかりません');
+
                 }
               } else {
-                console.log('⏳ 進捗監視がまだ継続中、完了タイムライン表示を延期');
                 // 進捗監視が継続している場合は、再度チェック
                 setTimeout(() => {
                   if (progressMonitoringInterval === null) {
-                    console.log('🎯 再解析完了タイムライン表示: 進捗100%達成・監視停止確認済み（再チェック）');
                     const item3 = document.getElementById('timeline-item-3');
                     if (item3) {
                       item3.className = '';
                       item3.style.display = 'block';
-                      console.log('✅ 再解析完了タイムラインを表示しました（再チェック）');
                     }
                   }
                 }, 1000); // 1秒後に再チェック
@@ -1645,13 +1533,9 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
             return; // 完了時は処理を終了
           }
         } else {
-          console.log('進捗データが無効:', data);
         }
       })
       .catch(error => {
-        console.error('❌ 進捗取得エラー:', error);
-        console.error('❌ エラー詳細:', error.message);
-        console.error('❌ エラー発生時の進捗:', progress + '%');
 
         // 解析が開始されていない場合は失敗ステータスに更新しない
         if (progress > 0 || progressMonitoringInterval) {
@@ -1698,13 +1582,8 @@ document.addEventListener('DOMContentLoaded', function () {
     goToImageListBtn.addEventListener('click', function (e) {
       e.preventDefault();
 
-      console.log('画像一覧へボタンクリック');
-
       // モデルセレクターを動的に取得
       const modelSelector = getModelSelector();
-      console.log('modelSelector:', modelSelector);
-      console.log('modelSelector.value:', modelSelector ? modelSelector.value : 'undefined');
-      console.log('alertElement:', alertElement);
 
       // アップロード済み画像があるかチェック
       const hasUploadedImages = document.querySelector('[data-file-upload-previews]').children.length > 0;
@@ -1712,23 +1591,17 @@ document.addEventListener('DOMContentLoaded', function () {
       // アップロード済み画像がない場合は、モデル選択をチェック
       if (!hasUploadedImages) {
         if (!modelSelector || !modelSelector.value) {
-          console.log('モデルが選択されていません');
           // アラートを表示
           if (alertElement) {
             alertElement.classList.remove('hidden');
             alertElement.style.display = 'block';
             alertElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            console.log('アラートを表示しました');
-            console.log('アラート要素のクラス:', alertElement.className);
-            console.log('アラート要素のスタイル:', alertElement.style.display);
           } else {
-            console.error('アラート要素が見つかりません');
+
           }
           return;
         }
       }
-
-      console.log('モデルが選択されています:', modelSelector.value);
       // モデルが選択されている場合は画像一覧へ遷移
       window.location.href = '/user_image_table/';
     });
@@ -1764,14 +1637,10 @@ function saveModelSelection(modelName) {
   })
     .then(response => response.json())
     .then(data => {
-      if (data.ok) {
-        console.log('モデル選択を保存しました:', modelName);
-      } else {
-        console.error('モデル選択の保存に失敗:', data.error);
-      }
+      // 保存結果はUI上の表示に影響しないためログ出力を省略
     })
     .catch(error => {
-      console.error('モデル選択保存エラー:', error);
+      // エラー時もUIを止めない
     });
 }
 
@@ -1792,13 +1661,11 @@ function getCookie(name) {
 }
 
 function updateDatabaseStatus() {
-  console.log('DB状態更新開始');
 
   // アップロードされた画像IDを取得
   const uploadedImageIds = getUploadedImages().map(img => img.id);
 
   if (uploadedImageIds.length === 0) {
-    console.log('アップロードされた画像がありません');
     return;
   }
 
@@ -1817,30 +1684,22 @@ function updateDatabaseStatus() {
       .then(response => response.json())
       .then(data => {
         if (data.ok) {
-          console.log(`✅ DB更新完了: 画像ID=${imageId}, ステータス=${data.status}`);
         } else {
-          console.error(`❌ DB更新失敗: 画像ID=${imageId}, エラー=${data.error}`);
         }
       })
       .catch(error => {
-        console.error(`❌ DB更新エラー: 画像ID=${imageId}, エラー=${error}`);
       });
   });
 }
 
 // 特定の画像IDのカードを「解析完了」に変更
 function updateAnalysisCardToCompletedForImage(imageId) {
-  console.log(`画像ID ${imageId} のカード更新開始`);
 
   // 特定の画像IDのプログレスコンテナを取得
   const progressBarPane = document.querySelector(`[data-analysis-progress-bar-pane="${imageId}"]`);
-  console.log(`画像ID ${imageId} のプログレスバーペイン:`, progressBarPane);
-
   const container = progressBarPane?.closest('.progress-container');
-  console.log(`画像ID ${imageId} のコンテナ:`, container);
 
   if (!container) {
-    console.log(`画像ID ${imageId} のプログレスコンテナが見つかりません`);
     return;
   }
 
@@ -1849,49 +1708,36 @@ function updateAnalysisCardToCompletedForImage(imageId) {
   const fileExtElement = container.querySelector(`[data-analysis-file-ext="${imageId}"]`);
   const statusElement = container.querySelector(`[data-analysis-file-size="${imageId}"]`);
 
-  console.log(`画像ID ${imageId} の要素検索結果:`);
-  console.log(`- fileNameElement:`, fileNameElement);
-  console.log(`- fileExtElement:`, fileExtElement);
-  console.log(`- statusElement:`, statusElement);
 
   if (fileNameElement) {
     // ファイル名はそのまま保持（ステータスは別の要素で管理）
-    console.log(`画像ID ${imageId} のファイル名部分はそのまま保持:`, fileNameElement.textContent);
   }
 
   // ステータス部分は表示したまま（updateIndividualProgressで設定した内容を表示）
   if (statusElement) {
-    console.log(`画像ID ${imageId} のステータス部分は表示したまま保持:`, statusElement.textContent);
-    console.log(`画像ID ${imageId} のステータス要素のスタイル:`, statusElement.style.display);
   }
 
   // 説明テキストを更新
   const descriptionElement = container.querySelector('.text-xs');
   if (descriptionElement) {
     descriptionElement.textContent = '画像のカテゴリー分類が完了しました';
-    console.log(`画像ID ${imageId} の説明テキストを更新しました`);
   }
 
   // より確実に「解析中」を含む要素を非表示にする
   const allElements = container.querySelectorAll('*');
   allElements.forEach((element, index) => {
     if (element.textContent && element.textContent.includes('解析中') && !element.textContent.includes('解析完了')) {
-      console.log(`画像ID ${imageId} で「解析中」を含む要素を発見 (${index}):`, element.textContent, 'タグ:', element.tagName, 'クラス:', element.className);
       element.style.display = 'none';
-      console.log(`画像ID ${imageId} で「解析中」を含む要素を非表示にしました`);
     }
   });
 
-  console.log(`画像ID ${imageId} のカード更新完了`);
 }
 
 // カードの内容を「解析完了」に変更
 function updateAnalysisCardToCompleted() {
-  console.log('カード更新開始');
 
   const container = document.getElementById('analysis-progress-previews');
   if (!container) {
-    console.error('analysis-progress-previewsコンテナが見つかりません');
     return;
   }
 
@@ -1902,22 +1748,18 @@ function updateAnalysisCardToCompleted() {
 
   if (fileNameElement) {
     // ファイル名はそのまま保持（ステータスは別の要素で管理）
-    console.log('ファイル名部分はそのまま保持:', fileNameElement.textContent);
   }
 
   // ステータス部分は表示したまま（updateIndividualProgressで設定した内容を表示）
   if (statusElement) {
-    console.log('ステータス部分は表示したまま保持:', statusElement.textContent);
   }
 
   // 説明テキストを更新
   const descriptionElement = container.querySelector('.text-xs');
   if (descriptionElement) {
     descriptionElement.textContent = '画像のカテゴリー分類が完了しました';
-    console.log('説明テキストを更新しました');
   }
 
-  console.log('カード更新完了');
 }
 
 function getCSRFToken() {
@@ -1925,6 +1767,5 @@ function getCSRFToken() {
   if (token) {
     return token.value;
   }
-  console.error('CSRFトークンが見つかりません');
   return '';
 }

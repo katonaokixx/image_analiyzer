@@ -1,62 +1,28 @@
 
 // 選択された画像がある場合のタイムライン表示制御
 document.addEventListener('DOMContentLoaded', function () {
-  console.log('🚀 re_image_uploadページが読み込まれました');
-
   // テンプレート変数を埋め込まず、DOMのdata属性から取得
   const ctxEl = document.getElementById('page-context');
   const selectedImageStatus = (ctxEl?.dataset.selectedImageStatus || '').trim();
   const selectedImageId = ctxEl?.dataset.selectedImageId || '';
 
-  console.log('🔍 selected_image_id:', selectedImageId);
-  console.log('🔍 selected_image_status:', selectedImageStatus);
-  console.log('🔍 ページの初期化を開始します');
-
   // グローバル変数として設定
   window.currentImageId = selectedImageId;
-
-  // 再解析完了後のリダイレクト処理は削除（ページリロードのみ）
-  console.log('🔍 window.currentImageIdを設定しました:', window.currentImageId);
 
   // 現在表示されている解析結果を確認
   logCurrentDisplayedResults();
 
   // タイムラインコンテナを表示
   const timelineContainer = document.getElementById('timeline-container');
-  console.log('🔍 タイムラインコンテナ要素:', timelineContainer);
   if (timelineContainer) {
-    console.log('🔍 タイムラインコンテナの現在のクラス:', timelineContainer.className);
-    console.log('🔍 タイムラインコンテナの現在のスタイル:', timelineContainer.style.display);
     timelineContainer.classList.remove('hidden');
     timelineContainer.classList.add('block');
     timelineContainer.style.display = 'block';
-    console.log('✅ タイムラインコンテナを表示しました');
-    console.log('🔍 タイムラインコンテナの更新後のクラス:', timelineContainer.className);
-    console.log('🔍 タイムラインコンテナの更新後のスタイル:', timelineContainer.style.display);
-  } else {
-    console.error('❌ タイムラインコンテナが見つかりません');
   }
 
   // 1つ目のタイムライン（ファイルアップロード完了）は常に表示
   // timeline1は後で宣言されるため、ここでは削除
 
-  // デバッグ: 利用可能なすべてのタイムライン要素を確認
-  console.log('🔍 デバッグ: 利用可能なすべてのタイムライン要素を確認');
-  const allTimelineItems = document.querySelectorAll('li[id^="timeline-item"]');
-  console.log('🔍 タイムライン要素の数:', allTimelineItems.length);
-  allTimelineItems.forEach((item, index) => {
-    console.log(`  ${index}: ${item.id} - クラス: ${item.className} - 表示: ${item.style.display}`);
-  });
-
-  // デバッグ: タイムラインコンテナ内のすべての要素を確認
-  if (timelineContainer) {
-    const containerChildren = timelineContainer.children;
-    console.log('🔍 タイムラインコンテナの子要素数:', containerChildren.length);
-    for (let i = 0; i < containerChildren.length; i++) {
-      const child = containerChildren[i];
-      console.log(`  ${i}: ${child.tagName} - ID: ${child.id} - クラス: ${child.className}`);
-    }
-  }
 
   if (selectedImageStatus) {
     showTimelineForSelectedImage(selectedImageStatus);
@@ -65,38 +31,28 @@ document.addEventListener('DOMContentLoaded', function () {
     setInterval(() => {
       const timelineContainer = document.getElementById('timeline-container');
       if (timelineContainer && timelineContainer.classList.contains('hidden')) {
-        console.log('タイムラインが非表示になったため再表示します');
         showTimelineForSelectedImage(selectedImageStatus);
       }
     }, 1000);
   }
 
   // 再解析ボタンのイベント設定（モーダル表示用）
-  console.log('🔍 再解析ボタンの設定を開始します');
-
   // 少し遅延してからボタンを取得（DOMが完全に読み込まれるまで待つ）
   setTimeout(() => {
     // 複数の方法でボタンを取得
     const retryButton = document.getElementById('start-analysis-btn') || document.querySelector('#start-analysis-btn');
-    console.log('🔍 再解析ボタン要素（遅延取得）:', retryButton);
-    console.log('🔍 再解析ボタンのクラス:', retryButton ? retryButton.className : 'null');
-    console.log('🔍 再解析ボタンのテキスト:', retryButton ? retryButton.textContent : 'null');
 
     if (retryButton) {
-      console.log('✅ 再解析ボタンが見つかりました。イベントリスナーを設定します');
 
       // 既存のイベントリスナーを削除
       retryButton.onclick = null;
 
       // 複数の方法でイベントリスナーを設定
       const clickHandler = function (e) {
-        console.log('🚀 再解析ボタンがクリックされました！');
         e.preventDefault();
-        console.log('🚀 preventDefault()を実行しました');
 
         // FlyonUIがモーダルを表示した後にイベントリスナーを設定
         setTimeout(() => {
-          console.log('🔍 モーダル表示後のイベントリスナー設定を開始します');
           setupModalButtonEvents();
         }, 200); // FlyonUIのモーダル表示を待つ
       };
@@ -104,14 +60,6 @@ document.addEventListener('DOMContentLoaded', function () {
       // addEventListenerとonclickの両方を設定
       retryButton.addEventListener('click', clickHandler);
       retryButton.onclick = clickHandler;
-      console.log('✅ 再解析ボタンのイベントリスナーを設定しました');
-    } else {
-      console.error('❌ 再解析ボタンが見つかりません（遅延取得）');
-      console.log('🔍 利用可能なボタン要素:');
-      const allButtons = document.querySelectorAll('button');
-      allButtons.forEach((btn, index) => {
-        console.log(`  ${index}: ${btn.id} - ${btn.className} - ${btn.textContent}`);
-      });
     }
   }, 500); // 500ms遅延
 
@@ -119,22 +67,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // モーダル内のボタンイベントを設定する関数
 function setupModalButtonEvents() {
-  console.log('🔍 モーダル内のボタンイベント設定を開始します');
-
   // モーダル内の解析開始ボタンのイベント設定
   const modalStartButton = document.getElementById('modal-start-analysis-btn');
-  console.log('🔍 モーダル内の解析開始ボタン要素:', modalStartButton);
 
   if (modalStartButton) {
-    console.log('✅ モーダル内の解析開始ボタンが見つかりました。イベントリスナーを設定します');
 
     // 既存のイベントリスナーを削除
     modalStartButton.onclick = null;
 
     // 単一のイベントリスナーを設定
     const startClickHandler = function (event) {
-      console.log('🚀 モーダル内の解析開始ボタンがクリックされました！');
-
       // イベントの重複実行を防ぐ
       if (event && event.defaultPrevented) {
         return;
@@ -146,7 +88,6 @@ function setupModalButtonEvents() {
 
       // ボタンの連続クリックを防ぐ
       if (modalStartButton.disabled) {
-        console.log('⚠️ ボタンが既に無効化されています。処理をスキップします。');
         return;
       }
 
@@ -156,11 +97,8 @@ function setupModalButtonEvents() {
 
       // モーダルを閉じる
       const modal = document.getElementById('slide-down-animated-modal');
-      console.log('🔍 モーダル要素（閉じる用）:', modal);
 
       if (modal) {
-        console.log('✅ モーダルが見つかりました。閉じる処理を開始します');
-
         // オーバーレイを完全に削除
         modal.classList.add('hidden');
         modal.style.display = 'none';
@@ -177,36 +115,19 @@ function setupModalButtonEvents() {
         // bodyのスクロールを復元
         document.body.style.overflow = '';
         document.body.classList.remove('modal-open');
-
-        console.log('✅ モーダルとオーバーレイを完全に閉じました');
-        console.log('🔍 モーダルの現在のクラス:', modal.className);
-        console.log('🔍 モーダルの現在のスタイル:', modal.style.display);
-      } else {
-        console.error('❌ モーダルが見つかりません（閉じる用）');
       }
 
-      console.log('🚀 retryAnalysis()関数を呼び出します');
       retryAnalysis();
     };
 
     // 単一のイベントリスナーのみを設定
     modalStartButton.addEventListener('click', startClickHandler);
-    console.log('✅ モーダル内の解析開始ボタンのイベントリスナーを設定しました');
-  } else {
-    console.error('❌ モーダル内の解析開始ボタンが見つかりません');
-    console.log('🔍 利用可能なモーダル内ボタン要素:');
-    const modalButtons = document.querySelectorAll('#slide-down-animated-modal button');
-    modalButtons.forEach((btn, index) => {
-      console.log(`  ${index}: ${btn.id} - ${btn.className} - ${btn.textContent}`);
-    });
   }
 
   // モーダルのキャンセルボタンのイベント設定
   const modalCancelButton = document.querySelector('[data-overlay="#slide-down-animated-modal"]');
-  console.log('🔍 モーダルのキャンセルボタン要素:', modalCancelButton);
 
   if (modalCancelButton) {
-    console.log('✅ モーダルのキャンセルボタンが見つかりました。イベントリスナーを設定します');
 
     // 既存のイベントリスナーを削除
     modalCancelButton.onclick = null;
@@ -214,7 +135,6 @@ function setupModalButtonEvents() {
     // addEventListenerを使用してイベントリスナーを設定
     modalCancelButton.addEventListener('click', function (e) {
       e.preventDefault();
-      console.log('🚀 モーダルのキャンセルボタンがクリックされました！');
 
       // モーダルを閉じる
       const modal = document.getElementById('slide-down-animated-modal');
@@ -235,27 +155,19 @@ function setupModalButtonEvents() {
         // bodyのスクロールを復元
         document.body.style.overflow = '';
         document.body.classList.remove('modal-open');
-
-        console.log('✅ モーダルとオーバーレイを完全に閉じました');
       }
     });
-    console.log('✅ モーダルのキャンセルボタンのイベントリスナーを設定しました');
-  } else {
-    console.error('❌ モーダルのキャンセルボタンが見つかりません');
   }
 }
 
 // 選択された画像のステータスに応じてタイムラインを表示
 function showTimelineForSelectedImage(status) {
-  console.log('再解析ページのタイムライン表示開始。ステータス:', status);
-
   // タイムラインコンテナを表示
   const timelineContainer = document.getElementById('timeline-container');
   if (timelineContainer) {
     timelineContainer.style.display = 'block';
     timelineContainer.classList.remove('hidden');
     timelineContainer.classList.add('block');
-    console.log('タイムラインコンテナを表示');
   }
 
   // 1つ目: ファイルアップロード完了（常に表示）
@@ -270,7 +182,6 @@ function showTimelineForSelectedImage(status) {
   if (timeline1Check) {
     timeline1Check.classList.remove('hidden');
     timeline1Check.style.display = 'block';
-    console.log('🔍 デバッグ: 1つ目のタイムラインを再表示しました');
   }
 
   // タイムライン表示制御
@@ -287,48 +198,28 @@ function showTimelineForSelectedImage(status) {
   });
 
   // selected_image_statusに基づいて表示制御
-  console.log('🔍 デバッグ: status =', status, 'type =', typeof status);
-
-  // デバッグ用：全てのタイムラインを一度表示してテスト
-  console.log('🔍 デバッグ: timeline1 =', timeline1);
-  console.log('🔍 デバッグ: timeline2 =', timeline2);
-  console.log('🔍 デバッグ: timeline3 =', timeline3);
-
   if (status === 'uploaded') {
     // アップロードのみの場合：1つ目のタイムラインのみ表示
-    console.log('🔍 デバッグ: uploaded の条件に入りました');
     if (timeline1) {
       timeline1.classList.remove('hidden');
       timeline1.style.display = 'block';
-      console.log('✅ アップロードのみ：1つ目のタイムライン（アップロード成功）を表示');
-    } else {
-      console.log('❌ timeline1が見つかりません');
     }
   } else if (status === 'analyzing') {
     // 解析中の場合：1つ目と2つ目のタイムラインを表示
-    console.log('🔍 デバッグ: analyzing の条件に入りました');
     if (timeline1) {
       timeline1.classList.remove('hidden');
       timeline1.style.display = 'block';
-      console.log('✅ 解析中：1つ目のタイムライン（アップロード成功）を表示');
     }
     if (timeline2) {
       timeline2.classList.remove('hidden');
       timeline2.style.display = 'block';
-      console.log('✅ 解析中：2つ目のタイムライン（解析開始）を表示');
     }
   } else if (status === 'completed') {
     // 解析完了の場合：3つ目のタイムラインのみ表示
-    console.log('🔍 デバッグ: completed の条件に入りました');
     if (timeline3) {
       timeline3.classList.remove('hidden');
       timeline3.style.display = 'block';
-      console.log('✅ 解析完了：3つ目のタイムライン（解析完了）を表示');
-    } else {
-      console.log('❌ timeline3が見つかりません');
     }
-  } else {
-    console.log('❌ どの条件にも該当しません。status =', status);
   }
 
 
@@ -339,12 +230,10 @@ function showTimelineForSelectedImage(status) {
   if (timeline4) {
     timeline4.className = 'hidden';
     timeline4.style.display = 'none';
-    console.log('4つ目のタイムライン（再解析開始）を非表示にしました');
   }
   if (timeline5) {
     timeline5.className = 'hidden';
     timeline5.style.display = 'none';
-    console.log('5つ目のタイムライン（再解析完了）を非表示にしました');
   }
 
   // ボタンの表示制御
@@ -362,26 +251,18 @@ let retryProgressInterval = null;
 
 // 再解析機能
 function retryAnalysis() {
-  console.log('🚀 retryAnalysis関数が呼び出されました');
-  console.log('🔍 window.currentImageId:', window.currentImageId);
-  console.log('🔍 window.isRetryAnalysis:', window.isRetryAnalysis);
-
   // 重複実行を防ぐ
   if (isRetryAnalysisRunning) {
-    console.log('⚠️ 再解析が既に実行中です。処理をスキップします。');
     return;
   }
 
   isRetryAnalysisRunning = true;
 
   if (!window.currentImageId) {
-    console.error('❌ 画像IDが設定されていません');
     alert('画像IDが設定されていません');
     isRetryAnalysisRunning = false; // フラグをリセット
     return;
   }
-
-  console.log('✅ 再解析を開始します。画像ID:', window.currentImageId);
 
   // 再解析フラグを設定（再解析専用ページなので常にtrue）
   window.isRetryAnalysis = true;
@@ -397,7 +278,6 @@ function retryAnalysis() {
       const now = new Date();
       startedAt.textContent = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     }
-    console.log('4つ目のタイムライン（再解析開始）を表示');
 
     // 進捗バーを生成
     generateRetryProgressBar();
@@ -413,7 +293,6 @@ function retryAnalysis() {
 
   // CSRFトークンを取得
   const csrfToken = getCSRFToken();
-  console.log('CSRFトークン:', csrfToken);
 
   // 再解析APIを呼び出し
   fetch('/api/analysis/retry/', {
@@ -428,10 +307,8 @@ function retryAnalysis() {
   })
     .then(response => response.json())
     .then(data => {
-      console.log('再解析API応答:', data);
       if (data.success) {
         // 再解析準備完了 - 実際の解析を開始
-        console.log('再解析の準備が完了しました。解析を開始します。');
         startRetryAnalysis();
       } else {
         alert('再解析の準備に失敗しました: ' + (data.error || '不明なエラー'));
@@ -444,8 +321,6 @@ function retryAnalysis() {
       }
     })
     .catch(error => {
-      console.error('再解析エラー (retryAnalysis):', error);
-      console.error('エラーの詳細:', error.message, error.stack);
       alert('再解析の準備に失敗しました: ' + error.message);
       // ボタンを元に戻す
       if (button) {
@@ -458,8 +333,6 @@ function retryAnalysis() {
 
 // 再解析を実際に開始する関数
 function startRetryAnalysis() {
-  console.log('🚀 startRetryAnalysis関数が呼び出されました');
-  console.log('🔍 window.currentImageId:', window.currentImageId);
 
   // 進捗バーを0%にリセット
   const progressBar = document.querySelector(`[data-analysis-progress-bar-pane="${window.currentImageId}"]`);
@@ -479,21 +352,17 @@ function startRetryAnalysis() {
 
   // CSRFトークンを取得
   const csrfToken = getCSRFToken();
-  console.log('🔍 CSRFトークン:', csrfToken);
 
   // モーダルで選択されたモデルを取得
   const modelSelector = document.getElementById('model-selector');
   const selectedModel = modelSelector ? modelSelector.value : 'vgg16';
-  console.log('🔍 選択されたモデル:', selectedModel);
 
   const requestData = {
     image_id: window.currentImageId,
     model: selectedModel // 選択されたモデルを使用
   };
-  console.log('🔍 リクエストデータ:', requestData);
 
   // 解析APIを呼び出し
-  console.log('🚀 /api/analysis/start/ にリクエストを送信します');
   fetch('/api/analysis/start/', {
     method: 'POST',
     headers: {
@@ -503,22 +372,13 @@ function startRetryAnalysis() {
     body: new URLSearchParams(requestData)
   })
     .then(response => {
-      console.log('解析開始API レスポンス:', response);
-      console.log('レスポンスステータス:', response.status);
-      console.log('レスポンスOK:', response.ok);
       return response.json();
     })
     .then(data => {
-      console.log('解析開始API応答データ:', data);
-      console.log('data.ok:', data.ok);
-      console.log('data.success:', data.success);
-      console.log('data.error:', data.error);
       if (data.ok || data.success) {
-        console.log('再解析が開始されました。進捗を監視します。');
         startRetryProgressMonitoring();
         // 成功時はフラグをリセットしない（進捗監視が完了するまで）
       } else {
-        console.error('API応答でエラー:', data);
         alert('再解析の開始に失敗しました: ' + (data.error || data.message || '不明なエラー'));
         // ボタンを元に戻す
         const analysisButton = document.getElementById('analysis-button-container');
@@ -531,8 +391,6 @@ function startRetryAnalysis() {
       }
     })
     .catch(error => {
-      console.error('再解析開始エラー (startRetryAnalysis):', error);
-      console.error('エラーの詳細:', error.message, error.stack);
       alert('再解析の開始に失敗しました: ' + error.message);
       // ボタンを元に戻す
       const analysisButton = document.getElementById('analysis-button-container');
@@ -547,12 +405,9 @@ function startRetryAnalysis() {
 
 // 再解析進捗バーを生成する関数（image_uploadの2つ目のタイムラインと同じUI）
 function generateRetryProgressBar() {
-  console.log('generateRetryProgressBar関数が呼び出されました');
   const progressContainer = document.getElementById('retry-analysis-progress-previews');
-  console.log('進捗コンテナ:', progressContainer);
 
   if (!progressContainer) {
-    console.error('retry-analysis-progress-previews要素が見つかりません');
     return;
   }
 
@@ -605,7 +460,6 @@ function generateRetryProgressBar() {
     `;
 
   progressContainer.innerHTML = progressHTML;
-  console.log('進捗バーのHTMLを挿入しました');
 
   // 進捗アニメーションを開始
   animateRetryProgress();
@@ -614,45 +468,34 @@ function generateRetryProgressBar() {
 
 // 再解析進捗バーを更新する関数
 function updateRetryProgressBar(percentage) {
-  console.log('再解析進捗バーを更新:', percentage + '%');
-
   const progressBar = document.getElementById('retry-progress-bar-pane');
   const progressValue = document.getElementById('retry-progress-bar-value');
 
   if (progressBar) {
     progressBar.style.width = percentage + '%';
-    console.log('進捗バーの幅を更新:', percentage + '%');
   }
 
   if (progressValue) {
     progressValue.textContent = percentage;
-    console.log('進捗値を更新:', percentage);
   }
 
   // 100%の場合は成功スタイルを適用
   if (percentage >= 100) {
     if (progressBar) {
       progressBar.classList.add('progress-success');
-      console.log('進捗バーに成功スタイルを適用');
     }
   }
 }
 
 // 再解析進捗アニメーション
 function animateRetryProgress() {
-  console.log('animateRetryProgress関数が呼び出されました');
   const progressBar = document.getElementById('retry-progress-bar-pane');
   const progressValue = document.getElementById('retry-progress-bar-value');
 
-  console.log('進捗バー要素:', progressBar);
-  console.log('進捗値要素:', progressValue);
-
   if (!progressBar || !progressValue) {
-    console.error('進捗バーまたは進捗値要素が見つかりません');
     return;
   }
 
-  console.log('進捗アニメーションを開始します');
   let progress = 0;
   const interval = setInterval(() => {
     progress += Math.random() * 10;
@@ -663,7 +506,6 @@ function animateRetryProgress() {
 
     if (progress >= 100) {
       clearInterval(interval);
-      console.log('進捗アニメーション完了');
       // 進捗完了時の処理
       progressBar.classList.add('progress-success');
     }
@@ -672,8 +514,6 @@ function animateRetryProgress() {
 
 // 再解析進捗監視機能
 function startRetryProgressMonitoring() {
-  console.log('再解析進捗監視を開始します');
-
   // 既存のintervalをクリア
   if (retryProgressInterval) {
     clearInterval(retryProgressInterval);
@@ -690,7 +530,6 @@ function startRetryProgressMonitoring() {
       clearInterval(retryProgressInterval);
       retryProgressInterval = null;
     }
-    console.log('再解析進捗監視をタイムアウトしました - 強制的に完了タイムラインを表示します');
 
     // 強制的に完了タイムラインを表示
     if (window.isRetryAnalysis) {
@@ -708,7 +547,6 @@ function startRetryProgressMonitoring() {
 
       // 3秒後にページリロード
       setTimeout(() => {
-        console.log('再解析完了（タイムアウト） - ページをリロードします');
         window.location.reload();
       }, 3000);
     }
@@ -719,30 +557,21 @@ function startRetryProgressMonitoring() {
 
 // 解析結果を再取得して表示を更新する関数
 function refreshAnalysisResults(imageId) {
-  console.log('🔄 解析結果を再取得します:', imageId);
-
   fetch(`/api/timeline/${imageId}/`)
     .then(response => response.json())
     .then(data => {
       if (data.ok && data.timeline) {
-        console.log('✅ 新しい解析結果を取得しました:', data.timeline);
-
         // 解析結果を表示エリアに更新
         updateAnalysisResultsDisplay(data.timeline);
-      } else {
-        console.error('❌ 解析結果の取得に失敗:', data.error);
       }
     })
     .catch(error => {
-      console.error('❌ 解析結果取得エラー:', error);
+      // エラーハンドリング
     });
 }
 
 // 解析結果表示を更新する関数
 function updateAnalysisResultsDisplay(timeline) {
-  console.log('🔄 既存の解析結果表示を更新します');
-  console.log('取得したタイムラインデータ:', timeline);
-
   // 現在表示されている解析結果を確認
   logCurrentDisplayedResults();
 
@@ -752,20 +581,12 @@ function updateAnalysisResultsDisplay(timeline) {
 
 // 現在表示されている解析結果をログ出力する関数
 function logCurrentDisplayedResults() {
-  console.log('📊 現在表示されている解析結果を確認します');
-
   // ページ内のテキストから解析結果を抽出
   const pageText = document.body.textContent;
 
   // 「前回の解析結果」パターンを検索
   const resultPattern = /前回の解析結果[：:]\s*([^]+?)(?=\n|$)/;
   const match = pageText.match(resultPattern);
-
-  if (match) {
-    console.log('✅ 現在表示されている解析結果:', match[1].trim());
-  } else {
-    console.log('❌ 解析結果が見つかりません');
-  }
 
   // 特定の要素から解析結果を探す
   const possibleElements = [
@@ -775,19 +596,8 @@ function logCurrentDisplayedResults() {
     document.querySelector('[id*="result"]')
   ];
 
-  possibleElements.forEach((element, index) => {
-    if (element && element.textContent) {
-      console.log(`🔍 要素${index + 1}の内容:`, element.textContent.trim());
-    }
-  });
-
   // ページ全体のテキストから解析結果らしき部分を抽出
   const resultKeywords = ['ファッション', 'アニメ', 'テクノロジー', '人物', '乗り物'];
-  resultKeywords.forEach(keyword => {
-    if (pageText.includes(keyword)) {
-      console.log(`🔍 キーワード "${keyword}" が見つかりました`);
-    }
-  });
 }
 
 // 手動リロードボタンを表示する関数
@@ -804,7 +614,6 @@ function showManualReloadButton() {
   reloadBtn.className = 'btn btn-primary btn-sm mt-2';
   reloadBtn.innerHTML = '<span class="icon-[tabler--refresh] size-4 mr-2"></span>解析結果を更新';
   reloadBtn.onclick = () => {
-    console.log('🔄 手動でページをリロードします');
     window.location.reload();
   };
 
@@ -813,21 +622,17 @@ function showManualReloadButton() {
   if (buttonContainer) {
     buttonContainer.appendChild(reloadBtn);
   }
-
-  console.log('✅ 手動リロードボタンを表示しました');
 }
 
 // 再解析進捗確認
 function checkRetryProgress() {
   if (!window.currentImageId) {
-    console.log('画像IDが設定されていません');
     return;
   }
 
   fetch(`/api/analysis/progress/?image_id=${window.currentImageId}`)
     .then(response => response.json())
     .then(data => {
-      console.log('再解析進捗:', data);
 
       // 進捗パーセンテージを更新（最初のアップロード時と同じロジックを使用）
       if (data.progress_percentage !== undefined) {
@@ -836,7 +641,6 @@ function checkRetryProgress() {
 
       if (data.status === 'completed' && (data.progress >= 100 || data.progress_percentage >= 100)) {
         // 再解析完了（API進捗または進捗パーセンテージが100%になった時）
-        console.log('再解析が完了しました: API進捗=' + data.progress + '%, 進捗パーセンテージ=' + (data.progress_percentage || 0) + '%');
         if (window.isRetryAnalysis) {
           // 再解析の進捗バーを100%に更新（最初のアップロード時と同じロジックを使用）
           updateIndividualProgress(window.currentImageId, 'completed', 100, 'completed');
@@ -846,7 +650,6 @@ function checkRetryProgress() {
 
           // 3秒後にページリロード
           setTimeout(() => {
-            console.log('再解析完了（正常完了） - ページをリロードします');
             window.location.reload();
           }, 3000);
 
@@ -867,7 +670,6 @@ function checkRetryProgress() {
         isRetryAnalysisRunning = false; // フラグをリセット
       } else if (data.status === 'failed') {
         // 再解析失敗
-        console.log('再解析が失敗しました');
         alert('再解析に失敗しました: ' + (data.error || '不明なエラー'));
 
         // 進捗監視を停止
@@ -876,15 +678,10 @@ function checkRetryProgress() {
           retryProgressInterval = null;
         }
         isRetryAnalysisRunning = false; // フラグをリセット
-      } else if (data.status === 'completed' && data.progress < 100 && (data.progress_percentage === undefined || data.progress_percentage < 100)) {
-        // 進捗が100%未満の場合は継続監視
-        console.log(`⏳ 再解析継続: API進捗=${data.progress}%, 進捗パーセンテージ=${data.progress_percentage || 0}% (completedステータスだが100%未満)`);
       }
       // analyzingの場合は継続監視
     })
     .catch(error => {
-      console.error('進捗確認エラー:', error);
-
       // 進捗監視を停止
       if (retryProgressInterval) {
         clearInterval(retryProgressInterval);
@@ -896,15 +693,12 @@ function checkRetryProgress() {
 
 // カードの内容を「解析完了」に変更
 function updateAnalysisCardToCompleted() {
-  console.log('カード更新開始');
-
   // 再解析の場合は4つ目のタイムラインのコンテナを更新
   const container = window.isRetryAnalysis ?
     document.getElementById('retry-analysis-progress-previews') :
     document.getElementById('analysis-progress-previews');
 
   if (!container) {
-    console.error('進捗コンテナが見つかりません:', window.isRetryAnalysis ? 'retry-analysis-progress-previews' : 'analysis-progress-previews');
     return;
   }
 
@@ -916,19 +710,17 @@ function updateAnalysisCardToCompleted() {
 
   // ファイル名要素はそのまま保持（完了テキストは別の要素で管理）
   if (fileNameElement) {
-    console.log('ファイル名要素はそのまま保持:', fileNameElement.textContent);
+    // ファイル名はそのまま保持
   }
 
   // ステータス要素のテキストを空にする（再解析完了時はステータステキストを表示しない）
   if (analysisStatusElement) {
     analysisStatusElement.textContent = '';
-    console.log('ステータス要素のテキストを空にしました');
   }
 
   // ステータス部分を非表示にする
   if (statusElement) {
     statusElement.style.display = 'none';
-    console.log('ステータス部分を非表示にしました');
   }
 
   // 説明テキストを更新
@@ -936,16 +728,13 @@ function updateAnalysisCardToCompleted() {
   if (descriptionElement) {
     const descriptionText = window.isRetryAnalysis ? '画像の再解析が完了しました' : '画像のカテゴリー分類が完了しました';
     descriptionElement.textContent = descriptionText;
-    console.log('説明テキストを更新しました:', descriptionText);
   }
 
   // より確実に「解析中」を含む要素を非表示にする
   const allElements = container.querySelectorAll('*');
   allElements.forEach((element, index) => {
     if (element.textContent && element.textContent.includes('解析中') && !element.textContent.includes('解析完了')) {
-      console.log(`「解析中」を含む要素を発見 (${index}):`, element.textContent, 'タグ:', element.tagName, 'クラス:', element.className);
       element.style.display = 'none';
-      console.log('「解析中」を含む要素を非表示にしました');
     }
   });
 
@@ -953,13 +742,9 @@ function updateAnalysisCardToCompleted() {
   const retryElements = container.querySelectorAll('*');
   retryElements.forEach((element, index) => {
     if (element.textContent && element.textContent.includes('再解析中') && !element.textContent.includes('再解析完了')) {
-      console.log(`「再解析中」を含む要素を発見 (${index}):`, element.textContent);
       element.textContent = element.textContent.replace('再解析中', '再解析完了');
-      console.log('「再解析中」を「再解析完了」に変更しました');
     }
   });
-
-  console.log('カード更新完了');
 }
 
 // 再解析完了タイムライン表示
@@ -974,23 +759,20 @@ function showRetryCompletedTimeline() {
       const now = new Date();
       completedAt.textContent = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     }
-    console.log('5つ目のタイムライン（再解析完了）を表示');
   }
 }
 
 // アップロードUIを流用した解析進捗表示を生成
 function createAnalysisProgressPreviews() {
-  console.log('📊 解析進捗表示開始');
-
   const container = document.getElementById('analysis-progress-previews');
   if (!container) {
-    console.error('analysis-progress-previews コンテナが見つかりません');
     return;
   }
 
   container.innerHTML = '';
 
   // 選択された画像の情報を取得（data属性から）
+  const ctxEl = document.getElementById('page-context');
   const selectedImage = {
     id: ctxEl?.dataset.selectedImageId || '',
     filename: ctxEl?.dataset.selectedImageFilename || '',
@@ -1001,11 +783,8 @@ function createAnalysisProgressPreviews() {
   };
 
   if (!selectedImage.id) {
-    console.error('選択された画像IDがありません');
     return;
   }
-
-  console.log('📊 選択された画像詳細:', selectedImage);
 
   // ファイル名と拡張子を分離
   const lastDot = selectedImage.filename.lastIndexOf('.');
@@ -1094,20 +873,16 @@ function updateIndividualProgress(imageId, status, progressPercentage = 0, progr
       progressBar.className = 'progress-bar progress-info transition-all duration-500';
       break;
     case 'completed':
-      console.log(`画像ID ${imageId} が解析完了しました`);
       progressBar.style.width = '100%';
       progressValue.textContent = '100';
       // 解析完了時のステータステキストを設定
-      console.log(`画像ID ${imageId} のステータステキストを設定: 画像の解析が完了しました。`);
       statusText.textContent = '画像の解析が完了しました。';
-      console.log(`画像ID ${imageId} のステータステキスト設定後:`, statusText.textContent);
       progressBar.className = 'progress-bar progress-success transition-all duration-500';
 
       // 個別の画像が完了した時にカードを更新（特定の画像IDを指定）
       updateAnalysisCardToCompletedForImage(imageId);
       break;
     case 'failed':
-      console.log(`ステータス: failed - 画像ID: ${imageId}`);
       progressBar.style.width = '0%';
       progressValue.textContent = '0';
       statusText.textContent = '解析失敗';
@@ -1122,7 +897,6 @@ function updateIndividualProgress(imageId, status, progressPercentage = 0, progr
           if (errorTimeline) {
             errorTimeline.className = '';
             errorTimeline.style.display = 'block';
-            console.log('解析失敗タイムラインを表示');
           }
         }
       }, 100);
@@ -1138,17 +912,12 @@ function updateIndividualProgress(imageId, status, progressPercentage = 0, progr
 
 // 特定の画像IDのカードを「解析完了」に変更
 function updateAnalysisCardToCompletedForImage(imageId) {
-  console.log(`画像ID ${imageId} のカード更新開始`);
-
   // 特定の画像IDのプログレスコンテナを取得
   const progressBarPane = document.querySelector(`[data-analysis-progress-bar-pane="${imageId}"]`);
-  console.log(`画像ID ${imageId} のプログレスバーペイン:`, progressBarPane);
 
   const container = progressBarPane?.closest('.progress-container');
-  console.log(`画像ID ${imageId} のコンテナ:`, container);
 
   if (!container) {
-    console.log(`画像ID ${imageId} のプログレスコンテナが見つかりません`);
     return;
   }
 
@@ -1157,40 +926,28 @@ function updateAnalysisCardToCompletedForImage(imageId) {
   const fileExtElement = container.querySelector(`[data-analysis-file-ext="${imageId}"]`);
   const statusElement = container.querySelector(`[data-analysis-file-size="${imageId}"]`);
 
-  console.log(`画像ID ${imageId} の要素検索結果:`);
-  console.log(`- fileNameElement:`, fileNameElement);
-  console.log(`- fileExtElement:`, fileExtElement);
-  console.log(`- statusElement:`, statusElement);
-
   if (fileNameElement) {
     // ファイル名はそのまま保持（ステータスは別の要素で管理）
-    console.log(`画像ID ${imageId} のファイル名部分はそのまま保持:`, fileNameElement.textContent);
   }
 
   // ステータス部分は表示したまま（updateIndividualProgressで設定した内容を表示）
   if (statusElement) {
-    console.log(`画像ID ${imageId} のステータス部分は表示したまま保持:`, statusElement.textContent);
-    console.log(`画像ID ${imageId} のステータス要素のスタイル:`, statusElement.style.display);
+    // ステータス部分は表示したまま保持
   }
 
   // 説明テキストを更新
   const descriptionElement = container.querySelector('.text-xs');
   if (descriptionElement) {
     descriptionElement.textContent = '画像のカテゴリー分類が完了しました';
-    console.log(`画像ID ${imageId} の説明テキストを更新しました`);
   }
 
   // より確実に「解析中」を含む要素を非表示にする
   const allElements = container.querySelectorAll('*');
   allElements.forEach((element, index) => {
     if (element.textContent && element.textContent.includes('解析中') && !element.textContent.includes('解析完了')) {
-      console.log(`画像ID ${imageId} で「解析中」を含む要素を発見 (${index}):`, element.textContent, 'タグ:', element.tagName, 'クラス:', element.className);
       element.style.display = 'none';
-      console.log(`画像ID ${imageId} で「解析中」を含む要素を非表示にしました`);
     }
   });
-
-  console.log(`画像ID ${imageId} のカード更新完了`);
 }
 
 // モデル選択時の説明表示
