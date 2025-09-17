@@ -292,18 +292,7 @@
     // グローバル変数として設定
     window.currentImageId = selectedImageId;
 
-    // 再解析完了後のリダイレクト処理
-    // URLパラメータでリダイレクトフラグをチェック
-    const urlParams = new URLSearchParams(window.location.search);
-    const shouldRedirect = urlParams.get('redirect') === 'true';
-
-    if (shouldRedirect && selectedImageStatus === 'completed') {
-      console.log('🔄 再解析完了後のリダイレクト処理を実行します');
-      setTimeout(() => {
-        console.log('📍 user_image_tableにリダイレクトします');
-        window.location.href = '/user_image_table/';
-      }, 3000); // 3秒後にリダイレクト
-    }
+    // 再解析完了後のリダイレクト処理は削除（ページリロードのみ）
     console.log('🔍 window.currentImageIdを設定しました:', window.currentImageId);
 
     // 現在表示されている解析結果を確認
@@ -995,10 +984,10 @@
           button.innerHTML = '<span class="icon-[tabler--refresh] size-5 mr-2"></span>再解析';
         }
 
-        // 3秒後にページリロード（リダイレクトフラグ付き）
+        // 3秒後にページリロード
         setTimeout(() => {
           console.log('再解析完了（タイムアウト） - ページをリロードします');
-          window.location.href = window.location.pathname + '?selected_image_id=' + window.currentImageId + '&image_status=completed&redirect=true';
+          window.location.reload();
         }, 3000);
       }
 
@@ -1133,10 +1122,10 @@
             updateAnalysisCardToCompleted();
             showRetryCompletedTimeline();
 
-            // 3秒後にページリロード（リダイレクトフラグ付き）
+            // 3秒後にページリロード
             setTimeout(() => {
               console.log('再解析完了（正常完了） - ページをリロードします');
-              window.location.href = window.location.pathname + '?selected_image_id=' + window.currentImageId + '&image_status=completed&redirect=true';
+              window.location.reload();
             }, 3000);
 
             // 再解析ボタンの状態を復元

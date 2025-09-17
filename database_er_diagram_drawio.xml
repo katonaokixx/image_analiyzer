@@ -1,46 +1,59 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mxfile host="app.diagrams.net" modified="2025-01-12T00:00:00.000Z" agent="5.0" etag="xxx" version="22.1.16" type="device">
-  <diagram name="Database Design" id="database-design">
-    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+<mxfile host="app.diagrams.net">
+  <diagram name="CustomUser Table" id="customuser-table">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="800">
       <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
-        
-        <!-- MatUser Table -->
-        <mxCell id="user-table" value="MatUser&#xa;(ユーザーマスタ)&#xa;&#xa;PK user_id&#xa;Integer, Auto-Increment, Not Null&#xa;username&#xa;Char(20), Not Null, Unique&#xa;email&#xa;Email, Not Null, Unique&#xa;is_staff&#xa;Boolean, Default False&#xa;is_active&#xa;Boolean, Default True" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-          <mxGeometry x="80" y="80" width="160" height="180" as="geometry" />
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- CustomUser Table Header -->
+        <mxCell id="cu_table" value="CustomUser" style="rounded=1;fillColor=#dae8fc;fontSize=12;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="300" y="40" width="400" height="30" as="geometry"/>
         </mxCell>
-        
-        <!-- Tranimages Table -->
-        <mxCell id="image-table" value="Tranimages&#xa;(アップロード画像)&#xa;&#xa;PK image_id&#xa;Integer, Auto-Increment, Not Null&#xa;FK user_id&#xa;Integer, Not Null&#xa;filename&#xa;Char(255), Not Null&#xa;file_path&#xa;Char(500), Not Null&#xa;upload_date&#xa;DateTime, Auto&#xa;status&#xa;Char(20), Choices" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
-          <mxGeometry x="320" y="80" width="160" height="180" as="geometry" />
+
+        <!-- CustomUser Columns (縦線で表形式) -->
+        <mxCell id="cu_user_id" value="user_id | PK | ユーザーID | bigint" style="fillColor=#a4c2f4;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="300" y="70" width="100" height="20" as="geometry"/>
         </mxCell>
-        
-        <!-- TranimageAnalysis Table -->
-        <mxCell id="analysis-result-table" value="TranimageAnalysis&#xa;(画像解析結果)&#xa;&#xa;PK analysis_id&#xa;Integer, Auto-Increment, Not Null&#xa;FK image_id&#xa;Integer, Not Null&#xa;label&#xa;Char(100), Not Null&#xa;confidence&#xa;Decimal(5,2), 0.00-100.00&#xa;model_name&#xa;Char(50), Not Null&#xa;rank&#xa;Integer, Not Null&#xa;created_at&#xa;DateTime, Auto" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
-          <mxGeometry x="560" y="80" width="160" height="180" as="geometry" />
+        <mxCell id="cu_username" value="username | | ユーザー名 | varchar" style="fillColor=#dae8fc;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="400" y="70" width="100" height="20" as="geometry"/>
         </mxCell>
-        
-        <!-- TranimageTimeline Table -->
-        <mxCell id="timeline-log-table" value="TranimageTimeline&#xa;(タイムライン管理)&#xa;&#xa;PK timeline_id&#xa;Integer, Auto-Increment, Not Null&#xa;FK image_id&#xa;Integer, Not Null, Unique&#xa;upload_completed_at&#xa;DateTime&#xa;analysis_started_at&#xa;DateTime&#xa;analysis_completed_at&#xa;DateTime&#xa;analysis_progress_percentage&#xa;Integer, Default 0&#xa;model_used&#xa;Char(50)&#xa;表示用データ&#xa;タイトル、説明、ステータス等&#xa;created_at&#xa;DateTime, Auto&#xa;updated_at&#xa;DateTime, Auto" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=26;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
-          <mxGeometry x="320" y="300" width="160" height="220" as="geometry" />
+        <mxCell id="cu_email" value="email | | メールアドレス | varchar" style="fillColor=#dae8fc;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="500" y="70" width="100" height="20" as="geometry"/>
         </mxCell>
-        
-        <!-- Relationship: User to Image (1:N Parent-Child) -->
-        <mxCell id="user-image-rel" value="1:N 親子関係&#xa;(CASCADE)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;strokeColor=#d6b656;fontStyle=1;" edge="1" parent="1" source="user-table" target="image-table">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="cu_is_staff" value="is_admin | | 管理者権限 | boolean" style="fillColor=#dae8fc;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="600" y="70" width="100" height="20" as="geometry"/>
         </mxCell>
-        
-        <!-- Relationship: Image to AnalysisResult (1:N Parent-Child) -->
-        <mxCell id="image-analysis-rel" value="1:N 親子関係&#xa;(CASCADE)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;strokeColor=#d6b656;fontStyle=1;" edge="1" parent="1" source="image-table" target="analysis-result-table">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="cu_is_active" value="is_active | | アカウント有効性 | boolean" style="fillColor=#dae8fc;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="700" y="70" width="100" height="20" as="geometry"/>
         </mxCell>
-        
-        <!-- Relationship: Image to TimelineLog (1:1 Parent-Child) -->
-        <mxCell id="image-timeline-rel" value="1:1 親子関係&#xa;(CASCADE)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;strokeColor=#d6b656;fontStyle=1;" edge="1" parent="1" source="image-table" target="timeline-log-table">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="cu_created_at" value="created_at | | 作成日時 | datetime" style="fillColor=#dae8fc;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="800" y="70" width="100" height="20" as="geometry"/>
         </mxCell>
-        
+        <mxCell id="cu_updated_at" value="updated_at | | 更新日時 | datetime" style="fillColor=#dae8fc;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="900" y="70" width="100" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- 縦線 -->
+        <mxCell id="line1" style="strokeColor=#000000;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="70" width="1" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="line2" style="strokeColor=#000000;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="500" y="70" width="1" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="line3" style="strokeColor=#000000;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="600" y="70" width="1" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="line4" style="strokeColor=#000000;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="700" y="70" width="1" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="line5" style="strokeColor=#000000;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="800" y="70" width="1" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="line6" style="strokeColor=#000000;strokeWidth=1;" vertex="1" parent="1">
+          <mxGeometry x="900" y="70" width="1" height="20" as="geometry"/>
+        </mxCell>
+
       </root>
     </mxGraphModel>
   </diagram>

@@ -32,14 +32,28 @@ function applyFilters() {
     rowsArray.sort((a, b) => {
       const dateA = a.querySelector('td:nth-child(2)').textContent.trim();
       const dateB = b.querySelector('td:nth-child(2)').textContent.trim();
-      return dateA.localeCompare(dateB);
+
+      // 日付文字列をDateオブジェクトに変換して比較
+      const dateObjA = new Date(dateA.replace(' ', 'T'));
+      const dateObjB = new Date(dateB.replace(' ', 'T'));
+
+      console.log(`Comparing dates: ${dateA} (${dateObjA}) vs ${dateB} (${dateObjB})`);
+
+      return dateObjA - dateObjB;
     });
     console.log('Sorted by oldest first');
   } else if (dateSort === '新しい順') {
     rowsArray.sort((a, b) => {
       const dateA = a.querySelector('td:nth-child(2)').textContent.trim();
       const dateB = b.querySelector('td:nth-child(2)').textContent.trim();
-      return dateB.localeCompare(dateA);
+
+      // 日付文字列をDateオブジェクトに変換して比較
+      const dateObjA = new Date(dateA.replace(' ', 'T'));
+      const dateObjB = new Date(dateB.replace(' ', 'T'));
+
+      console.log(`Comparing dates: ${dateA} (${dateObjA}) vs ${dateB} (${dateObjB})`);
+
+      return dateObjB - dateObjA;
     });
     console.log('Sorted by newest first');
   }
