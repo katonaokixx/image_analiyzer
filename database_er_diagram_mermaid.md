@@ -5,7 +5,7 @@
 ```mermaid
 erDiagram
     %%{init: {"er": {"layoutDirection": "TOP_TO_BOTTOM"}}}%%
-    CustomUser {
+    MstUser {
         user_id PK "ユーザーID" int "AUTO_INCREMENT NOT NULL"
         username "ユーザー名" varchar "VARCHAR(20) NOT NULL UNIQUE"
         email "メールアドレス" varchar "VARCHAR(255) NOT NULL UNIQUE"
@@ -15,56 +15,56 @@ erDiagram
         updated_at "更新日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
     }
     
-    UploadedImage {
+    TransUploadedImage {
         image_id PK "画像ID" int "AUTO_INCREMENT NOT NULL"
         user_id FK "ユーザーID" int "INT NOT NULL"
         filename "ファイル名" varchar "VARCHAR(255) NOT NULL"
         file_path "ファイルパス" varchar "VARCHAR(500) NOT NULL"
         upload_date "アップロード日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
         status "ステータス" varchar "VARCHAR(20) NOT NULL DEFAULT 'preparing'"
+        upload_error "アップロードエラー" text "TEXT NULL"
         created_at "作成日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
         updated_at "更新日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
     }
     
-    ImageAnalysis {
+    TransImageAnalysis {
         analysis_id PK "解析ID" int "AUTO_INCREMENT NOT NULL"
         image_id FK "画像ID" int "INT NOT NULL"
         label "分類ラベル" varchar "VARCHAR(100) NOT NULL"
         confidence "信頼度" decimal "DECIMAL(5,2) NOT NULL CHECK (confidence >= 0.00 AND confidence <= 100.00)"
         model_name "モデル名" varchar "VARCHAR(50) NOT NULL"
         rank "順位" int "INT NOT NULL"
-        created_at "作成日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-        updated_at "更新日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
-    }
-    
-    AnalysisTimeline {
-        timeline_id PK "タイムラインID" int "AUTO_INCREMENT NOT NULL"
-        image_id FK "画像ID" int "INT NOT NULL"
-        upload_completed_at "アップロード完了時刻" datetime "DATETIME NULL"
         analysis_started_at "解析開始時刻" datetime "DATETIME NULL"
         analysis_completed_at "解析完了時刻" datetime "DATETIME NULL"
-        progress_percentage "進捗率" int "INT NOT NULL DEFAULT 0 CHECK (progress_percentage >= 0 AND progress_percentage <= 100)"
-        model_used "使用モデル" varchar "VARCHAR(50) NULL"
-        display_data "表示用データ" text "TEXT NULL"
+        created_at "作成日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
+    }
+    
+    TransAnalysisTimeline {
+        timeline_id PK "タイムラインID" int "AUTO_INCREMENT NOT NULL"
+        image_id FK "画像ID" int "INT NOT NULL"
+        analysis_started_at "解析開始時刻" datetime "DATETIME NULL"
+        analysis_completed_at "解析完了時刻" datetime "DATETIME NULL"
+        analysis_error "解析エラー" text "TEXT NULL"
+        previous_results "前回解析結果" varchar "VARCHAR(200) NULL"
         created_at "作成日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
         updated_at "更新日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
     }
     
-    CustomUser ||--o{ UploadedImage : "1:N"
-    UploadedImage ||--o{ ImageAnalysis : "1:N"
-    UploadedImage ||--|| AnalysisTimeline : "1:1"
+    MstUser ||--o{ TransUploadedImage : "1:N"
+    TransUploadedImage ||--o{ TransImageAnalysis : "1:N"
+    TransUploadedImage ||--|| TransAnalysisTimeline : "1:1"
 ```
 
 ## 関係の説明
 
 ### 関係の詳細
-- **CustomUser → UploadedImage**: 1対多（1つのユーザーが複数の画像をアップロード）
+- **MstUser → TransUploadedImage**: 1対多（1つのユーザーが複数の画像をアップロード）
   - 削除動作：CASCADE（親削除時、子も削除）
 
-- **UploadedImage → ImageAnalysis**: 1対多（1つの画像が複数の解析結果を持つ）
+- **TransUploadedImage → TransImageAnalysis**: 1対多（1つの画像が複数の解析結果を持つ）
   - 削除動作：CASCADE（親削除時、子も削除）
 
-- **UploadedImage → AnalysisTimeline**: 1対1（1つの画像が1つのタイムラインを持つ）
+- **TransUploadedImage → TransAnalysisTimeline**: 1対1（1つの画像が1つのタイムラインを持つ）
   - 削除動作：CASCADE（親削除時、子も削除）
 
 ### 線の描き方による関係表現
@@ -76,7 +76,7 @@ erDiagram
 ```mermaid
 erDiagram
     %%{init: {"er": {"layoutDirection": "LEFT_TO_RIGHT"}}}%%
-    CustomUser {
+    MstUser {
         user_id PK "ユーザーID" int "AUTO_INCREMENT NOT NULL"
         username "ユーザー名" varchar "VARCHAR(20) NOT NULL UNIQUE"
         email "メールアドレス" varchar "VARCHAR(255) NOT NULL UNIQUE"
@@ -86,44 +86,44 @@ erDiagram
         updated_at "更新日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
     }
     
-    UploadedImage {
+    TransUploadedImage {
         image_id PK "画像ID" int "AUTO_INCREMENT NOT NULL"
         user_id FK "ユーザーID" int "INT NOT NULL"
         filename "ファイル名" varchar "VARCHAR(255) NOT NULL"
         file_path "ファイルパス" varchar "VARCHAR(500) NOT NULL"
         upload_date "アップロード日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
         status "ステータス" varchar "VARCHAR(20) NOT NULL DEFAULT 'preparing'"
+        upload_error "アップロードエラー" text "TEXT NULL"
         created_at "作成日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
         updated_at "更新日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
     }
     
-    ImageAnalysis {
+    TransImageAnalysis {
         analysis_id PK "解析ID" int "AUTO_INCREMENT NOT NULL"
         image_id FK "画像ID" int "INT NOT NULL"
         label "分類ラベル" varchar "VARCHAR(100) NOT NULL"
         confidence "信頼度" decimal "DECIMAL(5,2) NOT NULL CHECK (confidence >= 0.00 AND confidence <= 100.00)"
         model_name "モデル名" varchar "VARCHAR(50) NOT NULL"
         rank "順位" int "INT NOT NULL"
-        created_at "作成日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-        updated_at "更新日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
-    }
-    
-    AnalysisTimeline {
-        timeline_id PK "タイムラインID" int "AUTO_INCREMENT NOT NULL"
-        image_id FK "画像ID" int "INT NOT NULL"
-        upload_completed_at "アップロード完了時刻" datetime "DATETIME NULL"
         analysis_started_at "解析開始時刻" datetime "DATETIME NULL"
         analysis_completed_at "解析完了時刻" datetime "DATETIME NULL"
-        progress_percentage "進捗率" int "INT NOT NULL DEFAULT 0 CHECK (progress_percentage >= 0 AND progress_percentage <= 100)"
-        model_used "使用モデル" varchar "VARCHAR(50) NULL"
-        display_data "表示用データ" text "TEXT NULL"
+        created_at "作成日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
+    }
+    
+    TransAnalysisTimeline {
+        timeline_id PK "タイムラインID" int "AUTO_INCREMENT NOT NULL"
+        image_id FK "画像ID" int "INT NOT NULL"
+        analysis_started_at "解析開始時刻" datetime "DATETIME NULL"
+        analysis_completed_at "解析完了時刻" datetime "DATETIME NULL"
+        analysis_error "解析エラー" text "TEXT NULL"
+        previous_results "前回解析結果" varchar "VARCHAR(200) NULL"
         created_at "作成日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
         updated_at "更新日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
     }
     
-    CustomUser ||--o{ UploadedImage : "1:N"
-    UploadedImage ||--o{ ImageAnalysis : "1:N"
-    UploadedImage ||--|| AnalysisTimeline : "1:1"
+    MstUser ||--o{ TransUploadedImage : "1:N"
+    TransUploadedImage ||--o{ TransImageAnalysis : "1:N"
+    TransUploadedImage ||--|| TransAnalysisTimeline : "1:1"
 ```
 
 ## データベース制約の詳細
@@ -134,27 +134,69 @@ erDiagram
 
 ### NOT NULL制約
 - **必須フィールド**: `user_id`, `username`, `email`, `is_admin`, `is_active`, `created_at`, `updated_at`
-- **オプションフィールド**: `upload_completed_at`, `analysis_started_at`, `analysis_completed_at`, `model_used`, `display_data`
+- **オプションフィールド**: `analysis_started_at`, `analysis_completed_at`, `error_log`, `previous_results`
 
 ### UNIQUE制約
-- `CustomUser.username`: ユーザー名の重複禁止
-- `CustomUser.email`: メールアドレスの重複禁止
+- `MstUser.username`: ユーザー名の重複禁止
+- `MstUser.email`: メールアドレスの重複禁止
 
 ### CHECK制約
 - `confidence`: 0.00〜100.00の範囲内
-- `progress_percentage`: 0〜100の範囲内
 
 ### デフォルト値
 - `is_admin`: FALSE
 - `is_active`: TRUE
 - `status`: 'preparing'
-- `progress_percentage`: 0
 - `created_at`, `updated_at`: CURRENT_TIMESTAMP
 
 ### 外部キー制約
-- `UploadedImage.user_id` → `CustomUser.user_id` (CASCADE)
-- `ImageAnalysis.image_id` → `UploadedImage.image_id` (CASCADE)
-- `AnalysisTimeline.image_id` → `UploadedImage.image_id` (CASCADE)
+- `TransUploadedImage.user_id` → `MstUser.user_id` (CASCADE)
+- `TransImageAnalysis.image_id` → `TransUploadedImage.image_id` (CASCADE)
+- `TransAnalysisTimeline.image_id` → `TransUploadedImage.image_id` (CASCADE)
+
+## 解析エラー処理の詳細
+
+### エラー状態の管理
+- **TransUploadedImage.status**: 'preparing', 'analyzing', 'success', 'failed'
+  - 'failed'状態で解析エラーを表現
+
+### エラー情報の保存
+- **TransUploadedImage.error_log**: アップロード・解析エラー時の詳細ログを保存
+- **TransUploadedImage.status**: エラー状態の管理（'failed'）
+- **TransAnalysisTimeline.previous_results**: 前回解析結果を保存
+
+### エラー処理フロー
+1. 解析開始時: `status = 'analyzing'`
+2. 解析成功時: `status = 'success'`
+3. 解析失敗時: 
+   - `status = 'failed'`でエラー状態を管理
+   - `error_log`にエラー詳細を記録
+
+## メンターの指摘事項への対応
+
+### 1. アップロード完了時刻の重複解消
+- **問題**: `TransUploadedImage.upload_date`と`TransAnalysisTimeline.upload_completed_at`が重複
+- **対応**: `upload_completed_at`を削除（`upload_date`で十分）
+
+### 2. 進捗率の削除
+- **問題**: 進捗率の算出方法が不明確
+- **対応**: `progress_percentage`を削除（ProgressLogテーブルで管理）
+
+### 3. 不要フィールドの削除
+- **問題**: `model_used`, `display_data`, `error_code`が不要または重複
+- **対応**: 不要フィールドを削除
+
+### 4. 解析ステータスの適切な配置
+- **問題**: ステータスが`TransAnalysisTimeline`にあるべき
+- **対応**: ステータスは`TransUploadedImage`に配置（適切）
+
+### 5. テーブル名の改善
+- **問題**: 日本語名が不自然
+- **対応**: 適切な命名規則に変更
+  - `MstUser`（ユーザーマスタ）
+  - `TransUploadedImage`（画像アップロード機能）
+  - `TransImageAnalysis`（画像解析機能）
+  - `TransAnalysisTimeline`（解析タイムライン機能）
 
 ## draw.ioでの使用方法
 
@@ -177,6 +219,49 @@ erDiagram
 - **子テーブル**: 左側から線を伸ばす
 - **1対多**: 親側に「1」、子側に「多」の記号を配置
 - **1対1**: 両側に「1」の記号を配置
+
+## インデックス設計
+
+### 推奨インデックス
+- **MstUser**: `username`, `email` (UNIQUE制約により自動生成)
+- **TransUploadedImage**: `user_id`, `status`, `upload_date`
+- **TransImageAnalysis**: `image_id`, `model_name`, `analysis_started_at`
+- **TransAnalysisTimeline**: `image_id`, `analysis_started_at`
+
+### 複合インデックス
+- `TransUploadedImage(user_id, status)` - ユーザー別ステータス検索
+- `TransImageAnalysis(image_id, rank)` - 画像別解析結果順位検索
+
+## データ整合性制約
+
+### CHECK制約
+- `TransImageAnalysis.confidence`: 0.00-100.00の範囲
+- `TransUploadedImage.status`: 'preparing', 'processing', 'completed', 'failed'のいずれか
+
+### 外部キー制約
+- 全てのFKにCASCADE DELETE設定
+- 参照整合性の自動保証
+
+## テーブル役割の明確化
+
+### MstUser（ユーザーマスタ）
+- ユーザー基本情報の管理
+- 認証・認可の基盤
+
+### TransUploadedImage（アップロード画像）
+- 画像ファイルの基本情報管理
+- アップロードプロセスの状態管理
+- アップロードエラーの記録
+
+### TransImageAnalysis（画像解析結果）
+- 解析結果の詳細データ保存
+- 解析時刻の記録
+- 複数結果の順位管理
+
+### TransAnalysisTimeline（解析ログ）
+- 解析プロセスの全体管理
+- 解析エラーの記録
+- 前回解析結果の参照
 
 ## カスタマイズオプション
 

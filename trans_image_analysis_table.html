@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TransImageAnalysis（画像解析結果）</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f5f5f5;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 50vh;
+      }
+
+      .table {
+        border: 2px solid #333;
+        background-color: white;
+        width: 850px;
+        font-size: 11px;
+        border-collapse: collapse;
+      }
+
+      .table-header {
+        background-color: transparent;
+        padding: 8px;
+        font-weight: bold;
+        text-align: center;
+        border-bottom: 2px solid #333;
+        font-size: 14px;
+      }
+
+      .field {
+        padding: 6px 0;
+        border-bottom: 1px solid #ccc;
+        display: grid;
+        grid-template-columns: 100px 35px 140px 80px 350px;
+        align-items: center;
+      }
+
+      .field:last-child {
+        border-bottom: none;
+      }
+
+      .field-col {
+        padding: 0 8px;
+        border-right: 1px solid #ddd;
+      }
+
+      .field-col:last-child {
+        border-right: none;
+      }
+
+      .pk,
+      .fk {
+        font-weight: bold;
+      }
+
+      .field-type {
+        color: #666;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="table">
+      <div class="table-header">TransImageAnalysis(画像解析結果)</div>
+      <div class="field">
+        <div class="field-col">analysis_id</div>
+        <div class="field-col pk">PK</div>
+        <div class="field-col">"解析ID"</div>
+        <div class="field-col field-type">int</div>
+        <div class="field-col">AUTO_INCREMENT NOT NULL</div>
+      </div>
+      <div class="field">
+        <div class="field-col">image_id</div>
+        <div class="field-col fk">FK</div>
+        <div class="field-col">"画像ID"</div>
+        <div class="field-col field-type">int</div>
+        <div class="field-col">NOT NULL</div>
+      </div>
+      <div class="field">
+        <div class="field-col">label</div>
+        <div class="field-col"></div>
+        <div class="field-col">"分類ラベル"</div>
+        <div class="field-col field-type">varchar(100)</div>
+        <div class="field-col">NOT NULL</div>
+      </div>
+      <div class="field">
+        <div class="field-col">confidence</div>
+        <div class="field-col"></div>
+        <div class="field-col">"信頼度"</div>
+        <div class="field-col field-type">decimal(5,2)</div>
+        <div class="field-col">NOT NULL CHECK (confidence &gt;= 0.00 AND confidence &lt;= 100.00)</div>
+      </div>
+      <div class="field">
+        <div class="field-col">model_name</div>
+        <div class="field-col"></div>
+        <div class="field-col">"モデル名"</div>
+        <div class="field-col field-type">varchar(50)</div>
+        <div class="field-col">NOT NULL</div>
+      </div>
+      <div class="field">
+        <div class="field-col">rank</div>
+        <div class="field-col"></div>
+        <div class="field-col">"順位"</div>
+        <div class="field-col field-type">int</div>
+        <div class="field-col">NOT NULL</div>
+      </div>
+      <div class="field">
+        <div class="field-col">created_at</div>
+        <div class="field-col"></div>
+        <div class="field-col">"作成日時"</div>
+        <div class="field-col field-type">datetime</div>
+        <div class="field-col">NOT NULL DEFAULT CURRENT_TIMESTAMP</div>
+      </div>
+    </div>
+  </body>
+
+</html>
