@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // グローバル変数として設定
   window.currentImageId = selectedImageId;
+  console.log('🔍 selectedImageId:', selectedImageId);
+  console.log('🔍 window.currentImageId:', window.currentImageId);
 
   // 現在表示されている解析結果を確認
   logCurrentDisplayedResults();
@@ -37,38 +39,53 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // 再解析ボタンのイベント設定（モーダル表示用）
-  // 少し遅延してからボタンを取得（DOMが完全に読み込まれるまで待つ）
-  setTimeout(() => {
-    // 複数の方法でボタンを取得
-    const retryButton = document.getElementById('start-analysis-btn') || document.querySelector('#start-analysis-btn');
-
-    if (retryButton) {
-
-      // 既存のイベントリスナーを削除
-      retryButton.onclick = null;
-
-      // 複数の方法でイベントリスナーを設定
-      const clickHandler = function (e) {
-        e.preventDefault();
-
-        // FlyonUIがモーダルを表示した後にイベントリスナーを設定
-        setTimeout(() => {
-          setupModalButtonEvents();
-        }, 200); // FlyonUIのモーダル表示を待つ
-      };
-
-      // addEventListenerとonclickの両方を設定
-      retryButton.addEventListener('click', clickHandler);
-      retryButton.onclick = clickHandler;
-    }
-  }, 500); // 500ms遅延
+  setupRetryButtonEvents();
 
 });
 
+// 再解析ボタンのイベントを設定する関数
+function setupRetryButtonEvents() {
+  console.log('🔧 setupRetryButtonEvents関数が呼び出されました');
+
+  const retryButton = document.getElementById('start-analysis-btn');
+  console.log('🔍 再解析ボタン:', retryButton);
+
+  if (retryButton) {
+    console.log('✅ 再解析ボタンが見つかりました');
+
+    // 既存のイベントリスナーを削除
+    retryButton.onclick = null;
+    console.log('🗑️ 既存のonclickイベントを削除しました');
+
+    // 新しいイベントリスナーを設定
+    retryButton.onclick = function (e) {
+      console.log('🖱️ 再解析ボタンがクリックされました！');
+      console.log('🔍 イベントオブジェクト:', e);
+
+      // preventDefault()を削除してFlyonUIに任せる
+      console.log('🔧 FlyonUIにモーダル表示を任せます');
+
+      // FlyonUIがモーダルを表示した後にイベントリスナーを設定
+      console.log('⏰ 200ms後にsetupModalButtonEventsを呼び出します');
+      setTimeout(() => {
+        console.log('🔧 setupModalButtonEventsを呼び出します');
+        setupModalButtonEvents();
+      }, 200);
+    };
+
+    console.log('✅ 再解析ボタンのイベントリスナーを設定しました');
+  } else {
+    console.log('❌ 再解析ボタンが見つかりません');
+  }
+}
+
 // モーダル内のボタンイベントを設定する関数
 function setupModalButtonEvents() {
+  console.log('🔧 setupModalButtonEvents関数が呼び出されました');
+
   // モーダル内の解析開始ボタンのイベント設定
   const modalStartButton = document.getElementById('modal-start-analysis-btn');
+  console.log('🔍 モーダル内の解析開始ボタン:', modalStartButton);
 
   if (modalStartButton) {
 
@@ -94,6 +111,14 @@ function setupModalButtonEvents() {
       // ボタンを無効化
       modalStartButton.disabled = true;
       modalStartButton.innerHTML = '<span class="loading loading-spinner loading-sm"></span>処理中...';
+
+      // 再解析ボタンも無効化
+      const retryButton = document.getElementById('start-analysis-btn');
+      if (retryButton) {
+        retryButton.disabled = true;
+        retryButton.innerHTML = '再解析中...';
+        console.log('✅ 再解析ボタンを無効化しました');
+      }
 
       // モーダルを閉じる
       const modal = document.getElementById('slide-down-animated-modal');
@@ -125,38 +150,75 @@ function setupModalButtonEvents() {
   }
 
   // モーダルのキャンセルボタンのイベント設定
-  const modalCancelButton = document.querySelector('[data-overlay="#slide-down-animated-modal"]');
+  const modalCancelButton = document.getElementById('modal-cancel-btn');
+  console.log('🔍 キャンセルボタン:', modalCancelButton);
 
   if (modalCancelButton) {
+    console.log('✅ キャンセルボタンが見つかりました');
 
     // 既存のイベントリスナーを削除
     modalCancelButton.onclick = null;
+    console.log('🗑️ 既存のキャンセルボタンのonclickイベントを削除しました');
 
     // addEventListenerを使用してイベントリスナーを設定
     modalCancelButton.addEventListener('click', function (e) {
+      console.log('🖱️ キャンセルボタンがクリックされました！');
       e.preventDefault();
+      console.log('🚫 preventDefault()を実行しました');
 
       // モーダルを閉じる
       const modal = document.getElementById('slide-down-animated-modal');
+      console.log('🔍 モーダル要素（キャンセル時）:', modal);
+
       if (modal) {
+        console.log('🔧 モーダルを閉じる処理を開始...');
+
         // オーバーレイを完全に削除
         modal.classList.add('hidden');
         modal.style.display = 'none';
         modal.classList.remove('open', 'opened');
         modal.removeAttribute('aria-overlay');
         modal.removeAttribute('style');
+        console.log('✅ モーダルを非表示にしました');
 
         // オーバーレイの背景も削除
         const overlay = document.querySelector('.overlay-backdrop');
+        console.log('🔍 オーバーレイ要素（キャンセル時）:', overlay);
+
         if (overlay) {
           overlay.remove();
+          console.log('✅ オーバーレイを削除しました');
+        } else {
+          console.log('ℹ️ オーバーレイは存在しませんでした');
         }
 
         // bodyのスクロールを復元
         document.body.style.overflow = '';
         document.body.classList.remove('modal-open');
+        console.log('✅ bodyのスクロールを復元しました');
+
+        // 再解析ボタンを有効化
+        const retryButton = document.getElementById('start-analysis-btn');
+        if (retryButton) {
+          retryButton.disabled = false;
+          retryButton.innerHTML = '<span class="icon-[tabler--refresh] size-5 mr-2"></span>再解析';
+          console.log('✅ 再解析ボタンを有効化しました');
+        }
+
+        // 再解析ボタンのイベントを再設定
+        console.log('🔧 再解析ボタンのイベントを再設定します');
+        setTimeout(() => {
+          console.log('🔧 setupRetryButtonEventsを再呼び出しします');
+          setupRetryButtonEvents();
+        }, 100);
+      } else {
+        console.log('❌ モーダルが見つかりません（キャンセル時）');
       }
     });
+
+    console.log('✅ キャンセルボタンのイベントリスナーを設定しました');
+  } else {
+    console.log('❌ キャンセルボタンが見つかりません');
   }
 }
 
@@ -251,18 +313,26 @@ let retryProgressInterval = null;
 
 // 再解析機能
 function retryAnalysis() {
+  console.log('🚀 retryAnalysis関数が呼び出されました');
+  console.log('🔍 window.currentImageId:', window.currentImageId);
+
   // 重複実行を防ぐ
   if (isRetryAnalysisRunning) {
+    console.log('⚠️ 再解析は既に実行中です');
     return;
   }
 
   isRetryAnalysisRunning = true;
+  console.log('✅ 再解析フラグを設定しました');
 
   if (!window.currentImageId) {
+    console.log('❌ 画像IDが設定されていません');
     alert('画像IDが設定されていません');
     isRetryAnalysisRunning = false; // フラグをリセット
     return;
   }
+
+  console.log('✅ 画像IDが確認できました:', window.currentImageId);
 
   // 再解析フラグを設定（再解析専用ページなので常にtrue）
   window.isRetryAnalysis = true;
@@ -291,44 +361,9 @@ function retryAnalysis() {
     button.innerHTML = '<span class="icon-[tabler--loader-2] size-5 mr-2 animate-spin"></span>再解析中...';
   }
 
-  // CSRFトークンを取得
-  const csrfToken = getCSRFToken();
-
-  // 再解析APIを呼び出し
-  fetch('/api/analysis/retry/', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': csrfToken
-    },
-    body: JSON.stringify({
-      image_id: window.currentImageId
-    })
-  })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        // 再解析準備完了 - 実際の解析を開始
-        startRetryAnalysis();
-      } else {
-        alert('再解析の準備に失敗しました: ' + (data.error || '不明なエラー'));
-        // ボタンを元に戻す
-        if (button) {
-          button.disabled = false;
-          button.innerHTML = '<span class="icon-[tabler--refresh] size-5 mr-2"></span>再解析';
-        }
-        isRetryAnalysisRunning = false; // フラグをリセット
-      }
-    })
-    .catch(error => {
-      alert('再解析の準備に失敗しました: ' + error.message);
-      // ボタンを元に戻す
-      if (button) {
-        button.disabled = false;
-        button.innerHTML = '<span class="icon-[tabler--refresh] size-5 mr-2"></span>再解析';
-      }
-      isRetryAnalysisRunning = false; // フラグをリセット
-    });
+  // デフォルトモデルで再解析を開始
+  console.log('🔧 デフォルトモデル（vgg16）で再解析を開始します');
+  startRetryAnalysis();
 }
 
 // 再解析を実際に開始する関数
@@ -363,7 +398,7 @@ function startRetryAnalysis() {
   };
 
   // 解析APIを呼び出し
-  fetch('/api/analysis/start/', {
+  fetch('/v2/api/analysis/start/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -557,7 +592,7 @@ function startRetryProgressMonitoring() {
 
 // 解析結果を再取得して表示を更新する関数
 function refreshAnalysisResults(imageId) {
-  fetch(`/api/timeline/${imageId}/`)
+  fetch(`/v2/api/timeline/${imageId}/`)
     .then(response => response.json())
     .then(data => {
       if (data.ok && data.timeline) {
@@ -630,7 +665,7 @@ function checkRetryProgress() {
     return;
   }
 
-  fetch(`/api/analysis/progress/?image_id=${window.currentImageId}`)
+  fetch(`/v2/api/analysis/progress/?image_id=${window.currentImageId}`)
     .then(response => response.json())
     .then(data => {
 
@@ -639,8 +674,8 @@ function checkRetryProgress() {
         updateIndividualProgress(window.currentImageId, data.status, data.progress_percentage, data.progress_stage);
       }
 
-      if (data.status === 'completed' && (data.progress >= 100 || data.progress_percentage >= 100)) {
-        // 再解析完了（API進捗または進捗パーセンテージが100%になった時）
+      if (data.status === 'completed' && data.progress_percentage >= 100) {
+        // 再解析完了（進捗パーセンテージが100%になった時のみ）
         if (window.isRetryAnalysis) {
           // 再解析の進捗バーを100%に更新（最初のアップロード時と同じロジックを使用）
           updateIndividualProgress(window.currentImageId, 'completed', 100, 'completed');

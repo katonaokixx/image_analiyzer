@@ -22,7 +22,7 @@
       <div class="group flex items-center justify-center gap-2 pt-4 pb-2">
         <span
           class="icon-[tabler--chevron-left] text-primary size-5 shrink-0 transition-transform group-hover:-translate-x-1 rtl:rotate-180"></span>
-        <a href="{% url 'user_image_table' %}" class="link link-animated link-primary font-normal">画像一覧へ</a>
+        <a href="{% url 'v2_user_image_table' %}" class="link link-animated link-primary font-normal">画像一覧へ</a>
       </div>
     </div>
   </div>
@@ -41,7 +41,7 @@
 
       <!-- data-file-upload は厳密な JSON -->
       <div id="file-upload-limit" data-file-upload='{
-             "url": "/api/form-upload/",
+             "url": "/v2/api/form-upload/",
              "maxFilesize": 1,
              "maxFiles": 5,
              "autoProcessQueue": false,
@@ -51,6 +51,11 @@
                "gif": { "class": "shrink-0 size-5" }
              }
            }'>
+
+        <script>
+          console.log('DEBUG: Image upload page loaded');
+          console.log('DEBUG: Upload URL should be: /v2/api/form-upload/');
+        </script>
 
         <!-- プレビュー用テンプレート -->
         <template data-file-upload-preview="">
@@ -349,6 +354,25 @@
 {% block extra_js %}
 <!-- 簡素化されたアップロード機能 -->
 <script src="{% static 'js/upload-simplified.js' %}?v={{ timestamp|default:'1.0' }}"></script>
+<script>
+  // テンプレート変数をJavaScriptに渡す
+  window.uploadedImagesJson = '{{ uploaded_images_json|default:"[]"|escapejs }}';
+  window.analysisStatus = '{{ analysis_status|default:""|escapejs }}';
+  window.selectedModel = '{{ selected_model|default:""|escapejs }}';
+
+  // CSRFトークンを設定
+  document.addEventListener('DOMContentLoaded', function () {
+    const csrfToken = '{{ csrf_token }}';
+    if (csrfToken) {
+      // 隠しフィールドとして追加
+      const csrfInput = document.createElement('input');
+      csrfInput.type = 'hidden';
+      csrfInput.name = 'csrfmiddlewaretoken';
+      csrfInput.value = csrfToken;
+      document.body.appendChild(csrfInput);
+    }
+  });
+</script>
 <script src="{% static 'js/image-upload.js' %}?v={{ timestamp|default:'1.0' }}"></script>
 {% endblock %}
 

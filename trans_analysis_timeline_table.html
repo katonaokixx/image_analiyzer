@@ -84,25 +84,11 @@
         <div class="field-col">NOT NULL</div>
       </div>
       <div class="field">
-        <div class="field-col">analysis_started_at</div>
+        <div class="field-col">analysis_status</div>
         <div class="field-col"></div>
-        <div class="field-col">"解析開始時刻"</div>
-        <div class="field-col field-type">datetime</div>
-        <div class="field-col"></div>
-      </div>
-      <div class="field">
-        <div class="field-col">analysis_completed_at</div>
-        <div class="field-col"></div>
-        <div class="field-col">"解析完了時刻"</div>
-        <div class="field-col field-type">datetime</div>
-        <div class="field-col"></div>
-      </div>
-      <div class="field">
-        <div class="field-col">analysis_error_message</div>
-        <div class="field-col"></div>
-        <div class="field-col">"解析エラーメッセージ"</div>
-        <div class="field-col field-type">text</div>
-        <div class="field-col"></div>
+        <div class="field-col">"解析状態"</div>
+        <div class="field-col field-type">varchar(20)</div>
+        <div class="field-col">NOT NULL DEFAULT 'not_started'</div>
       </div>
       <div class="field">
         <div class="field-col">previous_results</div>

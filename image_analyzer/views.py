@@ -17,7 +17,7 @@ from django.template.loader import render_to_string
 from django.conf import settings
 from datetime import timedelta
 
-from .models import Image, MLModel, ProgressLog, TimelineLog, PasswordResetToken, AnalysisQueue, User, AnalysisResult
+from .models import User, Image, AnalysisResult, TimelineLog, MLModel, ProgressLog, PasswordResetToken, AnalysisQueue
 from django.utils import timezone
 from .services import analysis_service
 
@@ -118,7 +118,7 @@ def logout_view(request: HttpRequest):
     """ログアウト処理"""
     logout(request)
     messages.success(request, 'ログアウトしました。')
-    return redirect('login')
+    return redirect('v2_login')
 
 def user_image_table(request: HttpRequest):
     """一般ユーザー用画像テーブル"""
@@ -128,12 +128,25 @@ def user_image_table(request: HttpRequest):
         return redirect('login')
     
     # ログインしているユーザーの画像のみを表示
-    images = Image.objects.filter(user=request.user).select_related('queue_item').order_by('-upload_date')
+    images = Image.objects.filter(user=request.user).order_by('-upload_date')
     
     # ページネーション設定
     paginator = Paginator(images, 10)  # 10件/ページ
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+    
+    # テンプレート互換性のためのデータ変換
+    if images.exists() and hasattr(images.first(), 'image_id'):
+        # 新しいモデルの場合、既存のテンプレート用にデータを変換
+        converted_images = []
+        for img in page_obj:
+            # 既存のテンプレートが期待する属性を追加
+            img.id = img.image_id
+            img.filename = img.filename
+            img.upload_date = img.upload_date
+            img.status = img.status
+            converted_images.append(img)
+        page_obj.object_list = converted_images
     
     return render(request, 'main/user_image_table.html', {
         'images': page_obj,  # ページネーションされたオブジェクト
@@ -152,9 +165,8 @@ def admin_image_table(request: HttpRequest):
         messages.error(request, '管理者権限が必要です。')
         return redirect('admin_image_table')
     
-    images = Image.objects.select_related('queue_item').prefetch_related('analysis_results').order_by('-upload_date')
-    
-    # ユーザーリストを取得（フィルター用）
+    # 画像とユーザーを取得
+    images = Image.objects.prefetch_related('analysis_results').order_by('-upload_date')
     users = User.objects.all().order_by('username')
     
     # View All機能のチェック

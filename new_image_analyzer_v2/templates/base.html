@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html data-theme="shadcn">
+  {% load static %}
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}画像解析アプリ{% endblock %}</title>
+
+    <!-- 既存のCSS（Tailwind CSS + FlyonUI） -->
+    <link href="{% static 'css/output.css' %}" rel="stylesheet">
+
+    {% block extra_css %}{% endblock %}
+  </head>
+
+  <body>
+    <!-- navbarブロック -->
+    {% block navbar %}
+    {% include 'includes/navbar.html' %}
+    {% endblock %}
+
+    <!-- メインコンテンツ -->
+    {% block content %}{% endblock %}
+
+    <!-- JavaScript -->
+    <!-- 依存関係 -->
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+    <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
+    <!-- FlyonUI -->
+    <script src="{% static 'js/libs/flyonui.js' %}"></script>
+    <!-- その他のJSファイル -->
+    <script src="{% static 'js/modal.js' %}"></script>
+    <script src="{% static 'js/table.js' %}"></script>
+    <script src="{% static 'js/libs/accordion.js' %}"></script>
+
+    {% block extra_js %}{% endblock %}
+  </body>
+
+</html>

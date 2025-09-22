@@ -1,0 +1,367 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}画像アップロード - 画像解析アプリ{% endblock %}
+
+{% block content %}
+<!-- ページヘッダーセクション -->
+<div class="pt-16 py-2 sm:py-4 lg:pt-24 lg:pb-12">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div class="mb-1 space-y-4 text-center sm:mb-2 lg:mb-3">
+      <h2 class="text-base-content text-2xl font-semibold md:text-3xl lg:text-4xl">
+        <span class="relative z-1 font-bold">
+          画像アップロード
+          <span class="from-primary absolute start-0 bottom-1 -z-1 h-0.5 w-full bg-gradient-to-r to-transparent to-80%"
+            aria-hidden="true"></span>
+        </span>
+        & 解析
+      </h2>
+      <p class="text-base-content/80 text-xl">
+        画像をアップロードと解析ができます。
+      </p>
+      <div class="group flex items-center justify-center gap-2 pt-4 pb-2">
+        <span
+          class="icon-[tabler--chevron-left] text-primary size-5 shrink-0 transition-transform group-hover:-translate-x-1 rtl:rotate-180"></span>
+        <a href="{% url 'user_image_table' %}" class="link link-animated link-primary font-normal">画像一覧へ</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="pt-0 mb-8 px-4 sm:px-6 lg:px-8">
+  <div class="card max-w-5xl w-full mx-auto">
+    <div class="card-header">
+      <h5 class="card-title text-lg sm:text-xl">画像アップロード</h5>
+    </div>
+    <div class="card-body p-4 sm:p-6">
+
+      <!-- CSRFトークン -->
+      {% csrf_token %}
+
+
+      <!-- data-file-upload は厳密な JSON -->
+      <div id="file-upload-limit" data-file-upload='{
+             "url": "/api/form-upload/",
+             "maxFilesize": 1,
+             "maxFiles": 5,
+             "autoProcessQueue": false,
+             "extensions": {
+               "jpg": { "class": "shrink-0 size-5" },
+               "png": { "class": "shrink-0 size-5" },
+               "gif": { "class": "shrink-0 size-5" }
+             }
+           }'>
+
+        <!-- プレビュー用テンプレート -->
+        <template data-file-upload-preview="">
+          <div class="rounded-box bg-base-100 shadow-base-300/20 p-3 shadow-lg">
+            <div class="mb-1 flex items-center justify-between">
+              <div class="flex items-center gap-x-3">
+                <span
+                  class="text-base-content/80 border-base-content/20 flex size-8 items-center justify-center rounded-lg border p-0.5"
+                  data-file-upload-file-icon="">
+                  <img class="hidden rounded-md" data-dz-thumbnail="" alt="">
+                </span>
+                <div>
+                  <p class="text-base-content text-sm font-medium">
+                    <span class="inline-block truncate align-bottom" data-file-upload-file-name=""></span>.
+                    <span data-file-upload-file-ext=""></span>
+                  </p>
+                  <p class="text-base-content/50 text-xs" data-file-upload-file-size=""
+                    data-file-upload-file-success=""></p>
+                  <p class="text-error text-xs" style="display:none" data-file-upload-file-error="">File exceeds size
+                    limit.</p>
+                </div>
+              </div>
+              <div class="flex items-center">
+                <!-- アイコンを削除 -->
+              </div>
+            </div>
+            <div class="flex items-center gap-x-3 whitespace-nowrap">
+              <div class="progress h-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
+                data-file-upload-progress-bar="">
+                <div
+                  class="progress-bar progress-primary file-upload-complete:progress-success transition-all duration-500"
+                  style="width:0" data-file-upload-progress-bar-pane=""></div>
+              </div>
+              <span class="text-base-content mb-0.5 text-sm">
+                <span data-file-upload-progress-bar-value="">0</span>%
+              </span>
+            </div>
+          </div>
+        </template>
+
+        <!-- ドロップ領域 -->
+        <div
+          class="bg-base-200/60 rounded-box flex flex-col justify-center border-2 border-base-content/20 border-dashed">
+          <div class="text-center cursor-pointer p-6 sm:p-8 lg:p-12" data-file-upload-trigger="">
+            <p class="text-base-content/50 mb-3 text-xs sm:text-sm">1MB以下のファイルを選択してください。（最大5枚、合計5MBまで）</p>
+            <button class="btn btn-soft btn-sm btn-primary text-nowrap">
+              <span class="icon-[tabler--file-upload] size-4 sm:size-4.5 shrink-0"></span>
+              <span class="hidden sm:inline">ドラッグ&ドロップでアップロード</span>
+              <span class="sm:hidden">アップロード</span>
+            </button>
+            <p class="text-base-content/50 my-2 text-xs">または</p>
+            <p class="link link-animated link-primary font-medium text-xs sm:text-sm">ファイルを選択</p>
+          </div>
+          <div class="mx-4 sm:mx-8 lg:mx-12 mb-4 sm:mb-6 lg:mb-8 space-y-2 empty:m-0" data-file-upload-previews="">
+          </div>
+        </div>
+
+        <!-- アップロード開始ボタン -->
+        <div id="upload-button-container" class="hidden flex justify-center mt-4">
+          <button id="start-upload-btn" class="btn btn-primary btn-outline waves waves-primary">
+            <span class="icon-[tabler--upload] size-5 mr-2"></span>アップロード開始
+          </button>
+        </div>
+
+        <!-- 解析開始(モデル選択)ボタン -->
+        <div id="analysis-button-container" class="hidden flex justify-center mt-4">
+          <button id="start-analysis-btn" class="btn btn-primary btn-outline waves waves-primary"
+            data-overlay="#slide-down-animated-modal">
+            <span class="icon-[tabler--brain] size-5 mr-2"></span>モデルを選択
+          </button>
+        </div>
+
+
+
+
+        <!-- モデル未選択アラート -->
+        <div id="model-selection-alert" class="alert alert-outline alert-warning hidden" role="alert">
+          <span class="icon-[tabler--alert-triangle] size-5"></span>
+          <div>
+            <h3 class="font-semibold">モデルを選択してください</h3>
+            <div class="text-xs">画像一覧に進む前に、解析モデルを選択してください。</div>
+          </div>
+        </div>
+
+        <!-- タイムライン -->
+        <ul id="timeline-container"
+          class="timeline timeline-snap-icon timeline-compact timeline-vertical w-full hidden">
+
+          <!-- アップロード成功 -->
+          <li id="timeline-item-1-success" class="hidden">
+            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-success/5 border border-success/20">
+              <div
+                class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
+                <span class="text-sm sm:text-base">ファイルアップロード完了</span>
+                <span class="text-base-content/50 text-xs sm:text-sm font-normal">
+                  {% if images and images.0.timeline_log.upload_completed_at %}{{
+                  images.0.timeline_log.upload_completed_at|date:'Y-m-d H:i' }}{% endif %}
+                </span>
+              </div>
+              <p id="timeline-description" class="mb-2 text-xs sm:text-sm">ファイルのアップロードに成功しました</p>
+              <div class="flex items-center gap-2">
+                <span class="icon-[tabler--check-circle] text-success size-4 sm:size-5">✅</span>
+                <span class="text-xs sm:text-sm text-success font-medium">アップロード成功</span>
+              </div>
+            </div>
+          </li>
+
+          <!-- アップロード失敗 -->
+          <li id="timeline-item-1-error" class="hidden">
+            <hr class="bg-error" />
+            <div class="timeline-middle">
+              <span class="badge badge-error size-4.5 rounded-full p-0">
+                <span class="icon-[tabler--alert-triangle] text-error-content size-3.5"></span>
+              </span>
+            </div>
+            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 border border-error/30 bg-error/5">
+              <div
+                class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
+                <span class="text-sm sm:text-base">アップロード失敗</span>
+                <span class="text-base-content/50 text-xs sm:text-sm font-normal" id="timeline-analysis-started-at">
+                  {% if images and images.0.timeline_log.analysis_started_at %}{{
+                  images.0.timeline_log.analysis_started_at|date:'Y-m-d H:i' }}{% endif %}
+                </span>
+              </div>
+              <p id="timeline-error-description" class="mb-2 text-xs sm:text-sm">ファイルのアップロードに失敗しました</p>
+              <div class="flex items-center gap-2">
+                <span class="icon-[tabler--alert-circle] text-error size-4 sm:size-5"></span>
+                <span class="text-xs sm:text-sm text-error font-medium">アップロード失敗</span>
+              </div>
+            </div>
+            <hr class="bg-error" />
+          </li>
+
+          <!-- 解析開始 -->
+          <li id="timeline-item-2" class="hidden" style="display: none;">
+            <hr class="bg-warning" />
+            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-warning/5 border border-warning/20">
+              <div
+                class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
+                <span class="text-sm sm:text-base">解析開始</span>
+                <span class="text-base-content/50 text-xs sm:text-sm font-normal" id="timeline-analysis-completed-at">
+                  {% if images and images.0.timeline_log.analysis_completed_at %}{{
+                  images.0.timeline_log.analysis_completed_at|date:'Y-m-d H:i' }}{% endif %}
+                </span>
+              </div>
+              <p class="mb-2 text-xs sm:text-sm">AIによる画像解析を開始しました。</p>
+
+              <!-- アップロードUIを流用した解析進捗表示 -->
+              <div class="mx-4 sm:mx-8 lg:mx-12 space-y-2" id="analysis-progress-previews">
+                <!-- 各画像の解析進捗はJavaScriptで動的に生成 -->
+              </div>
+            </div>
+            <hr class="bg-warning" />
+          </li>
+
+          <!-- 解析失敗（2つ目のタイムラインが失敗時に変更される） -->
+          <li id="timeline-item-2-error" class="hidden" style="display: none;">
+            <hr class="bg-error" />
+            <div class="timeline-middle">
+              <span class="badge badge-error size-4.5 rounded-full p-0">
+                <span class="icon-[tabler--alert-triangle] text-error-content size-3.5"></span>
+              </span>
+            </div>
+            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 border border-error/30 bg-error/5">
+              <div
+                class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
+                <span class="text-sm sm:text-base">解析失敗</span>
+                <span class="text-base-content/50 text-xs sm:text-sm font-normal">今すぐ</span>
+              </div>
+              <p class="mb-2 text-xs sm:text-sm">解析が失敗しました</p>
+              <div class="flex items-center gap-2">
+                <span class="icon-[tabler--alert-circle] text-error size-4 sm:size-5"></span>
+                <span class="text-xs sm:text-sm text-error font-medium">解析失敗</span>
+              </div>
+            </div>
+            <hr class="bg-error" />
+          </li>
+
+          <!-- 解析完了 -->
+          <li id="timeline-item-3" class="hidden" style="display: none;">
+            <hr class="bg-success" />
+            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-success/5 border border-success/20">
+              <div
+                class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
+                <span class="text-sm sm:text-base">解析完了</span>
+                <span class="text-base-content/50 text-xs sm:text-sm font-normal" id="timeline-analysis-completed-at">
+                  {% if images and images.0.timeline_log.analysis_completed_at %}{{
+                  images.0.timeline_log.analysis_completed_at|date:'Y-m-d H:i' }}{% endif %}
+                </span>
+              </div>
+              <p class="mb-2 text-xs sm:text-sm">
+                {% if images and images.0.analysis_results.all %}
+                直近の解析結果:
+                {% for r in images.0.analysis_results.all|dictsort:"rank" %}
+                {{ r.rank }}位: {{ r.label }} ({{ r.confidence }}%)
+                {% if not forloop.last %} / {% endif %}
+                {% endfor %}
+                {% else %}
+                画像のカテゴリー分類が完了しました
+                {% endif %}
+              </p>
+              <div class="flex items-center gap-2">
+                <span class="icon-[tabler--brain] text-success size-4 sm:size-5"></span>
+                <span class="text-xs sm:text-sm text-success font-medium">完了</span>
+              </div>
+            </div>
+            <hr class="bg-success" />
+          </li>
+
+          <!-- 解析失敗 -->
+          <li id="timeline-item-3-error" class="hidden" style="display: none;">
+            <hr class="bg-error" />
+            <div class="timeline-middle">
+              <span class="badge badge-error size-4.5 rounded-full p-0">
+                <span class="icon-[tabler--alert-triangle] text-error-content size-3.5"></span>
+              </span>
+            </div>
+            <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 border border-error/30 bg-error/5">
+              <div
+                class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
+                <span class="text-sm sm:text-base">解析失敗</span>
+                <span class="text-base-content/50 text-xs sm:text-sm font-normal">今すぐ</span>
+              </div>
+              <p class="mb-2 text-xs sm:text-sm">解析が失敗しました</p>
+              <div class="flex items-center gap-2">
+                <span class="icon-[tabler--alert-circle] text-error size-4 sm:size-5"></span>
+                <span class="text-xs sm:text-sm text-error font-medium">解析失敗</span>
+              </div>
+            </div>
+            <hr class="bg-error" />
+          </li>
+
+
+        </ul>
+
+      </div><!-- /#file-upload-limit -->
+    </div>
+  </div>
+</div>
+
+<div class="h-16"></div>
+
+<!-- モデル選択モーダル -->
+<div id="slide-down-animated-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden"
+  role="dialog" tabindex="-1">
+  <div
+    class="modal-dialog overlay-open:mt-4 sm:overlay-open:mt-8 lg:overlay-open:mt-12 overlay-open:duration-300 transition-all ease-out max-w-sm sm:max-w-md lg:max-w-lg">
+    <div class="modal-content">
+      <div class="modal-header p-4 sm:p-6">
+        <h3 class="modal-title text-lg sm:text-xl">画像解析モデル選択</h3>
+        <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
+          data-overlay="#slide-down-animated-modal">
+          <span class="icon-[tabler--x] size-4"></span>
+        </button>
+      </div>
+      <div class="modal-body p-4 sm:p-6">
+        <div class="flex flex-col gap-4 sm:gap-6">
+          <div class="text-center">
+            <p class="text-sm sm:text-base text-gray-600 mb-2">アップロードされた画像を解析するための機械学習モデルを選択してください。</p>
+            <p class="text-xs sm:text-sm text-gray-500">各モデルは異なる特徴を持ち、解析目的に応じて最適なものを選択できます。</p>
+          </div>
+          <div class="space-y-3">
+            <div class="form-control">
+              <label class="label"><span class="label-text font-semibold text-sm sm:text-base">解析モデル</span></label>
+              <select class="select select-bordered w-full text-sm sm:text-base" id="model-selector">
+                <option value="">モデルを選択してください</option>
+                <option value="resnet50">PyTorch ResNet-50 (汎用画像分類)</option>
+                <option value="efficientnet">TensorFlow EfficientNet (軽量・高速)</option>
+                <option value="mobilenet">PyTorch MobileNet (モバイル最適化)</option>
+                <option value="vgg16">PyTorch VGG-16 (高精度・詳細分析)</option>
+                <option value="clip">CLIP (アニメ・イラスト検出特化)</option>
+                <option value="custom">カスタムモデル (特定用途特化)</option>
+              </select>
+            </div>
+            <div class="bg-base-200 rounded-lg p-3 sm:p-4">
+              <h4 class="font-semibold text-xs sm:text-sm mb-2">選択されたモデルの特徴</h4>
+              <p class="text-xs sm:text-sm text-gray-600" id="model-description">モデルを選択すると、ここに詳細な説明が表示されます。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="flex justify-end gap-3">
+          <button type="button" class="btn btn-soft btn-secondary"
+            data-overlay="#slide-down-animated-modal">キャンセル</button>
+          <button type="button" class="btn btn-primary" id="modal-start-analysis-btn">
+            <span class="icon-[tabler--player-play] size-5 mr-2"></span>解析開始
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- 簡素化されたアップロード機能 -->
+<script src="{% static 'js/upload-simplified.js' %}?v={{ timestamp|default:'1.0' }}"></script>
+<script src="{% static 'js/image-upload.js' %}?v={{ timestamp|default:'1.0' }}"></script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* タイムラインの表示を有効化 */
+  #timeline-container .timeline-middle {
+    display: flex !important;
+  }
+
+  /* タイムラインのスタイル調整 */
+  #timeline-container .timeline-end {
+    margin-left: 1rem !important;
+  }
+</style>
+{% endblock %}

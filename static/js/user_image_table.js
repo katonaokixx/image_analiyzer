@@ -4,7 +4,7 @@ function navigateToUploadPage(imageId, imageStatus) {
   console.log('navigateToUploadPage called with:', imageId, imageStatus);
 
   // URLパラメータで画像IDを渡す（CSRFトークン不要）
-  window.location.href = `/re_image_upload/?selected_image_id=${imageId}&image_status=${imageStatus}`;
+  window.location.href = `/v2/re_image_upload/?selected_image_id=${imageId}&image_status=${imageStatus}`;
 }
 
 // 再解析ページに遷移する関数
@@ -12,11 +12,12 @@ function navigateToReanalysis() {
   const currentImageId = window.currentModalImageId;
   if (currentImageId) {
     console.log('navigateToReanalysis called with imageId:', currentImageId);
-    window.location.href = `/re_image_upload/?selected_image_id=${currentImageId}&image_status=completed`;
+    window.location.href = `/v2/re_image_upload/?selected_image_id=${currentImageId}&image_status=completed`;
   } else {
     console.error('画像IDが取得できません');
   }
 }
+
 
 // 削除確認状態に切り替える関数
 function openDeleteConfirmModal() {
@@ -65,11 +66,11 @@ function confirmDeleteImage() {
   }
 
   // 削除APIを呼び出し
-  console.log('削除API呼び出し開始:', `/api/images/${currentImageId}/delete/`);
+  console.log('削除API呼び出し開始:', `/v2/api/images/${currentImageId}/delete/`);
   console.log('使用するCSRFトークン:', csrfToken);
 
-  fetch(`/api/images/${currentImageId}/delete/`, {
-    method: 'DELETE',
+  fetch(`/v2/api/images/${currentImageId}/delete/`, {
+    method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-CSRFToken': csrfToken

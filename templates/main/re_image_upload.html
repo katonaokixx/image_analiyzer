@@ -21,7 +21,7 @@
       <div class="group flex items-center justify-center gap-2 pt-4 pb-2">
         <span
           class="icon-[tabler--chevron-left] text-primary size-5 shrink-0 transition-transform group-hover:-translate-x-1 rtl:rotate-180"></span>
-        <a href="{% url 'user_image_table' %}" class="link link-animated link-primary font-normal">画像一覧へ</a>
+        <a href="{% url 'v2_user_image_table' %}" class="link link-animated link-primary font-normal">画像一覧へ</a>
       </div>
     </div>
   </div>
@@ -38,7 +38,7 @@
       {% csrf_token %}
 
       <!-- ページコンテキスト（JSが参照） -->
-      <div id="page-context" class="hidden" data-selected-image-id="{{ selected_image.id|default:'' }}"
+      <div id="page-context" class="hidden" data-selected-image-id="{{ selected_image.image_id|default:'' }}"
         data-selected-image-status="{{ selected_image_status|default:'' }}"
         data-selected-image-filename="{{ selected_image.filename|default:''|escape }}"
         data-selected-image-thumbnail-url="{{ selected_image.thumbnail_url|default:''|escape }}"
@@ -54,8 +54,10 @@
             <div class="flex items-center gap-x-3">
               <span
                 class="text-base-content/80 border-base-content/20 flex size-8 items-center justify-center rounded-lg border p-0.5">
+                <!-- DEBUG: 画像URL = {{ selected_image.thumbnail_url }} -->
                 <img src="{{ selected_image.thumbnail_url }}" alt="{{ selected_image.filename }}"
-                  class="rounded-md w-full h-full object-cover">
+                  class="rounded-md w-full h-full object-cover"
+                  onerror="console.error('画像読み込みエラー:', this.src); this.style.display='none';">
               </span>
               <div>
                 <p class="text-base-content text-sm font-medium">
@@ -134,7 +136,7 @@
                 {{ timeline_log.analysis_started_at|date:'Y-m-d H:i'|default:'' }}
               </span>
             </div>
-            <p class="mb-2 text-xs sm:text-sm">{{ timeline_log.analysis_step_description|default:'AIによる画像解析を開始しました。' }}
+            <p class="mb-2 text-xs sm:text-sm">{{ timeline_log.previous_results|default:'AIによる画像解析を開始しました。' }}
             </p>
 
             <!-- アップロードUIを流用した解析進捗表示 -->
@@ -273,7 +275,7 @@
       </div>
       <div class="modal-footer">
         <div class="flex justify-end gap-3">
-          <button type="button" class="btn btn-soft btn-secondary"
+          <button type="button" class="btn btn-soft btn-secondary" id="modal-cancel-btn"
             data-overlay="#slide-down-animated-modal">キャンセル</button>
           <button type="button" class="btn btn-primary" id="modal-start-analysis-btn">
             <span class="icon-[tabler--player-play] size-5 mr-2"></span>解析開始

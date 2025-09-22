@@ -1,0 +1,48 @@
+{% extends 'auth_base.html' %}
+{% load static %}
+
+{% block title %}送信完了 - 画像解析アプリ{% endblock %}
+
+{% block content %}
+<div class="flex h-auto min-h-screen items-center justify-center overflow-x-hidden py-2">
+  <div class="relative flex items-center justify-center px-4 sm:px-6 lg:px-8">
+    <div class="bg-base-100 shadow-base-300/20 z-1 w-full max-w-md space-y-6 rounded-xl p-6 shadow-md sm:p-8">
+      <div class="flex items-center gap-3">
+        <h2 class="text-base-content text-xl font-bold">画像解析アプリ</h2>
+      </div>
+      <div class="text-center">
+        <div class="mb-6">
+          <span class="icon-[tabler--circle-check] size-24 text-success mx-auto block mb-4"></span>
+          <h3 class="text-base-content mb-4 text-2xl font-semibold">送信完了</h3>
+        </div>
+
+        <div class="bg-success/10 border border-success/20 rounded-lg p-6 mb-6">
+          <p class="text-base-content text-lg leading-relaxed">
+            パスワードリセットリンクがあなたのメールアドレスに送信されました。<br>
+            受信トレイを確認してリンクをクリックし、新しいパスワードを設定してください。
+          </p>
+        </div>
+
+        <div class="bg-base-200 rounded-lg p-4 mb-6">
+          <div class="flex items-center gap-2">
+            <span class="icon-[tabler--info-circle] size-8 text-info"></span>
+            <p class="text-base-content/80 text-sm">
+              メールが届かない場合は、迷惑メールフォルダもご確認ください。
+            </p>
+          </div>
+        </div>
+
+        <div class="w-full">
+          <a href="{% url 'password_reset_request' %}" class="btn btn-lg btn-primary btn-gradient w-full">再送信</a>
+        </div>
+      </div>
+
+      <div class="group flex items-center justify-center gap-2">
+        <span
+          class="icon-[tabler--chevron-left] text-primary size-5 shrink-0 transition-transform group-hover:-translate-x-1 rtl:rotate-180"></span>
+        <a href="{% url 'login' %}" class="link link-animated link-primary font-normal">ログイン画面</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

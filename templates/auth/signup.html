@@ -166,7 +166,7 @@
         </form>
         <p class="text-base-content/80 mb-4 text-center">
           既にアカウントはお持ちですか?
-          <a href="{% url 'login' %}" class="link link-animated link-primary font-normal">ログイン画面</a>
+          <a href="{% url 'v2_login' %}" class="link link-animated link-primary font-normal">ログイン画面</a>
         </p>
       </div>
     </div>
@@ -190,7 +190,7 @@
         </div>
         <p class="text-lg mb-2">アカウントが正常に作成されました！</p>
         <p class="text-sm text-base-content/70 mb-4">5秒後にログイン画面に自動で移動します。</p>
-        <a href="{% url 'login' %}" class="btn btn-primary">今すぐログイン画面へ</a>
+        <a href="{% url 'v2_login' %}" class="btn btn-primary">今すぐログイン画面へ</a>
       </div>
     </div>
   </div>
@@ -213,7 +213,7 @@
         </div>
         <p class="text-lg mb-2">既に同じ名前、メールアドレスのアカウントがあります。</p>
         <p class="text-sm text-base-content/70 mb-4">5秒後にログイン画面に自動で移動します。</p>
-        <a href="{% url 'login' %}" class="btn btn-primary">今すぐログイン画面へ</a>
+        <a href="{% url 'v2_login' %}" class="btn btn-primary">今すぐログイン画面へ</a>
       </div>
     </div>
   </div>
@@ -291,7 +291,7 @@
       // 5秒後にログイン画面にリダイレクト
       setTimeout(function () {
         console.log('Redirecting to login page...');
-        window.location.href = "{% url 'login' %}";
+        window.location.href = "{% url 'v2_login' %}";
       }, 5000);
     } else {
       console.error('Success modal element not found!');
@@ -363,7 +363,7 @@
       // 5秒後にログイン画面にリダイレクト
       setTimeout(function () {
         console.log('Redirecting to login page...');
-        window.location.href = "{% url 'login' %}";
+        window.location.href = "{% url 'v2_login' %}";
       }, 5000);
     } else {
       console.error('Duplicate modal element not found!');

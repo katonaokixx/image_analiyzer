@@ -21,7 +21,7 @@
       </p>
       <div class="group flex items-center justify-center gap-2 pt-4 pb-4"
         style="padding-top: 16px !important; padding-bottom: 16px !important;">
-        <a href="{% url 'image_upload' %}" class="link link-animated link-primary font-normal">画像解析へ</a>
+        <a href="{% url 'v2_image_upload' %}" class="link link-animated link-primary font-normal">画像解析へ</a>
         <span
           class="icon-[tabler--chevron-right] text-primary size-5 shrink-0 transition-transform group-hover:translate-x-1 rtl:rotate-180"></span>
       </div>
@@ -184,7 +184,7 @@
         </thead>
         <tbody>
           {% for image in images %}
-          <tr data-image-id="{{ image.id }}">
+          <tr data-image-id="{{ image.image_id }}">
             <td>
               <div class="flex items-center gap-3">
                 <div class="avatar cursor-pointer" data-overlay="#slide-down-animated-modal">
@@ -225,26 +225,26 @@
             </td>
             <td class="text-center">
               {% if image.status == 'completed' %}
-              {% for result in image.analysis_results.all %}
-              {% if result.rank == 1 %}
-              <span class="badge badge-primary">{{ result.label }}</span>
-              {% endif %}
-              {% empty %}
+              {% with image.analysis_results.all|first as first_result %}
+              {% if first_result %}
+              <span class="badge badge-primary">{{ first_result.label }}</span>
+              {% else %}
               <span class="text-sm text-gray-500">-</span>
-              {% endfor %}
+              {% endif %}
+              {% endwith %}
               {% else %}
               <span class="text-sm text-gray-500">-</span>
               {% endif %}
             </td>
             <td>
-              {% if image.analysis_results.all %}
-              {% for result in image.analysis_results.all %}
-              {% if result.rank == 1 %}
-              <span class="badge badge-success">{{ result.confidence }}%</span>
-              {% endif %}
-              {% empty %}
+              {% if image.status == 'completed' %}
+              {% with image.analysis_results.all|first as first_result %}
+              {% if first_result %}
+              <span class="badge badge-success">{{ first_result.confidence }}%</span>
+              {% else %}
               <span class="badge badge-secondary">-</span>
-              {% endfor %}
+              {% endif %}
+              {% endwith %}
               {% else %}
               <span class="badge badge-secondary">-</span>
               {% endif %}

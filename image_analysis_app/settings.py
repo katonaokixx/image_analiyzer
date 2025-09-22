@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'image_analyzer',
+    'new_image_analyzer_v2',
 ]
 
 # カスタムユーザーモデル設定

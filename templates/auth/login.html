@@ -62,11 +62,12 @@
         </form>
         <p class="text-base-content/80 mb-4 text-center">
           アカウント作成していない場合→
-          <a href="{% url 'signup' %}" class="link link-animated link-primary font-normal">アカウント作成</a>
+          <a href="{% url 'v2_signup' %}" class="link link-animated link-primary font-normal">アカウント作成</a>
         </p>
         <p class="text-base-content/80 mb-4 text-center">
           パスワード忘れた場合→
-          <a href="{% url 'password_reset_request' %}" class="link link-animated link-primary font-normal">パスワードリセット</a>
+          <a href="{% url 'v2_password_reset_request' %}"
+            class="link link-animated link-primary font-normal">パスワードリセット</a>
         </p>
       </div>
     </div>

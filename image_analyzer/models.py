@@ -703,3 +703,80 @@ class AnalysisQueue(models.Model):
         for index, item in enumerate(items, 1):
             item.position = index
             item.save(update_fields=['position'])
+
+
+# 新しいテーブル設計のモデル（段階的移行用）
+class TransUploadedImage(models.Model):
+    """画像アップロードテーブル（新設計）"""
+    
+    # ステータスの選択肢
+    STATUS_CHOICES = [
+        ('preparing', '準備中'),
+        ('analyzing', '解析中'),
+        ('success', '解析成功'),
+        ('failed', '失敗'),
+    ]
+    
+    # 主キー
+    image_id = models.AutoField(
+        primary_key=True,
+        verbose_name='画像ID'
+    )
+    
+    # 外部キー
+    user_id = models.ForeignKey(
+        'User',
+        on_delete=models.CASCADE,
+        verbose_name='ユーザーID',
+        related_name='uploaded_images_new'
+    )
+    
+    # 基本情報
+    filename = models.CharField(
+        max_length=255,
+        verbose_name='ファイル名'
+    )
+    
+    file_path = models.CharField(
+        max_length=500,
+        verbose_name='ファイルパス'
+    )
+    
+    upload_date = models.DateTimeField(
+        default=timezone.now,
+        verbose_name='アップロード日時'
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='preparing',
+        verbose_name='ステータス'
+    )
+    
+    # エラー情報
+    upload_error = models.TextField(
+        verbose_name='アップロードエラー',
+        blank=True,
+        null=True
+    )
+    
+    # タイムスタンプ
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='作成日時'
+    )
+    
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='更新日時'
+    )
+    
+    class Meta:
+        db_table = 'trans_uploaded_image'
+        verbose_name = '画像アップロード'
+        verbose_name_plural = '画像アップロード'
+        ordering = ['-upload_date']
+    
+    def __str__(self):
+        return f"{self.filename} ({self.get_status_display()})"

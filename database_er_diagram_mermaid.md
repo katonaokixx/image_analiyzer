@@ -36,18 +36,16 @@ erDiagram
         rank "順位" int "INT NOT NULL"
         analysis_started_at "解析開始時刻" datetime "DATETIME NULL"
         analysis_completed_at "解析完了時刻" datetime "DATETIME NULL"
+        analysis_error "解析エラー" text "TEXT NULL"
         created_at "作成日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        updated_at "更新日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
     }
     
     TransAnalysisTimeline {
         timeline_id PK "タイムラインID" int "AUTO_INCREMENT NOT NULL"
         image_id FK "画像ID" int "INT NOT NULL"
-        analysis_started_at "解析開始時刻" datetime "DATETIME NULL"
-        analysis_completed_at "解析完了時刻" datetime "DATETIME NULL"
-        analysis_error "解析エラー" text "TEXT NULL"
+        analysis_status "解析状態" varchar "VARCHAR(20) NOT NULL DEFAULT 'not_started'"
         previous_results "前回解析結果" varchar "VARCHAR(200) NULL"
-        created_at "作成日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-        updated_at "更新日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
     }
     
     MstUser ||--o{ TransUploadedImage : "1:N"
@@ -107,18 +105,16 @@ erDiagram
         rank "順位" int "INT NOT NULL"
         analysis_started_at "解析開始時刻" datetime "DATETIME NULL"
         analysis_completed_at "解析完了時刻" datetime "DATETIME NULL"
+        analysis_error "解析エラー" text "TEXT NULL"
         created_at "作成日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
+        updated_at "更新日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
     }
     
     TransAnalysisTimeline {
         timeline_id PK "タイムラインID" int "AUTO_INCREMENT NOT NULL"
         image_id FK "画像ID" int "INT NOT NULL"
-        analysis_started_at "解析開始時刻" datetime "DATETIME NULL"
-        analysis_completed_at "解析完了時刻" datetime "DATETIME NULL"
-        analysis_error "解析エラー" text "TEXT NULL"
+        analysis_status "解析状態" varchar "VARCHAR(20) NOT NULL DEFAULT 'not_started'"
         previous_results "前回解析結果" varchar "VARCHAR(200) NULL"
-        created_at "作成日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-        updated_at "更新日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
     }
     
     MstUser ||--o{ TransUploadedImage : "1:N"
@@ -134,7 +130,7 @@ erDiagram
 
 ### NOT NULL制約
 - **必須フィールド**: `user_id`, `username`, `email`, `is_admin`, `is_active`, `created_at`, `updated_at`
-- **オプションフィールド**: `analysis_started_at`, `analysis_completed_at`, `error_log`, `previous_results`
+- **オプションフィールド**: `analysis_started_at`, `analysis_completed_at`, `analysis_error`, `previous_results`
 
 ### UNIQUE制約
 - `MstUser.username`: ユーザー名の重複禁止
@@ -147,6 +143,7 @@ erDiagram
 - `is_admin`: FALSE
 - `is_active`: TRUE
 - `status`: 'preparing'
+- `analysis_status`: 'not_started'
 - `created_at`, `updated_at`: CURRENT_TIMESTAMP
 
 ### 外部キー制約
@@ -158,45 +155,59 @@ erDiagram
 
 ### エラー状態の管理
 - **TransUploadedImage.status**: 'preparing', 'analyzing', 'success', 'failed'
-  - 'failed'状態で解析エラーを表現
+  - 'failed'状態でアップロードエラーを表現
 
 ### エラー情報の保存
-- **TransUploadedImage.error_log**: アップロード・解析エラー時の詳細ログを保存
-- **TransUploadedImage.status**: エラー状態の管理（'failed'）
-- **TransAnalysisTimeline.previous_results**: 前回解析結果を保存
+- **TransUploadedImage.upload_error**: アップロードエラー時の詳細ログを保存
+- **TransImageAnalysis.analysis_error**: 解析エラー時の詳細ログを保存
+- **TransAnalysisTimeline.analysis_status**: 解析状態の管理（'not_started', 'in_progress', 'completed', 'failed'）
 
 ### エラー処理フロー
-1. 解析開始時: `status = 'analyzing'`
-2. 解析成功時: `status = 'success'`
-3. 解析失敗時: 
-   - `status = 'failed'`でエラー状態を管理
-   - `error_log`にエラー詳細を記録
+1. アップロード開始時: `status = 'preparing'`
+2. 解析開始時: `analysis_status = 'in_progress'`
+3. 解析成功時: `analysis_status = 'completed'`
+4. 解析失敗時: 
+   - `analysis_status = 'failed'`でエラー状態を管理
+   - `analysis_error`にエラー詳細を記録
 
-## メンターの指摘事項への対応
+## メンターのフィードバックへの対応
 
-### 1. アップロード完了時刻の重複解消
-- **問題**: `TransUploadedImage.upload_date`と`TransAnalysisTimeline.upload_completed_at`が重複
-- **対応**: `upload_completed_at`を削除（`upload_date`で十分）
+### 1. 解析ログは解析状態のみ記載
+- **修正前**: `TransAnalysisTimeline`に解析時刻、エラー詳細などが混在
+- **修正後**: `analysis_status`のみで解析状態を管理
+- **効果**: テーブルの役割が明確化
 
-### 2. 進捗率の削除
-- **問題**: 進捗率の算出方法が不明確
-- **対応**: `progress_percentage`を削除（ProgressLogテーブルで管理）
+### 2. 各フィールドの適切な配置
+- **解析時刻**: `TransImageAnalysis`に移動（解析結果の詳細データとして）
+- **解析エラー**: `TransImageAnalysis`に移動（解析結果の詳細データとして）
+- **アップロードエラー**: `TransUploadedImage`に配置（アップロード関連データとして）
 
-### 3. 不要フィールドの削除
-- **問題**: `model_used`, `display_data`, `error_code`が不要または重複
-- **対応**: 不要フィールドを削除
+### 3. アップロードエラーの記載方法
+- **場所**: `TransUploadedImage.upload_error`
+- **用途**: アップロードプロセスでのエラー詳細を記録
+- **管理**: アップロード関連のエラーは画像テーブルで一元管理
 
-### 4. 解析ステータスの適切な配置
-- **問題**: ステータスが`TransAnalysisTimeline`にあるべき
-- **対応**: ステータスは`TransUploadedImage`に配置（適切）
+## テーブル役割の明確化
 
-### 5. テーブル名の改善
-- **問題**: 日本語名が不自然
-- **対応**: 適切な命名規則に変更
-  - `MstUser`（ユーザーマスタ）
-  - `TransUploadedImage`（画像アップロード機能）
-  - `TransImageAnalysis`（画像解析機能）
-  - `TransAnalysisTimeline`（解析タイムライン機能）
+### MstUser（ユーザーマスタ）
+- ユーザー基本情報の管理
+- 認証・認可の基盤
+
+### TransUploadedImage（アップロード画像）
+- 画像ファイルの基本情報管理
+- アップロードプロセスの状態管理
+- **アップロードエラーの記録**
+
+### TransImageAnalysis（画像解析結果）
+- 解析結果の詳細データ保存
+- **解析時刻の記録**
+- **解析エラーの記録**
+- 複数結果の順位管理
+
+### TransAnalysisTimeline（解析ログ）
+- **解析状態のみの管理**
+- 前回解析結果の参照
+- 解析プロセスの全体進行状況
 
 ## draw.ioでの使用方法
 
@@ -226,7 +237,7 @@ erDiagram
 - **MstUser**: `username`, `email` (UNIQUE制約により自動生成)
 - **TransUploadedImage**: `user_id`, `status`, `upload_date`
 - **TransImageAnalysis**: `image_id`, `model_name`, `analysis_started_at`
-- **TransAnalysisTimeline**: `image_id`, `analysis_started_at`
+- **TransAnalysisTimeline**: `image_id`, `analysis_status`
 
 ### 複合インデックス
 - `TransUploadedImage(user_id, status)` - ユーザー別ステータス検索
@@ -237,31 +248,11 @@ erDiagram
 ### CHECK制約
 - `TransImageAnalysis.confidence`: 0.00-100.00の範囲
 - `TransUploadedImage.status`: 'preparing', 'processing', 'completed', 'failed'のいずれか
+- `TransAnalysisTimeline.analysis_status`: 'not_started', 'in_progress', 'completed', 'failed'のいずれか
 
 ### 外部キー制約
 - 全てのFKにCASCADE DELETE設定
 - 参照整合性の自動保証
-
-## テーブル役割の明確化
-
-### MstUser（ユーザーマスタ）
-- ユーザー基本情報の管理
-- 認証・認可の基盤
-
-### TransUploadedImage（アップロード画像）
-- 画像ファイルの基本情報管理
-- アップロードプロセスの状態管理
-- アップロードエラーの記録
-
-### TransImageAnalysis（画像解析結果）
-- 解析結果の詳細データ保存
-- 解析時刻の記録
-- 複数結果の順位管理
-
-### TransAnalysisTimeline（解析ログ）
-- 解析プロセスの全体管理
-- 解析エラーの記録
-- 前回解析結果の参照
 
 ## カスタマイズオプション
 
