@@ -101,7 +101,7 @@
               <span class="text-sm sm:text-base">ファイルアップロード完了</span>
               <span class="text-base-content/50 text-xs sm:text-sm font-normal">
                 {% if selected_image.upload_completed_at %}{{ selected_image.upload_completed_at|date:'Y-m-d H:i' }}{%
-                else %}{{ selected_image.upload_started_at|date:'Y-m-d H:i' }}{% endif %}
+                else %}{{ selected_image.created_at|date:'Y-m-d H:i' }}{% endif %}
               </span>
             </div>
             <p id="timeline-description" class="mb-2 text-xs sm:text-sm">

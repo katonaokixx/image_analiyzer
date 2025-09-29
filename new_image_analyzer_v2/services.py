@@ -7,7 +7,7 @@ import time
 from typing import List, Dict, Optional
 from django.conf import settings
 from django.utils import timezone
-from .models import Image, AnalysisResult, TimelineLog, ProgressLog, AnalysisQueue
+from .models import TransUploadedImage, TransImageAnalysis
 
 logger = logging.getLogger(__name__)
 
@@ -281,14 +281,10 @@ class AnalysisService:
             
             if model_info['model'] is None:
                 logger.error(f"モデルが読み込まれていません: {internal_model_name}")
-                # PyTorchがインストールされていない場合のダミー結果
+                # モデルが読み込まれていない場合はエラーを返す
                 return {
-                    'success': True,
-                    'predictions': [
-                        {'label': '動物', 'confidence': 85.5},
-                        {'label': '自然', 'confidence': 72.3},
-                        {'label': '建物', 'confidence': 68.1}
-                    ]
+                    'success': False,
+                    'error': f'モデル {internal_model_name} が読み込まれていません。PyTorch/CLIPのインストールを確認してください。'
                 }
             
             # 画像の前処理
@@ -850,9 +846,9 @@ class AnalysisService:
             results = []
             for i, (category, confidence) in enumerate(sorted_categories[:3]):
                 if confidence > 0.001:  # 0.1%以上の信頼度
-                    # 信頼度を10%以上、95%以下に調整（100%を避ける）
-                    min_confidence = 0.10
-                    max_confidence = 0.95
+                    # 信頼度を20%以上、90%以下に調整（より現実的な値に）
+                    min_confidence = 0.20
+                    max_confidence = 0.90
                     adjusted_confidence = max(min(confidence, max_confidence), min_confidence)
                     
                     results.append({
@@ -865,9 +861,9 @@ class AnalysisService:
             if len(results) < 3:
                 for i, (category, confidence) in enumerate(sorted_categories[3:6]):
                     if confidence > 0.0001:  # 0.01%以上の信頼度
-                        # 信頼度を5%以上、50%以下に調整
-                        min_confidence = 0.05
-                        max_confidence = 0.50
+                        # 信頼度を15%以上、80%以下に調整（より現実的な値に）
+                        min_confidence = 0.15
+                        max_confidence = 0.80
                         adjusted_confidence = max(min(confidence, max_confidence), min_confidence)
                         
                         results.append({
@@ -962,34 +958,13 @@ class AnalysisService:
             if broad_category_results:
                 return broad_category_results
             
-            # フォールバック: 従来の方法
-            # モデルに応じてクラス名を読み込み
-            if internal_model_name == 'clip':
-                class_names = self._get_clip_classes()
-            else:
-                class_names = self._get_imagenet_classes()
-            
-            # 上位3つの予測結果を取得
-            top_indices = np.argsort(predictions[0])[-3:][::-1]
-            
-            results = []
-            for i, idx in enumerate(top_indices):
-                # idxが整数であることを確認
-                if isinstance(idx, int) and idx < len(predictions[0]):
-                    confidence = float(predictions[0][idx]) * 100
-                    english_name = class_names.get(idx, f"Class_{idx}")
-                    japanese_name = self._get_japanese_translation(english_name)
-                    
-                    # 日本語名と英語名を組み合わせて表示
-                    display_name = f"{japanese_name} ({english_name})" if japanese_name != english_name else japanese_name
-                
-                    results.append({
-                        'label': display_name,
-                        'confidence': confidence,
-                        'rank': i + 1
-                    })
-            
-            return results
+            # 大分類で結果がない場合は、デフォルト結果を返す
+            logger.warning(f"大分類で結果が取得できませんでした: {internal_model_name}")
+            return [
+                {'label': '分類不明', 'confidence': 50.0, 'rank': 1},
+                {'label': 'その他', 'confidence': 30.0, 'rank': 2},
+                {'label': '未分類', 'confidence': 20.0, 'rank': 3}
+            ]
         
         except Exception as e:
             logger.error(f"予測結果の整形に失敗: {e}")
@@ -1004,7 +979,7 @@ class AnalysisService:
                 'ファッション': [8, 9],  # realistic photo, safety equipment
                 '動物': [10],  # animal
                 '建物': [11],  # building
-                '車両': [12, 13, 14, 15, 16],  # car, vehicle, automobile, sports car, racing car
+                '乗り物': [12, 13, 14, 15, 16],  # car, vehicle, automobile, sports car, racing car
                 '人物': [17],  # person
                 '自然': [18]   # nature
             }
@@ -1041,227 +1016,19 @@ class AnalysisService:
             return [{'label': 'Error', 'confidence': 0.0, 'rank': 1}]
 
     def process_queue_item(self, queue_item_id: int) -> Dict:
-        """キューアイテムを処理する"""
-        try:
-            from .models import AnalysisQueue, Image, AnalysisResult, TimelineLog
-            
-            # キューアイテムを取得
-            queue_item = AnalysisQueue.objects.get(id=queue_item_id)
-            image = queue_item.image
-            
-            # キューアイテム処理開始
-            
-            # 画像のステータスを解析中に更新
-            image.status = 'analyzing'
-            image.save()
-            
-            # タイムラインログを追加
-            timeline_log, created = TimelineLog.objects.get_or_create(
-                image=image,
-                defaults={}
-            )
-            timeline_log.analysis_started_at = timezone.now()
-            timeline_log.model_used = queue_item.model_name
-            timeline_log.save()
-            
-            # 画像解析を実行
-            result = self.analyze_image(image.file_path, queue_item.model_name)
-            
-            if result['success']:
-                # 解析成功
-                image.status = 'completed'
-                image.save()
-                
-                # 古い解析結果を削除（同じモデルの結果）
-                old_results = AnalysisResult.objects.filter(
-                    image=image, 
-                    model_name=queue_item.model_name
-                )
-                deleted_count = old_results.count()
-                old_results.delete()
-                logger.info(f"古い解析結果を削除: {deleted_count}件 (モデル: {queue_item.model_name})")
-                
-                # 解析結果を保存
-                for i, pred in enumerate(result['results']):
-                    AnalysisResult.objects.create(
-                        image=image,
-                        model_name=queue_item.model_name,
-                        label=pred['label'],
-                        confidence=pred['confidence'],
-                        rank=pred['rank'],
-                        model_version='1.0.0'  # デフォルトバージョン
-                    )
-                
-                # 解析完了時にタイムライン情報を更新
-                try:
-                    timeline_log = image.timeline_log
-                    timeline_log.analysis_completed_at = timezone.now()
-                    timeline_log.completion_step_title = '解析完了'
-                    timeline_log.completion_step_description = '画像のカテゴリー分類が完了しました'
-                    timeline_log.completion_step_status = '完了'
-                    timeline_log.completion_step_icon = 'brain'
-                    timeline_log.completion_step_color = 'success'
-                    timeline_log.save()
-                except TimelineLog.DoesNotExist:
-                    pass
-                
-                # キューアイテムを完了に更新
-                queue_item.status = 'completed'
-                queue_item.completed_at = timezone.now()
-                queue_item.save()
-                
-                # タイムラインログを追加
-                timeline_log, created = TimelineLog.objects.get_or_create(
-                    image=image,
-                    defaults={}
-                )
-                timeline_log.analysis_completed_at = timezone.now()
-                timeline_log.save()
-                    
-                # 解析完了
-                return {'success': True, 'message': f'画像ID {image.id} の解析が完了しました'}
-                    
-            else:
-                # 解析失敗
-                image.status = 'failed'
-                image.save()
-                
-                # 失敗時の進捗ログを作成
-                ProgressLog.objects.create(
-                    image=image,
-                    progress_percentage=0.0,
-                    current_stage='failed',
-                    stage_description=f'解析失敗: {result.get("error", "Unknown error")}'
-                )
-                
-                # 失敗時にタイムライン情報を更新
-                try:
-                    timeline_log = image.timeline_log
-                    timeline_log.analysis_step_title = '解析失敗'
-                    timeline_log.analysis_step_description = '画像の解析に失敗しました'
-                    timeline_log.analysis_step_status = '解析失敗'
-                    timeline_log.analysis_step_icon = 'alert-circle'
-                    timeline_log.analysis_step_color = 'error'
-                    timeline_log.analysis_progress_percentage = 0
-                    timeline_log.analysis_progress_stage = 'failed'
-                    # 3つ目のタイムラインも失敗に更新
-                    timeline_log.completion_step_title = '解析失敗'
-                    timeline_log.completion_step_description = '画像の解析に失敗しました'
-                    timeline_log.completion_step_status = '解析失敗'
-                    timeline_log.completion_step_icon = 'alert-circle'
-                    timeline_log.completion_step_color = 'error'
-                    timeline_log.save()
-                except TimelineLog.DoesNotExist:
-                    pass
-                
-                # キューアイテムを失敗に更新
-                queue_item.status = 'failed'
-                queue_item.completed_at = timezone.now()
-                queue_item.error_message = result.get('error', 'Unknown error')
-                queue_item.save()
-                
-                # タイムラインログを追加
-                timeline_log, created = TimelineLog.objects.get_or_create(
-                    image=image,
-                    defaults={}
-                )
-                # 失敗時は解析完了時刻は更新しない
-                timeline_log.save()
-                
-                logger.error(f"解析失敗: 画像ID={image.id}, エラー={result['error']}")
-                raise Exception(f"解析に失敗しました: {result['error']}")
-            
-        except Exception as e:
-            logger.error(f"キューアイテム処理エラー: {e}")
-            return {'success': False, 'error': str(e)}
+        """キューアイテムを処理する（v2では使用しない）"""
+        # v2ではキューシステムを使用しないため、このメソッドは使用されません
+        return {'success': False, 'error': 'v2ではキューシステムを使用しません'}
     
     def get_analysis_progress(self) -> Dict:
-        """解析進捗を取得する"""
-        try:
-            from .models import Image, ProgressLog
-            from django.utils import timezone
-            
-            # 解析中または準備中の画像を取得
-            processing_images = Image.objects.filter(status__in=['preparing', 'analyzing'])
-            total_processing = processing_images.count()
-            
-            # 失敗した画像を取得
-            failed_images = Image.objects.filter(status='failed')
-            total_failed = failed_images.count()
-            
-            # 完了した画像を取得
-            completed_images = Image.objects.filter(status='completed')
-            total_completed = completed_images.count()
-            
-            # 解析中の画像がない場合
-            if total_processing == 0:
-                # 完了した画像がある場合
-                if total_completed > 0:
-                    return {
-                        'progress': 100,
-                        'status': 'completed',
-                        'current_stage': 'completed',
-                        'description': '解析完了'
-                    }
-                
-                # 失敗した画像がある場合
-                if total_failed > 0:
-                    # 最新の失敗ログから進捗を取得
-                    latest_failed_progress = ProgressLog.objects.filter(
-                        image__in=failed_images
-                    ).order_by('-timestamp').first()
-                    
-                    if latest_failed_progress:
-                        return {
-                            'progress': float(latest_failed_progress.progress_percentage),
-                            'status': 'failed',
-                            'current_stage': latest_failed_progress.current_stage,
-                            'description': latest_failed_progress.stage_description
-                        }
-                    else:
-                        return {
-                            'progress': 0,
-                            'status': 'failed',
-                            'current_stage': 'failed',
-                            'description': '解析失敗'
-                        }
-                
-                # 解析待ちの状態
-                return {
-                    'progress': 0,
-                    'status': 'waiting',
-                    'current_stage': 'waiting',
-                    'description': '解析待ち...'
-                }
-            
-            # 最新の進捗ログから進捗を取得
-            latest_progress = ProgressLog.objects.filter(
-                image__in=processing_images
-            ).order_by('-timestamp').first()
-            
-            if latest_progress:
-                return {
-                    'progress': float(latest_progress.progress_percentage),
-                    'status': 'analyzing',
-                    'current_stage': latest_progress.current_stage,
-                    'description': latest_progress.stage_description
-                }
-            else:
-                return {
-                    'progress': 0,
-                    'status': 'analyzing',
-                    'current_stage': 'preparing',
-                    'description': '解析準備中...'
-                }
-                
-        except Exception as e:
-            logger.error(f"進捗取得エラー: {e}")
-            return {
-                'progress': 0,
-                'status': 'error',
-                'current_stage': 'error',
-                'description': f'エラー: {str(e)}'
-            }
+        """解析進捗を取得する（v2では使用しない）"""
+        # v2では進捗管理をviews.pyで行うため、このメソッドは使用されません
+        return {
+            'progress': 0,
+            'status': 'not_used',
+            'current_stage': 'not_used',
+            'description': 'v2では使用されません'
+        }
 
 
 # シングルトンインスタンス

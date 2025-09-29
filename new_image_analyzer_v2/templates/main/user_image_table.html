@@ -201,17 +201,11 @@
               </div>
             </td>
             <td>
-              <!-- FORCE UPDATE: {{ image.upload_started_at }} -->
-              <div style="background: red; color: white; padding: 10px; font-weight: bold; font-size: 16px;">
-                FORCE DEBUG: {{ image.upload_started_at }}
-              </div>
-              <div style="background: blue; color: white; padding: 10px; font-weight: bold; font-size: 16px;">
-                FORCE TYPE: {{ image.upload_started_at|default:"None" }}
-              </div>
-              <div style="background: green; color: white; padding: 10px; font-weight: bold; font-size: 16px;">
-                FORCE DATE: {% if image.upload_started_at %}{{ image.upload_started_at|date:"Y-m-d H:i" }}{% else
-                %}日時データなし{% endif %}
-              </div>
+              {% if image.upload_completed_at %}
+              {{ image.upload_completed_at|date:"Y-m-d H:i" }}
+              {% else %}
+              {{ image.created_at|date:"Y-m-d H:i" }}
+              {% endif %}
             </td>
             <td>
               {% if image.status == 'completed' %}

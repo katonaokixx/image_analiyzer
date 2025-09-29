@@ -2,11 +2,23 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.contrib.auth.models import BaseUserManager
 import os
+
+
+class MstUserManager(BaseUserManager):
+    """MstUser用のカスタムマネージャー"""
+    
+    def get_by_natural_key(self, username):
+        """Django認証システムで必要なメソッド"""
+        return self.get(username=username)
 
 
 class MstUser(models.Model):
     """ユーザーマスタ（ER図に完全準拠）"""
+    
+    # カスタムマネージャー
+    objects = MstUserManager()
     
     # Django認証システムに必要な属性
     REQUIRED_FIELDS = ['email']
@@ -84,6 +96,11 @@ class MstUser(models.Model):
     def get_username(self):
         return self.username
     
+    def check_password(self, raw_password):
+        """パスワードチェック"""
+        from django.contrib.auth.hashers import check_password
+        return check_password(raw_password, self.password)
+    
     @classmethod
     def get_by_natural_key(cls, username):
         """Django認証システム用のメソッド"""
@@ -142,7 +159,8 @@ class TransUploadedImage(models.Model):
     )
     
     analysis_started_at = models.DateTimeField(
-        default=timezone.now,
+        null=True,
+        blank=True,
         verbose_name='解析開始時刻'
     )
     

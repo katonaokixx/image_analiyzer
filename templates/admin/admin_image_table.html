@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}管理者用画像一覧 - 画像解析アプリ{% endblock %}
 
@@ -153,7 +154,7 @@
           {% for image in images %}
           <tr data-image-id="{{ image.id }}">
             <td>
-              <span class="font-medium">{{ image.user.username }}</span>
+              <span class="font-medium text-red-500">{{ image.user_id.username }}</span>
             </td>
             <td>
               <div class="flex items-center gap-3">
@@ -166,11 +167,17 @@
                 </div>
                 <div>
                   <div class="text-sm opacity-50">画像ファイル</div>
-                  <div class="font-medium">{{ image.filename }}</div>
+                  <div class="font-medium">{{ image.simple_filename }}</div>
                 </div>
               </div>
             </td>
-            <td>{{ image.upload_date|date:"Y-m-d H:i" }}</td>
+            <td>
+              {% if image.upload_completed_at %}
+              {{ image.upload_completed_at|date:"Y-m-d H:i" }}
+              {% else %}
+              {{ image.created_at|date:"Y-m-d H:i" }}
+              {% endif %}
+            </td>
             <td>
               {% if image.status == 'completed' %}
               <span class="badge badge-outline border-dashed badge-success me-2 cursor-pointer" title="クリックしてタイムラインを確認"
@@ -202,26 +209,26 @@
             </td>
             <td class="text-center">
               {% if image.status == 'completed' %}
-              {% for result in image.analysis_results.all %}
-              {% if result.rank == 1 %}
-              <span class="badge badge-primary">{{ result.label }}</span>
-              {% endif %}
-              {% empty %}
+              {% with image.get_previous_results|first as latest_result %}
+              {% if latest_result %}
+              <span class="badge badge-primary">{{ latest_result.label }}</span>
+              {% else %}
               <span class="text-sm text-gray-500">-</span>
-              {% endfor %}
+              {% endif %}
+              {% endwith %}
               {% else %}
               <span class="text-sm text-gray-500">-</span>
               {% endif %}
             </td>
             <td>
               {% if image.status == 'completed' %}
-              {% for result in image.analysis_results.all %}
-              {% if result.rank == 1 %}
-              <span class="badge badge-outline">{{ result.confidence }}%</span>
-              {% endif %}
-              {% empty %}
+              {% with image.get_previous_results|first as latest_result %}
+              {% if latest_result %}
+              <span class="badge badge-outline">{{ latest_result.confidence }}%</span>
+              {% else %}
               <span class="text-sm text-gray-500">-</span>
-              {% endfor %}
+              {% endif %}
+              {% endwith %}
               {% else %}
               <span class="text-sm text-gray-500">-</span>
               {% endif %}
@@ -236,33 +243,33 @@
               {% endif %}
             </td>
             <td>
-              {% if image.timeline_log.analysis_started_at %}
-              {{ image.timeline_log.analysis_started_at|date:"Y-m-d H:i" }}
+              {% if image.analysis_started_at %}
+              {{ image.analysis_started_at|date:"Y-m-d H:i" }}
               {% else %}
               <span class="text-sm text-gray-500">-</span>
               {% endif %}
             </td>
             <td>
-              {% if image.timeline_log.analysis_completed_at %}
-              {{ image.timeline_log.analysis_completed_at|date:"Y-m-d H:i" }}
+              {% if image.analysis_completed_at %}
+              {{ image.analysis_completed_at|date:"Y-m-d H:i" }}
               {% else %}
               <span class="text-sm text-gray-500">-</span>
               {% endif %}
             </td>
             <td>
               {% if image.status == 'completed' %}
-              {% with first_result=image.analysis_results.first %}
-              {% if first_result %}
-              {% if first_result.model_name == 'pytorch_resnet50' %}
+              {% with image.get_previous_results|first as latest_result %}
+              {% if latest_result %}
+              {% if latest_result.model_name == 'pytorch_resnet50' %}
               <span class="badge badge-info">PyTorch ResNet-50</span>
-              {% elif first_result.model_name == 'pytorch_vgg16' %}
+              {% elif latest_result.model_name == 'pytorch_vgg16' %}
               <span class="badge badge-info">PyTorch VGG-16</span>
-              {% elif first_result.model_name == 'pytorch_mobilenet' %}
+              {% elif latest_result.model_name == 'pytorch_mobilenet' %}
               <span class="badge badge-info">PyTorch MobileNet</span>
-              {% elif first_result.model_name == 'clip' %}
+              {% elif latest_result.model_name == 'clip' %}
               <span class="badge badge-info">CLIP</span>
               {% else %}
-              <span class="badge badge-info">{{ first_result.model_name }}</span>
+              <span class="badge badge-info">{{ latest_result.model_name }}</span>
               {% endif %}
               {% else %}
               <span class="text-sm text-gray-500">-</span>

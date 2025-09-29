@@ -20,11 +20,8 @@ from datetime import timedelta
 # 新しいモデルをインポート
 from .models import MstUser, TransUploadedImage, TransImageAnalysis
 from django.utils import timezone
-# 既存のサービスをインポート（後で新しいモデル用に修正）
-# v1の依存関係を削除
-# from image_analyzer.services import analysis_service
-# 既存のモデルもインポート（認証用）
-# from image_analyzer.models import PasswordResetToken
+# v2用の解析サービスをインポート
+from .services import analysis_service
 
 ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif'}
 MAX_MB = 1
@@ -47,24 +44,13 @@ def validate_file(file):
     return None
 
 def save_file_and_create_image_v2(file, user):
-    """ファイルを保存して新しいモデルで画像レコードを作成"""
-    # ファイル名を生成（タイムスタンプを追加しない）
-    filename = file.name
-    file_path = os.path.join(settings.MEDIA_ROOT, 'images', filename)
+    """ファイルを保存して新しいモデルで画像レコードを作成（番号付与方式）"""
+    import uuid
+    from datetime import datetime
     
-    print(f"DEBUG: ファイル名: {filename}")
-    print(f"DEBUG: ファイルパス: {file_path}")
-    
-    # ディレクトリを作成
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    
-    # ファイルを保存
-    with open(file_path, 'wb') as destination:
-        for chunk in file.chunks():
-            destination.write(chunk)
-    
-    print(f"DEBUG: ファイル保存完了: {file_path}")
-    print(f"DEBUG: ファイル存在確認: {os.path.exists(file_path)}")
+    # 元のファイル名を取得
+    original_filename = file.name
+    file_ext = os.path.splitext(original_filename)[1]
     
     # 既存のUserからMstUserを取得または作成
     mst_user, created = MstUser.objects.get_or_create(
@@ -78,28 +64,52 @@ def save_file_and_create_image_v2(file, user):
     
     print(f"DEBUG: MstUser: {mst_user.username} (created: {created})")
     
+    # 重複チェックと番号付与
+    display_filename = original_filename
+    counter = 1
+    
+    # 同じユーザーが同じファイル名でアップロードした回数をカウント
+    existing_count = TransUploadedImage.objects.filter(
+        user_id=mst_user,
+        filename__startswith=original_filename.split('.')[0]  # 拡張子を除いた部分でチェック
+    ).count()
+    
+    if existing_count > 0:
+        # 番号を付与
+        name_without_ext = original_filename.split('.')[0]
+        display_filename = f"{name_without_ext} ({existing_count}){file_ext}"
+    
+    # 物理ファイル用の一意なファイル名を生成（UUID方式を維持）
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    unique_id = str(uuid.uuid4())[:8]
+    physical_filename = f"{timestamp}_{unique_id}{file_ext}"
+    file_path = os.path.join(settings.MEDIA_ROOT, 'images', physical_filename)
+    
+    print(f"DEBUG: 元のファイル名: {original_filename}")
+    print(f"DEBUG: 表示用ファイル名: {display_filename}")
+    print(f"DEBUG: 物理ファイル名: {physical_filename}")
+    print(f"DEBUG: ファイルパス: {file_path}")
+    
+    # ディレクトリを作成
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    
+    # ファイルを保存
+    with open(file_path, 'wb') as destination:
+        for chunk in file.chunks():
+            destination.write(chunk)
+    
+    print(f"DEBUG: ファイル保存完了: {file_path}")
+    print(f"DEBUG: ファイル存在確認: {os.path.exists(file_path)}")
+    
     # 新しいモデルで画像レコードを作成
     img = TransUploadedImage.objects.create(
         user_id=mst_user,  # MstUserのインスタンスを渡す
-        filename=filename,
-        file_path=file_path,
+        filename=display_filename,  # 表示用ファイル名を保存
+        file_path=file_path,  # 物理ファイルパス
         status='analyzing'  # 直接解析中に
     )
     
-    # ファイル保存処理
-    try:
-        with open(file_path, 'wb') as destination:
-            for chunk in file.chunks():
-                destination.write(chunk)
-        
-        print(f"DEBUG: アップロード完了: {img.created_at}")
-        
-    except Exception as e:
-        # アップロード失敗時はエラーステータスに更新
-        img.status = 'failed'
-        img.save()
-        raise e
-    
+    print(f"DEBUG: アップロード完了: {img.created_at}")
     print(f"DEBUG: TransUploadedImage作成完了: ID={img.image_id}")
     
     return img
@@ -277,21 +287,9 @@ def user_image_table(request: HttpRequest):
     for image in images_list:
         print(f"DEBUG user_image_table: Processing image {image.image_id}: {image.filename}")
         print(f"DEBUG user_image_table: created_at = {image.created_at}")
-        if image.filename and '__' in image.filename:
-            # ファイル名から拡張子を取得
-            if '.' in image.filename:
-                name_part, extension = image.filename.rsplit('.', 1)
-                # アンダースコア2つ以降の部分を取得
-                if '__' in name_part:
-                    simple_part = name_part.split('__', 1)[1]
-                    image.simple_filename = f"{simple_part}.{extension}"
-                    print(f"DEBUG user_image_table: {image.filename} -> {image.simple_filename}")
-                else:
-                    image.simple_filename = image.filename
-            else:
-                image.simple_filename = image.filename
-        else:
-            image.simple_filename = image.filename
+        
+        # ファイル名をそのまま表示（番号付与方式）
+        image.simple_filename = image.filename
     
     context = {
         'page_obj': page_obj,
@@ -311,17 +309,17 @@ def admin_image_table(request: HttpRequest):
         return redirect('v2_user_image_table')
     
     # 新しいモデルを使用して画像を取得
-    images = TransUploadedImage.objects.all().order_by('-upload_started_at')
+    images = TransUploadedImage.objects.all().order_by('-created_at')
     users = MstUser.objects.all().order_by('username')
     
     # View All機能のチェック
     view_all = request.GET.get('view_all', 'false').lower() == 'true'
     
-    if view_all:
-        # 全ユーザーの画像を表示
+    if view_all or request.user.is_staff:
+        # 管理者またはView Allが有効な場合は全ユーザーの画像を表示
         filtered_images = images
     else:
-        # ログインユーザーの画像のみ表示
+        # 一般ユーザーの場合は自分の画像のみ表示
         try:
             mst_user = MstUser.objects.get(username=request.user.username)
             filtered_images = images.filter(user_id=mst_user)
@@ -338,21 +336,16 @@ def admin_image_table(request: HttpRequest):
     for image in images_list:
         print(f"DEBUG admin_image_table: Processing image {image.image_id}: {image.filename}")
         print(f"DEBUG admin_image_table: created_at = {image.created_at}")
-        if image.filename and '__' in image.filename:
-            # ファイル名から拡張子を取得
-            if '.' in image.filename:
-                name_part, extension = image.filename.rsplit('.', 1)
-                # アンダースコア2つ以降の部分を取得
-                if '__' in name_part:
-                    simple_part = name_part.split('__', 1)[1]
-                    image.simple_filename = f"{simple_part}.{extension}"
-                    print(f"DEBUG admin_image_table: {image.filename} -> {image.simple_filename}")
-                else:
-                    image.simple_filename = image.filename
-            else:
-                image.simple_filename = image.filename
+        print(f"DEBUG admin_image_table: user_id = {image.user_id}")
+        print(f"DEBUG admin_image_table: user_id type = {type(image.user_id)}")
+        if image.user_id:
+            print(f"DEBUG admin_image_table: user_id.username = {image.user_id.username}")
+            print(f"DEBUG admin_image_table: user_id.__str__ = {str(image.user_id)}")
         else:
-            image.simple_filename = image.filename
+            print("DEBUG admin_image_table: user_id is None!")
+        
+        # ファイル名をそのまま表示（番号付与方式）
+        image.simple_filename = image.filename
     
     context = {
         'page_obj': page_obj,
@@ -360,6 +353,7 @@ def admin_image_table(request: HttpRequest):
         'users': users,
         'view_all': view_all,
         'user': request.user,
+        'has_data': len(images_list) > 0,  # データがあるかどうかのフラグ
     }
     
     return render(request, 'admin/admin_image_table.html', context)
@@ -921,7 +915,7 @@ def perform_image_analysis(image, model_name):
     try:
         logger.info(f"画像解析開始: ファイルパス={image.file_path}, モデル={model_name}")
         
-        # v1のanalysis_serviceを使用して画像解析を実行
+        # v2用の解析サービスを使用して画像解析を実行
         analysis_response = analysis_service.analyze_image(image.file_path, model_name)
         logger.info(f"解析結果取得: {analysis_response}")
         logger.info(f"解析結果の型: {type(analysis_response)}")

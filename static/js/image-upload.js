@@ -137,17 +137,17 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
 
-  } else {
-    // アップロード済み画像がない場合は、アップロードボタンを表示し、解析ボタンを非表示にする
-    const analysisButton = document.getElementById('analysis-button-container');
-    const uploadButtonContainer = document.getElementById('upload-button-container');
+} else {
+  // アップロード済み画像がない場合は、アップロードボタンを表示し、解析ボタンを非表示にする
+  const analysisButton = document.getElementById('analysis-button-container');
+  const uploadButtonContainer = document.getElementById('upload-button-container');
 
     if (analysisButton) {
-      analysisButton.classList.add('hidden');
-    }
+    analysisButton.classList.add('hidden');
+  }
 
     if (uploadButtonContainer) {
-      uploadButtonContainer.classList.remove('hidden');
+    uploadButtonContainer.classList.remove('hidden');
     }
   }
 
@@ -356,7 +356,7 @@ function startAnalysis(model) {
         startProgressMonitoring();
       } else {
         alert('解析の開始に失敗しました: ' + (data.error || '不明なエラー'));
-        analysisButton.disabled = false;
+          analysisButton.disabled = false;
         analysisButtonText.textContent = originalText;
       }
     })
@@ -460,7 +460,7 @@ function updateAnalysisUI(status, progress = 0) {
   }
 
   if (status === 'completed') {
-    analysisButton.disabled = false;
+        analysisButton.disabled = false;
     analysisButtonText.textContent = '解析完了';
 
     // 3つ目のタイムラインを表示
