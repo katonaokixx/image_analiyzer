@@ -37,12 +37,18 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'image_analyzer',
+    # 'image_analyzer',  # v1アプリを削除
     'new_image_analyzer_v2',
 ]
 
-# カスタムユーザーモデル設定
-AUTH_USER_MODEL = 'image_analyzer.User'
+# カスタムユーザーモデル設定（v2のMstUserを使用）
+AUTH_USER_MODEL = 'new_image_analyzer_v2.MstUser'
+
+# カスタム認証バックエンド
+AUTHENTICATION_BACKENDS = [
+    'new_image_analyzer_v2.auth_backend.MstUserAuthBackend',
+    'django.contrib.auth.backends.ModelBackend',  # フォールバック
+]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -67,6 +73,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
+            'debug': DEBUG,
         },
     },
 ]

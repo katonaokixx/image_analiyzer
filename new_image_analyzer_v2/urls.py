@@ -27,6 +27,7 @@ urlpatterns = [
     path('api/analysis/retry/', views.api_retry_analysis, name='v2_api_retry_analysis'),
     path('api/update-status/', views.api_update_status, name='v2_api_update_status'),
     path('api/timeline/<int:image_id>/', views.api_get_timeline, name='v2_api_get_timeline'),
+    path('api/images/<int:image_id>/detail/', views.api_image_detail, name='v2_api_image_detail'),
     path('api/images/<int:image_id>/delete/', views.api_delete_image, name='v2_api_delete_image'),
     
     # 解析キュー管理システム（新しいモデルを使用）

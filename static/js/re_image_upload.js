@@ -888,10 +888,8 @@ function updateIndividualProgress(imageId, status, progressPercentage = 0, progr
       progressBar.className = 'progress-bar progress-success transition-all duration-500';
       break;
     case 'preparing':
-      // 準備中の進捗は動的に計算（20-50%の範囲）
-      const totalImages = 1; // 再解析時は1枚のみ
-      const currentPosition = 1;
-      const progressPercent = Math.min(20 + (currentPosition / totalImages) * 30, 50);
+      // 準備中の進捗は実際の進捗値を使用（APIから取得した値）
+      const progressPercent = data.progress || 0;
       progressBar.style.width = `${progressPercent}%`;
       progressValue.textContent = Math.round(progressPercent);
 
@@ -900,9 +898,10 @@ function updateIndividualProgress(imageId, status, progressPercentage = 0, progr
       progressBar.className = 'progress-bar progress-warning transition-all duration-500';
       break;
     case 'analyzing':
-      // 解析中の進捗は実際の進捗値を使用
-      progressBar.style.width = '50%';
-      progressValue.textContent = '50';
+      // 解析中の進捗は実際の進捗値を使用（APIから取得した値）
+      const actualProgress = data.progress || 0;
+      progressBar.style.width = actualProgress + '%';
+      progressValue.textContent = actualProgress;
       // 解析中のステータステキストを設定
       statusText.textContent = '解析中';
       progressBar.className = 'progress-bar progress-info transition-all duration-500';

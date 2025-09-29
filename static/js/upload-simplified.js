@@ -21,7 +21,7 @@ window.addEventListener('beforeunload', function () {
 
 // 進捗監視関数をグローバルスコープで定義
 function startProgressWatcher() {
-  return setInterval(checkUploadProgress, 50);
+  return setInterval(checkUploadProgress, 500);
 }
 
 // 解析完了後のUI状態を完全にリセットする関数
@@ -223,10 +223,8 @@ function updateIndividualProgress(imageId, status) {
       progressBar.className = 'progress-bar progress-success transition-all duration-500';
       break;
     case 'preparing':
-      // 準備中の進捗は動的に計算（20-50%の範囲）
-      const totalImages = getUploadedImages().length;
-      const currentPosition = imageId;
-      const progressPercent = Math.min(20 + (currentPosition / totalImages) * 30, 50);
+      // 準備中の進捗は実際の進捗値を使用（APIから取得した値）
+      const progressPercent = data.progress || 0;
       progressBar.style.width = `${progressPercent}%`;
       progressValue.textContent = Math.round(progressPercent);
 
@@ -235,9 +233,10 @@ function updateIndividualProgress(imageId, status) {
       progressBar.className = 'progress-bar progress-warning transition-all duration-500';
       break;
     case 'analyzing':
-      // 解析中の進捗は実際の進捗値を使用
-      progressBar.style.width = '50%';
-      progressValue.textContent = '50';
+      // 解析中の進捗は実際の進捗値を使用（APIから取得した値）
+      const actualProgress = data.progress || 0;
+      progressBar.style.width = actualProgress + '%';
+      progressValue.textContent = actualProgress;
       // 解析中のステータステキストを設定
       statusText.textContent = '解析中';
       progressBar.className = 'progress-bar progress-info transition-all duration-500';
@@ -313,11 +312,8 @@ function updatePreparingProgress(overallProgress) {
     const progressValueEl = document.querySelector(`[data-analysis-progress-bar-value="${image.id}"]`);
 
     if (progressBar && progressValueEl) {
-      // 準備中の進捗を20-50%の範囲で段階的に更新
-      const baseProgress = 20;
-      const maxProgress = 50;
-      const progressStep = (maxProgress - baseProgress) / uploadedImages.length;
-      const imageProgress = Math.min(baseProgress + (index + 1) * progressStep, overallProgress);
+      // 実際の進捗値を使用
+      const imageProgress = overallProgress;
 
       progressBar.style.width = `${imageProgress}%`;
       progressValueEl.textContent = Math.round(imageProgress);
@@ -1322,7 +1318,7 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
   // グローバル変数に保存
   progressMonitoringInterval = setInterval(() => {
     // 実際の進捗を取得するAPI呼び出し
-    fetch('/api/analysis/progress/')
+    fetch('/v2/api/analysis/progress/')
       .then(response => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

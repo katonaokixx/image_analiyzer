@@ -42,8 +42,7 @@
         data-selected-image-status="{{ selected_image_status|default:'' }}"
         data-selected-image-filename="{{ selected_image.filename|default:''|escape }}"
         data-selected-image-thumbnail-url="{{ selected_image.thumbnail_url|default:''|escape }}"
-        data-analysis-progress-percentage="{{ timeline_log.analysis_progress_percentage|default:0 }}"
-        data-analysis-progress-stage="{{ timeline_log.analysis_progress_stage|default:'preparing' }}"></div>
+        data-analysis-progress-percentage="0" data-analysis-progress-stage="preparing"></div>
 
       <!-- 選択された画像のカード表示 -->
       {% if selected_image %}
@@ -96,27 +95,22 @@
 
         <!-- アップロード成功 -->
         <li id="timeline-item-1" class="hidden" style="display: none;">
-          <div
-            class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-{{ timeline_log.upload_step_color|default:'success' }}/5 border border-{{ timeline_log.upload_step_color|default:'success' }}/20">
+          <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-success/5 border border-success/20">
             <div
               class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
-              <span class="text-sm sm:text-base">{{ timeline_log.upload_step_title|default:'ファイルアップロード完了' }}</span>
+              <span class="text-sm sm:text-base">ファイルアップロード完了</span>
               <span class="text-base-content/50 text-xs sm:text-sm font-normal">
-                {{ timeline_log.upload_completed_at|date:'Y-m-d H:i'|default:'' }}
+                {% if selected_image.upload_completed_at %}{{ selected_image.upload_completed_at|date:'Y-m-d H:i' }}{%
+                else %}{{ selected_image.upload_started_at|date:'Y-m-d H:i' }}{% endif %}
               </span>
             </div>
             <p id="timeline-description" class="mb-2 text-xs sm:text-sm">
               ファイルのアップロードに成功しました
             </p>
             <div class="flex items-center gap-2">
-              <span
-                class="icon-[tabler--{{ timeline_log.upload_step_icon|default:'check-circle' }}] text-{{ timeline_log.upload_step_color|default:'success' }} size-4 sm:size-5">✅</span>
-              <span class="text-xs sm:text-sm text-{{ timeline_log.upload_step_color|default:'success' }} font-medium">
-                {% if timeline_log and timeline_log.upload_step_status %}
-                {{ timeline_log.upload_step_status }}
-                {% else %}
+              <span class="icon-[tabler--check-circle] text-success size-4 sm:size-5">✅</span>
+              <span class="text-xs sm:text-sm text-success font-medium">
                 アップロード成功
-                {% endif %}
               </span>
             </div>
           </div>
@@ -125,16 +119,15 @@
 
         <!-- 解析開始 -->
         <li id="timeline-item-2" class="hidden" style="display: none;">
-          <div
-            class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-{{ timeline_log.analysis_step_color|default:'warning' }}/5 border border-{{ timeline_log.analysis_step_color|default:'warning' }}/20">
+          <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-warning/5 border border-warning/20">
             <div
               class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
-              <span class="text-sm sm:text-base">{{ timeline_log.analysis_step_title|default:'解析開始' }}</span>
+              <span class="text-sm sm:text-base">解析開始</span>
               <span class="text-base-content/50 text-xs sm:text-sm font-normal" id="timeline-analysis-started-at">
-                {{ timeline_log.analysis_started_at|date:'Y-m-d H:i'|default:'' }}
+                {{ selected_image.analysis_started_at|date:'Y-m-d H:i'|default:'' }}
               </span>
             </div>
-            <p class="mb-2 text-xs sm:text-sm">{{ timeline_log.analysis_step_description|default:'AIによる画像解析を開始しました。' }}
+            <p class="mb-2 text-xs sm:text-sm">AIによる画像解析を開始しました。
             </p>
 
             <!-- アップロードUIを流用した解析進捗表示 -->
@@ -144,14 +137,9 @@
 
             <!-- 解析失敗時のアイコン + ステータス（プログレスバーの下に配置） -->
             <div id="analysis-status-display" class="hidden flex items-center gap-2 mt-3">
-              <span
-                class="icon-[tabler--{{ timeline_log.analysis_step_icon|default:'x-circle' }}] text-{{ timeline_log.analysis_step_color|default:'error' }} size-4 sm:size-5">❌</span>
-              <span class="text-xs sm:text-sm text-{{ timeline_log.analysis_step_color|default:'error' }} font-medium">
-                {% if timeline_log and timeline_log.analysis_step_status %}
-                {{ timeline_log.analysis_step_status }}
-                {% else %}
+              <span class="icon-[tabler--x-circle] text-error size-4 sm:size-5">❌</span>
+              <span class="text-xs sm:text-sm text-error font-medium">
                 解析失敗
-                {% endif %}
               </span>
             </div>
           </div>
@@ -159,32 +147,26 @@
 
         <!-- 解析完了 -->
         <li id="timeline-item-3" class="hidden" style="display: none;">
-          <div
-            class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-{{ timeline_log.completion_step_color|default:'success' }}/5 border border-{{ timeline_log.completion_step_color|default:'success' }}/20">
+          <div class="timeline-end ms-2 m-3 w-full rounded-lg p-3 sm:p-4 pt-1 bg-success/5 border border-success/20">
             <div
               class="text-base-content pt-0.5 mb-3 flex gap-2 font-medium max-sm:flex-col-reverse sm:items-center sm:justify-between">
-              <span class="text-sm sm:text-base">{{ timeline_log.completion_step_title|default:'解析完了' }}</span>
+              <span class="text-sm sm:text-base">解析完了</span>
               <span class="text-base-content/50 text-xs sm:text-sm font-normal" id="timeline-analysis-completed-at">
-                {{ timeline_log.analysis_completed_at|date:'Y-m-d H:i'|default:'' }}
+                {{ selected_image.analysis_completed_at|date:'Y-m-d H:i'|default:'' }}
               </span>
             </div>
             <p class="mb-2 text-xs sm:text-sm">
-              {% if timeline_log and timeline_log.completion_step_description %}
-              {{ timeline_log.completion_step_description }}
+              <!-- DEBUG: previous_results_text = {{ previous_results_text }} -->
+              {% if previous_results_text %}
+              {{ previous_results_text }}
               {% else %}
               画像のカテゴリー分類が完了しました
               {% endif %}
             </p>
             <div class="flex items-center gap-2">
-              <span
-                class="icon-[tabler--{{ timeline_log.completion_step_icon|default:'brain' }}] text-{{ timeline_log.completion_step_color|default:'success' }} size-4 sm:size-5"></span>
-              <span
-                class="text-xs sm:text-sm text-{{ timeline_log.completion_step_color|default:'success' }} font-medium">
-                {% if timeline_log and timeline_log.completion_step_status %}
-                {{ timeline_log.completion_step_status }}
-                {% else %}
+              <span class="icon-[tabler--brain] text-success size-4 sm:size-5"></span>
+              <span class="text-xs sm:text-sm text-success font-medium">
                 完了
-                {% endif %}
               </span>
             </div>
           </div>

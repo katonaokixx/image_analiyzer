@@ -754,13 +754,6 @@ class TransUploadedImage(models.Model):
         verbose_name='ステータス'
     )
     
-    # エラー情報
-    upload_error = models.TextField(
-        verbose_name='アップロードエラー',
-        blank=True,
-        null=True
-    )
-    
     # タイムスタンプ
     created_at = models.DateTimeField(
         auto_now_add=True,

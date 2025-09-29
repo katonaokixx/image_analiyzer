@@ -11,8 +11,6 @@ erDiagram
         email "メールアドレス" varchar "VARCHAR(255) NOT NULL UNIQUE"
         is_admin "管理者権限" boolean "BOOLEAN NOT NULL DEFAULT FALSE"
         is_active "アカウント有効性" boolean "BOOLEAN NOT NULL DEFAULT TRUE"
-        created_at "作成日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-        updated_at "更新日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
     }
     
     TransUploadedImage {
@@ -22,9 +20,6 @@ erDiagram
         file_path "ファイルパス" varchar "VARCHAR(500) NOT NULL"
         upload_date "アップロード日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
         status "ステータス" varchar "VARCHAR(20) NOT NULL DEFAULT 'preparing'"
-        upload_error "アップロードエラー" text "TEXT NULL"
-        created_at "作成日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-        updated_at "更新日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
     }
     
     TransImageAnalysis {
@@ -37,20 +32,10 @@ erDiagram
         analysis_started_at "解析開始時刻" datetime "DATETIME NULL"
         analysis_completed_at "解析完了時刻" datetime "DATETIME NULL"
         analysis_error "解析エラー" text "TEXT NULL"
-        created_at "作成日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-        updated_at "更新日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
-    }
-    
-    TransAnalysisTimeline {
-        timeline_id PK "タイムラインID" int "AUTO_INCREMENT NOT NULL"
-        image_id FK "画像ID" int "INT NOT NULL"
-        analysis_status "解析状態" varchar "VARCHAR(20) NOT NULL DEFAULT 'not_started'"
-        previous_results "前回解析結果" varchar "VARCHAR(200) NULL"
     }
     
     MstUser ||--o{ TransUploadedImage : "1:N"
     TransUploadedImage ||--o{ TransImageAnalysis : "1:N"
-    TransUploadedImage ||--|| TransAnalysisTimeline : "1:1"
 ```
 
 ## 関係の説明
@@ -62,8 +47,6 @@ erDiagram
 - **TransUploadedImage → TransImageAnalysis**: 1対多（1つの画像が複数の解析結果を持つ）
   - 削除動作：CASCADE（親削除時、子も削除）
 
-- **TransUploadedImage → TransAnalysisTimeline**: 1対1（1つの画像が1つのタイムラインを持つ）
-  - 削除動作：CASCADE（親削除時、子も削除）
 
 ### 線の描き方による関係表現
 - **右側に線が伸びるテーブル**: 親テーブル（参照元）
@@ -80,8 +63,6 @@ erDiagram
         email "メールアドレス" varchar "VARCHAR(255) NOT NULL UNIQUE"
         is_admin "管理者権限" boolean "BOOLEAN NOT NULL DEFAULT FALSE"
         is_active "アカウント有効性" boolean "BOOLEAN NOT NULL DEFAULT TRUE"
-        created_at "作成日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-        updated_at "更新日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
     }
     
     TransUploadedImage {
@@ -91,9 +72,6 @@ erDiagram
         file_path "ファイルパス" varchar "VARCHAR(500) NOT NULL"
         upload_date "アップロード日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
         status "ステータス" varchar "VARCHAR(20) NOT NULL DEFAULT 'preparing'"
-        upload_error "アップロードエラー" text "TEXT NULL"
-        created_at "作成日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-        updated_at "更新日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
     }
     
     TransImageAnalysis {
@@ -106,20 +84,10 @@ erDiagram
         analysis_started_at "解析開始時刻" datetime "DATETIME NULL"
         analysis_completed_at "解析完了時刻" datetime "DATETIME NULL"
         analysis_error "解析エラー" text "TEXT NULL"
-        created_at "作成日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-        updated_at "更新日時" datetime "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
-    }
-    
-    TransAnalysisTimeline {
-        timeline_id PK "タイムラインID" int "AUTO_INCREMENT NOT NULL"
-        image_id FK "画像ID" int "INT NOT NULL"
-        analysis_status "解析状態" varchar "VARCHAR(20) NOT NULL DEFAULT 'not_started'"
-        previous_results "前回解析結果" varchar "VARCHAR(200) NULL"
     }
     
     MstUser ||--o{ TransUploadedImage : "1:N"
     TransUploadedImage ||--o{ TransImageAnalysis : "1:N"
-    TransUploadedImage ||--|| TransAnalysisTimeline : "1:1"
 ```
 
 ## データベース制約の詳細
@@ -149,7 +117,6 @@ erDiagram
 ### 外部キー制約
 - `TransUploadedImage.user_id` → `MstUser.user_id` (CASCADE)
 - `TransImageAnalysis.image_id` → `TransUploadedImage.image_id` (CASCADE)
-- `TransAnalysisTimeline.image_id` → `TransUploadedImage.image_id` (CASCADE)
 
 ## 解析エラー処理の詳細
 
@@ -158,9 +125,7 @@ erDiagram
   - 'failed'状態でアップロードエラーを表現
 
 ### エラー情報の保存
-- **TransUploadedImage.upload_error**: アップロードエラー時の詳細ログを保存
 - **TransImageAnalysis.analysis_error**: 解析エラー時の詳細ログを保存
-- **TransAnalysisTimeline.analysis_status**: 解析状態の管理（'not_started', 'in_progress', 'completed', 'failed'）
 
 ### エラー処理フロー
 1. アップロード開始時: `status = 'preparing'`
@@ -173,19 +138,15 @@ erDiagram
 ## メンターのフィードバックへの対応
 
 ### 1. 解析ログは解析状態のみ記載
-- **修正前**: `TransAnalysisTimeline`に解析時刻、エラー詳細などが混在
+- **修正前**: 解析時刻、エラー詳細などが混在
 - **修正後**: `analysis_status`のみで解析状態を管理
 - **効果**: テーブルの役割が明確化
 
 ### 2. 各フィールドの適切な配置
 - **解析時刻**: `TransImageAnalysis`に移動（解析結果の詳細データとして）
 - **解析エラー**: `TransImageAnalysis`に移動（解析結果の詳細データとして）
-- **アップロードエラー**: `TransUploadedImage`に配置（アップロード関連データとして）
-
-### 3. アップロードエラーの記載方法
-- **場所**: `TransUploadedImage.upload_error`
-- **用途**: アップロードプロセスでのエラー詳細を記録
-- **管理**: アップロード関連のエラーは画像テーブルで一元管理
+- **アップロードエラー**: HTTPレスポンスで返す（アプリケーション側エラー）
+- **インフラエラー**: Djangoの例外処理でキャッチ
 
 ## テーブル役割の明確化
 
@@ -204,9 +165,9 @@ erDiagram
 - **解析エラーの記録**
 - 複数結果の順位管理
 
-### TransAnalysisTimeline（解析ログ）
-- **解析状態のみの管理**
-- 前回解析結果の参照
+### 解析状態の管理
+- **TransUploadedImage.status**で解析状態を管理
+- 前回解析結果は**TransImageAnalysis**から直接取得
 - 解析プロセスの全体進行状況
 
 ## draw.ioでの使用方法
@@ -237,7 +198,6 @@ erDiagram
 - **MstUser**: `username`, `email` (UNIQUE制約により自動生成)
 - **TransUploadedImage**: `user_id`, `status`, `upload_date`
 - **TransImageAnalysis**: `image_id`, `model_name`, `analysis_started_at`
-- **TransAnalysisTimeline**: `image_id`, `analysis_status`
 
 ### 複合インデックス
 - `TransUploadedImage(user_id, status)` - ユーザー別ステータス検索
@@ -248,7 +208,6 @@ erDiagram
 ### CHECK制約
 - `TransImageAnalysis.confidence`: 0.00-100.00の範囲
 - `TransUploadedImage.status`: 'preparing', 'processing', 'completed', 'failed'のいずれか
-- `TransAnalysisTimeline.analysis_status`: 'not_started', 'in_progress', 'completed', 'failed'のいずれか
 
 ### 外部キー制約
 - 全てのFKにCASCADE DELETE設定

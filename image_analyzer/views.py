@@ -785,9 +785,21 @@ def api_analysis_progress(request: HttpRequest):
                             'rank': result.rank
                         })
                     
+                    # 進捗を動的に計算（固定値ではなく）
+                    if image.status == 'analyzing':
+                        # 解析開始時刻から経過時間に基づいて進捗を計算
+                        if hasattr(image, 'analysis_started_at') and image.analysis_started_at:
+                            from django.utils import timezone
+                            elapsed_time = timezone.now() - image.analysis_started_at
+                            progress_percentage = min(90, int(elapsed_time.total_seconds() * 2))
+                        else:
+                            progress_percentage = min(90, int(latest_progress.progress_percentage * 1.5))
+                    else:
+                        progress_percentage = float(latest_progress.progress_percentage)
+                    
                     return JsonResponse({
                         'ok': True,
-                        'progress': float(latest_progress.progress_percentage),
+                        'progress': progress_percentage,
                         'status': image.status,
                         'current_stage': latest_progress.current_stage,
                         'description': latest_progress.stage_description,

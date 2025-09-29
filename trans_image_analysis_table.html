@@ -116,7 +116,7 @@
         <div class="field-col"></div>
         <div class="field-col">"解析開始時刻"</div>
         <div class="field-col field-type">datetime</div>
-        <div class="field-col"></div>
+        <div class="field-col">NOT NULL DEFAULT CURRENT_TIMESTAMP</div>
       </div>
       <div class="field">
         <div class="field-col">analysis_completed_at</div>
@@ -131,20 +131,6 @@
         <div class="field-col">"解析エラー"</div>
         <div class="field-col field-type">text</div>
         <div class="field-col"></div>
-      </div>
-      <div class="field">
-        <div class="field-col">created_at</div>
-        <div class="field-col"></div>
-        <div class="field-col">"作成日時"</div>
-        <div class="field-col field-type">datetime</div>
-        <div class="field-col">NOT NULL DEFAULT CURRENT_TIMESTAMP</div>
-      </div>
-      <div class="field">
-        <div class="field-col">updated_at</div>
-        <div class="field-col"></div>
-        <div class="field-col">"更新日時"</div>
-        <div class="field-col field-type">datetime</div>
-        <div class="field-col">NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP</div>
       </div>
     </div>
   </body>

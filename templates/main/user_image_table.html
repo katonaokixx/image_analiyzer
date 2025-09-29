@@ -199,7 +199,13 @@
                 </div>
               </div>
             </td>
-            <td>{{ image.upload_date|date:"Y-m-d H:i" }}</td>
+            <td>
+              {% if image.created_at %}
+              {{ image.created_at|date:"Y-m-d H:i" }}
+              {% else %}
+              日時データなし
+              {% endif %}
+            </td>
             <td>
               {% if image.status == 'completed' %}
               <span class="badge badge-outline border-dashed badge-success me-2">解析成功</span>
@@ -225,9 +231,9 @@
             </td>
             <td class="text-center">
               {% if image.status == 'completed' %}
-              {% with image.analysis_results.all|first as first_result %}
-              {% if first_result %}
-              <span class="badge badge-primary">{{ first_result.label }}</span>
+              {% with image.get_previous_results|first as latest_result %}
+              {% if latest_result %}
+              <span class="badge badge-primary">{{ latest_result.label }}</span>
               {% else %}
               <span class="text-sm text-gray-500">-</span>
               {% endif %}
@@ -238,9 +244,9 @@
             </td>
             <td>
               {% if image.status == 'completed' %}
-              {% with image.analysis_results.all|first as first_result %}
-              {% if first_result %}
-              <span class="badge badge-success">{{ first_result.confidence }}%</span>
+              {% with image.get_previous_results|first as latest_result %}
+              {% if latest_result %}
+              <span class="badge badge-success">{{ latest_result.confidence }}%</span>
               {% else %}
               <span class="badge badge-secondary">-</span>
               {% endif %}

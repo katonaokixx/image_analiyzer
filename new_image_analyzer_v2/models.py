@@ -1,16 +1,16 @@
 from django.db import models
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 import os
 
-# 既存のUserモデルを取得
-User = get_user_model()
-
 
 class MstUser(models.Model):
     """ユーザーマスタ（ER図に完全準拠）"""
+    
+    # Django認証システムに必要な属性
+    REQUIRED_FIELDS = ['email']
+    USERNAME_FIELD = 'username'
     
     # 主キー
     user_id = models.AutoField(
@@ -30,6 +30,12 @@ class MstUser(models.Model):
         verbose_name='メールアドレス'
     )
     
+    password = models.CharField(
+        max_length=128,
+        verbose_name='パスワード',
+        default='pbkdf2_sha256$260000$dummy$dummy'  # ダミーパスワード
+    )
+    
     is_admin = models.BooleanField(
         default=False,
         verbose_name='管理者権限'
@@ -40,17 +46,6 @@ class MstUser(models.Model):
         verbose_name='アカウント有効性'
     )
     
-    # タイムスタンプ
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='作成日時'
-    )
-    
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        verbose_name='更新日時'
-    )
-    
     class Meta:
         db_table = 'mst_user_v2'
         verbose_name = 'ユーザーマスタ'
@@ -58,6 +53,41 @@ class MstUser(models.Model):
     
     def __str__(self):
         return self.username
+    
+    # Django認証システム互換メソッド
+    @property
+    def is_authenticated(self):
+        return True
+    
+    @property
+    def is_anonymous(self):
+        return False
+    
+    @property
+    def pk(self):
+        return self.user_id
+    
+    @property
+    def is_staff(self):
+        return self.is_admin
+    
+    @property
+    def is_superuser(self):
+        return self.is_admin
+    
+    def has_perm(self, perm, obj=None):
+        return self.is_admin
+    
+    def has_module_perms(self, app_label):
+        return self.is_admin
+    
+    def get_username(self):
+        return self.username
+    
+    @classmethod
+    def get_by_natural_key(cls, username):
+        """Django認証システム用のメソッド"""
+        return cls.objects.get(username=username)
 
 
 class TransUploadedImage(models.Model):
@@ -65,10 +95,11 @@ class TransUploadedImage(models.Model):
     
     # ステータスの選択肢
     STATUS_CHOICES = [
-        ('preparing', '準備中'),
+        ('uploading', 'アップロード中'),
+        ('uploaded', 'アップロード完了'),
         ('analyzing', '解析中'),
-        ('success', '解析成功'),
-        ('failed', '失敗'),
+        ('completed', '解析完了'),
+        ('failed', '解析失敗'),
     ]
     
     # 主キー
@@ -97,31 +128,31 @@ class TransUploadedImage(models.Model):
         verbose_name='ファイルパス'
     )
     
-    upload_date = models.DateTimeField(
-        default=timezone.now,
-        verbose_name='アップロード日時'
-    )
-    
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default='uploaded',
+        default='analyzing',
         verbose_name='ステータス'
-    )
-    
-    # エラー情報
-    upload_error = models.TextField(
-        verbose_name='アップロードエラー',
-        blank=True,
-        null=True
     )
     
     # タイムスタンプ
     created_at = models.DateTimeField(
         auto_now_add=True,
-        verbose_name='作成日時'
+        verbose_name='アップロード日時'
     )
     
+    analysis_started_at = models.DateTimeField(
+        default=timezone.now,
+        verbose_name='解析開始時刻'
+    )
+    
+    analysis_completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='解析完了時刻'
+    )
+    
+    # タイムスタンプ
     updated_at = models.DateTimeField(
         auto_now=True,
         verbose_name='更新日時'
@@ -131,7 +162,7 @@ class TransUploadedImage(models.Model):
         db_table = 'trans_uploaded_image_v2'
         verbose_name = '画像アップロード'
         verbose_name_plural = '画像アップロード'
-        ordering = ['-upload_date']
+        ordering = ['-created_at']
     
     @property
     def thumbnail_url(self):
@@ -144,6 +175,31 @@ class TransUploadedImage(models.Model):
         # ファイル名をURLエンコード
         encoded_path = urllib.parse.quote(relative_path, safe='/')
         return f"{settings.MEDIA_URL}{encoded_path}"
+    
+    def get_previous_results(self):
+        """前回の解析結果を取得（最新の解析実行の結果を信頼度順で取得、上位3件）"""
+        # まず最新の解析完了時刻を取得
+        latest_analysis_time = TransImageAnalysis.objects.filter(image_id=self).order_by('-analysis_completed_at').first()
+        if latest_analysis_time:
+            # 最新の解析実行の結果を信頼度順で取得（上位3件まで）
+            return TransImageAnalysis.objects.filter(
+                image_id=self,
+                analysis_completed_at=latest_analysis_time.analysis_completed_at
+            ).order_by('-confidence')[:3]
+        else:
+            return TransImageAnalysis.objects.none()
+    
+    def get_previous_results_text(self):
+        """前回の解析結果をテキスト形式で取得"""
+        results = self.get_previous_results()
+        if not results:
+            return None
+        
+        result_texts = []
+        for i, result in enumerate(results, 1):
+            result_texts.append(f"{i}位: {result.label} ({result.confidence}%)")
+        
+        return " / ".join(result_texts)
     
     def __str__(self):
         return f"{self.filename} ({self.get_status_display()})"
@@ -191,9 +247,8 @@ class TransImageAnalysis(models.Model):
     
     # 解析時刻
     analysis_started_at = models.DateTimeField(
-        verbose_name='解析開始時刻',
-        null=True,
-        blank=True
+        default=timezone.now,
+        verbose_name='解析開始時刻'
     )
     
     analysis_completed_at = models.DateTimeField(
@@ -209,17 +264,6 @@ class TransImageAnalysis(models.Model):
         null=True
     )
     
-    # タイムスタンプ
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='作成日時'
-    )
-    
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        verbose_name='更新日時'
-    )
-    
     class Meta:
         db_table = 'trans_image_analysis_v2'
         verbose_name = '画像解析結果'
@@ -229,53 +273,3 @@ class TransImageAnalysis(models.Model):
     def __str__(self):
         return f"{self.image_id.filename} - {self.label} ({self.confidence}%)"
 
-
-class TransAnalysisTimeline(models.Model):
-    """解析ログテーブル"""
-    
-    # 解析状態の選択肢
-    ANALYSIS_STATUS_CHOICES = [
-        ('not_started', '未開始'),
-        ('in_progress', '解析中'),
-        ('completed', '解析完了'),
-        ('failed', '解析失敗'),
-    ]
-    
-    # 主キー
-    timeline_id = models.AutoField(
-        primary_key=True,
-        verbose_name='タイムラインID'
-    )
-    
-    # 外部キー
-    image_id = models.OneToOneField(
-        TransUploadedImage,
-        on_delete=models.CASCADE,
-        verbose_name='画像ID',
-        related_name='timeline_log',
-        db_column='image_id'
-    )
-    
-    # 解析状態
-    analysis_status = models.CharField(
-        max_length=20,
-        choices=ANALYSIS_STATUS_CHOICES,
-        default='not_started',
-        verbose_name='解析状態'
-    )
-    
-    # 前回解析結果
-    previous_results = models.CharField(
-        max_length=200,
-        verbose_name='前回解析結果',
-        blank=True,
-        null=True
-    )
-    
-    class Meta:
-        db_table = 'trans_analysis_timeline_v2'
-        verbose_name = '解析ログ'
-        verbose_name_plural = '解析ログ'
-    
-    def __str__(self):
-        return f"{self.image_id.filename} - {self.get_analysis_status_display()}"

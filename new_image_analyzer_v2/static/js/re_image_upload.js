@@ -295,7 +295,7 @@ function retryAnalysis() {
   const csrfToken = getCSRFToken();
 
   // 再解析APIを呼び出し
-  fetch('/api/analysis/retry/', {
+  fetch('/v2/api/analysis/retry/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -363,7 +363,7 @@ function startRetryAnalysis() {
   };
 
   // 解析APIを呼び出し
-  fetch('/api/analysis/start/', {
+  fetch('/v2/api/analysis/start/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -630,7 +630,7 @@ function checkRetryProgress() {
     return;
   }
 
-  fetch(`/api/analysis/progress/?image_id=${window.currentImageId}`)
+  fetch(`/v2/api/analysis/progress/?image_id=${window.currentImageId}`)
     .then(response => response.json())
     .then(data => {
 

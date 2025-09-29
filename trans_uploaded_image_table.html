@@ -98,7 +98,7 @@
         <div class="field-col">NOT NULL</div>
       </div>
       <div class="field">
-        <div class="field-col">upload_date</div>
+        <div class="field-col">created_at</div>
         <div class="field-col"></div>
         <div class="field-col">"アップロード日時"</div>
         <div class="field-col field-type">datetime</div>
@@ -109,31 +109,9 @@
         <div class="field-col"></div>
         <div class="field-col">"ステータス"</div>
         <div class="field-col field-type">varchar(20)</div>
-        <div class="field-col">NOT NULL DEFAULT 'preparing'</div>
-      </div>
-      <div class="field">
-        <div class="field-col">upload_error</div>
-        <div class="field-col"></div>
-        <div class="field-col">"アップロードエラー"</div>
-        <div class="field-col field-type">text</div>
-        <div class="field-col"></div>
-      </div>
-      <div class="field">
-        <div class="field-col">created_at</div>
-        <div class="field-col"></div>
-        <div class="field-col">"作成日時"</div>
-        <div class="field-col field-type">datetime</div>
-        <div class="field-col">NOT NULL DEFAULT CURRENT_TIMESTAMP</div>
-      </div>
-      <div class="field">
-        <div class="field-col">updated_at</div>
-        <div class="field-col"></div>
-        <div class="field-col">"更新日時"</div>
-        <div class="field-col field-type">datetime</div>
-        <div class="field-col">NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP</div>
+        <div class="field-col">NOT NULL DEFAULT 'analyzing'</div>
       </div>
     </div>
   </body>
 
 </html>
-

@@ -6,7 +6,8 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('v2/', include('new_image_analyzer_v2.urls')),
-    path('', include('image_analyzer.urls')),
+    # v1のURLを削除
+    # path('', include('image_analyzer.urls')),
 ]
 
 # 開発環境でのメディアファイル配信

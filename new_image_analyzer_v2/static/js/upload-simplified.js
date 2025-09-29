@@ -1322,7 +1322,7 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
   // グローバル変数に保存
   progressMonitoringInterval = setInterval(() => {
     // 実際の進捗を取得するAPI呼び出し
-    fetch('/api/analysis/progress/')
+    fetch('/v2/api/analysis/progress/')
       .then(response => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

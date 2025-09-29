@@ -171,7 +171,10 @@
               </span>
             </div>
             <p class="mb-2 text-xs sm:text-sm">
-              {% if timeline_log and timeline_log.completion_step_description %}
+              <!-- DEBUG: previous_results_text = {{ previous_results_text }} -->
+              {% if previous_results_text %}
+              {{ previous_results_text }}
+              {% elif timeline_log and timeline_log.completion_step_description %}
               {{ timeline_log.completion_step_description }}
               {% else %}
               画像のカテゴリー分類が完了しました

@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}Test Page{% endblock %}
 
@@ -184,7 +185,7 @@
         </thead>
         <tbody>
           {% for image in images %}
-          <tr data-image-id="{{ image.id }}">
+          <tr data-image-id="{{ image.image_id }}">
             <td>
               <div class="flex items-center gap-3">
                 <div class="avatar cursor-pointer" data-overlay="#slide-down-animated-modal">
@@ -195,11 +196,23 @@
                 </div>
                 <div>
                   <div class="text-sm opacity-50">画像ファイル</div>
-                  <div class="font-medium">{{ image.filename }}</div>
+                  <div class="font-medium">{{ image.simple_filename }}</div>
                 </div>
               </div>
             </td>
-            <td>{{ image.upload_date|date:"Y-m-d H:i" }}</td>
+            <td>
+              <!-- FORCE UPDATE: {{ image.upload_started_at }} -->
+              <div style="background: red; color: white; padding: 10px; font-weight: bold; font-size: 16px;">
+                FORCE DEBUG: {{ image.upload_started_at }}
+              </div>
+              <div style="background: blue; color: white; padding: 10px; font-weight: bold; font-size: 16px;">
+                FORCE TYPE: {{ image.upload_started_at|default:"None" }}
+              </div>
+              <div style="background: green; color: white; padding: 10px; font-weight: bold; font-size: 16px;">
+                FORCE DATE: {% if image.upload_started_at %}{{ image.upload_started_at|date:"Y-m-d H:i" }}{% else
+                %}日時データなし{% endif %}
+              </div>
+            </td>
             <td>
               {% if image.status == 'completed' %}
               <span class="badge badge-outline border-dashed badge-success me-2">解析成功</span>
@@ -225,26 +238,26 @@
             </td>
             <td class="text-center">
               {% if image.status == 'completed' %}
-              {% for result in image.analysis_results.all %}
-              {% if result.rank == 1 %}
-              <span class="badge badge-primary">{{ result.label }}</span>
-              {% endif %}
-              {% empty %}
+              {% with image.get_previous_results|first as latest_result %}
+              {% if latest_result %}
+              <span class="badge badge-primary">{{ latest_result.label }}</span>
+              {% else %}
               <span class="text-sm text-gray-500">-</span>
-              {% endfor %}
+              {% endif %}
+              {% endwith %}
               {% else %}
               <span class="text-sm text-gray-500">-</span>
               {% endif %}
             </td>
             <td>
-              {% if image.analysis_results.all %}
-              {% for result in image.analysis_results.all %}
-              {% if result.rank == 1 %}
-              <span class="badge badge-success">{{ result.confidence }}%</span>
-              {% endif %}
-              {% empty %}
+              {% if image.status == 'completed' %}
+              {% with image.get_previous_results|first as latest_result %}
+              {% if latest_result %}
+              <span class="badge badge-success">{{ latest_result.confidence }}%</span>
+              {% else %}
               <span class="badge badge-secondary">-</span>
-              {% endfor %}
+              {% endif %}
+              {% endwith %}
               {% else %}
               <span class="badge badge-secondary">-</span>
               {% endif %}
@@ -715,5 +728,7 @@
   .placeholder-content-modal {
     text-align: center;
   }
+</style>
+{% endblock %}
 </style>
 {% endblock %}

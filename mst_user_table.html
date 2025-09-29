@@ -4,7 +4,7 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TransAnalysisTimeline（解析ログ）</title>
+    <title>MstUser（ユーザーマスタ）</title>
     <style>
       body {
         font-family: Arial, sans-serif;
@@ -68,34 +68,48 @@
 
   <body>
     <div class="table">
-      <div class="table-header">TransAnalysisTimeline(解析ログ)</div>
+      <div class="table-header">MstUser(ユーザーマスタ)</div>
       <div class="field">
-        <div class="field-col">timeline_id</div>
+        <div class="field-col">user_id</div>
         <div class="field-col pk">PK</div>
-        <div class="field-col">"タイムラインID"</div>
+        <div class="field-col">"ユーザーID"</div>
         <div class="field-col field-type">int</div>
         <div class="field-col">AUTO_INCREMENT NOT NULL</div>
       </div>
       <div class="field">
-        <div class="field-col">image_id</div>
-        <div class="field-col fk">FK</div>
-        <div class="field-col">"画像ID"</div>
-        <div class="field-col field-type">int</div>
+        <div class="field-col">username</div>
+        <div class="field-col"></div>
+        <div class="field-col">"ユーザー名"</div>
+        <div class="field-col field-type">varchar(20)</div>
+        <div class="field-col">UNIQUE NOT NULL</div>
+      </div>
+      <div class="field">
+        <div class="field-col">email</div>
+        <div class="field-col"></div>
+        <div class="field-col">"メールアドレス"</div>
+        <div class="field-col field-type">varchar(255)</div>
+        <div class="field-col">UNIQUE NOT NULL</div>
+      </div>
+      <div class="field">
+        <div class="field-col">password</div>
+        <div class="field-col"></div>
+        <div class="field-col">"パスワード"</div>
+        <div class="field-col field-type">varchar(128)</div>
         <div class="field-col">NOT NULL</div>
       </div>
       <div class="field">
-        <div class="field-col">analysis_status</div>
+        <div class="field-col">is_admin</div>
         <div class="field-col"></div>
-        <div class="field-col">"解析状態"</div>
-        <div class="field-col field-type">varchar(20)</div>
-        <div class="field-col">NOT NULL DEFAULT 'not_started'</div>
+        <div class="field-col">"管理者権限"</div>
+        <div class="field-col field-type">boolean</div>
+        <div class="field-col">NOT NULL DEFAULT FALSE</div>
       </div>
       <div class="field">
-        <div class="field-col">previous_results</div>
+        <div class="field-col">is_active</div>
         <div class="field-col"></div>
-        <div class="field-col">"前回解析結果"</div>
-        <div class="field-col field-type">varchar(200)</div>
-        <div class="field-col"></div>
+        <div class="field-col">"アカウント有効性"</div>
+        <div class="field-col field-type">boolean</div>
+        <div class="field-col">NOT NULL DEFAULT TRUE</div>
       </div>
     </div>
   </body>

@@ -619,9 +619,9 @@ function startProgressMonitoring(imageId) {
     progressDescription.textContent = '解析を開始しています...';
   }
 
-  // 1秒ごとに進捗を取得
+  // 0.5秒ごとに進捗を取得
   progressInterval = setInterval(() => {
-    fetch(`/api/analysis/progress/?image_id=${imageId}`)
+    fetch(`/v2/api/analysis/progress/?image_id=${imageId}`)
       .then(response => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -664,7 +664,7 @@ function startProgressMonitoring(imageId) {
         clearInterval(progressInterval);
         progressInterval = null;
       });
-  }, 1000);
+  }, 500);
 }
 
 // 進捗監視停止

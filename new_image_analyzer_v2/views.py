@@ -18,12 +18,13 @@ from django.conf import settings
 from datetime import timedelta
 
 # 新しいモデルをインポート
-from .models import MstUser, TransUploadedImage, TransImageAnalysis, TransAnalysisTimeline
+from .models import MstUser, TransUploadedImage, TransImageAnalysis
 from django.utils import timezone
 # 既存のサービスをインポート（後で新しいモデル用に修正）
-from image_analyzer.services import analysis_service
+# v1の依存関係を削除
+# from image_analyzer.services import analysis_service
 # 既存のモデルもインポート（認証用）
-from image_analyzer.models import PasswordResetToken
+# from image_analyzer.models import PasswordResetToken
 
 ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif'}
 MAX_MB = 1
@@ -47,8 +48,8 @@ def validate_file(file):
 
 def save_file_and_create_image_v2(file, user):
     """ファイルを保存して新しいモデルで画像レコードを作成"""
-    # ファイル名を生成
-    filename = f"{timezone.now().strftime('%Y%m%d_%H%M%S')}_{file.name}"
+    # ファイル名を生成（タイムスタンプを追加しない）
+    filename = file.name
     file_path = os.path.join(settings.MEDIA_ROOT, 'images', filename)
     
     print(f"DEBUG: ファイル名: {filename}")
@@ -82,9 +83,22 @@ def save_file_and_create_image_v2(file, user):
         user_id=mst_user,  # MstUserのインスタンスを渡す
         filename=filename,
         file_path=file_path,
-        upload_date=timezone.now(),
-        status='uploaded'
+        status='analyzing'  # 直接解析中に
     )
+    
+    # ファイル保存処理
+    try:
+        with open(file_path, 'wb') as destination:
+            for chunk in file.chunks():
+                destination.write(chunk)
+        
+        print(f"DEBUG: アップロード完了: {img.created_at}")
+        
+    except Exception as e:
+        # アップロード失敗時はエラーステータスに更新
+        img.status = 'failed'
+        img.save()
+        raise e
     
     print(f"DEBUG: TransUploadedImage作成完了: ID={img.image_id}")
     
@@ -232,19 +246,24 @@ def password_reset_success_view(request: HttpRequest):
 @login_required
 def user_image_table(request: HttpRequest):
     """ユーザー画像テーブル表示（新しいモデル使用）"""
+    print("DEBUG: user_image_table view called")
     # ログイン認証チェック
     if not request.user.is_authenticated:
         messages.error(request, 'ログインが必要です。')
         return redirect('v2_login')
     
     # 新しいモデルを使用して画像を取得
-    try:
-        # 既存のUserからMstUserを取得
-        mst_user = MstUser.objects.get(username=request.user.username)
-        images = TransUploadedImage.objects.filter(user_id=mst_user).order_by('-upload_date')
-    except MstUser.DoesNotExist:
-        # MstUserが存在しない場合は空のクエリセット
-        images = TransUploadedImage.objects.none()
+    if request.user.is_staff:
+        # 管理者の場合は全ユーザーの画像を表示
+        images = TransUploadedImage.objects.all().order_by('-created_at')
+    else:
+        try:
+            # 既存のUserからMstUserを取得
+            mst_user = MstUser.objects.get(username=request.user.username)
+            images = TransUploadedImage.objects.filter(user_id=mst_user).order_by('-created_at')
+        except MstUser.DoesNotExist:
+            # MstUserが存在しない場合は空のクエリセット
+            images = TransUploadedImage.objects.none()
     
     # ページネーション設定
     paginator = Paginator(images, 10)  # 10件/ページ
@@ -253,6 +272,27 @@ def user_image_table(request: HttpRequest):
     
     # テンプレートに渡すデータ
     images_list = list(page_obj.object_list)
+    
+    # 各画像にシンプルなファイル名を追加
+    for image in images_list:
+        print(f"DEBUG user_image_table: Processing image {image.image_id}: {image.filename}")
+        print(f"DEBUG user_image_table: created_at = {image.created_at}")
+        if image.filename and '__' in image.filename:
+            # ファイル名から拡張子を取得
+            if '.' in image.filename:
+                name_part, extension = image.filename.rsplit('.', 1)
+                # アンダースコア2つ以降の部分を取得
+                if '__' in name_part:
+                    simple_part = name_part.split('__', 1)[1]
+                    image.simple_filename = f"{simple_part}.{extension}"
+                    print(f"DEBUG user_image_table: {image.filename} -> {image.simple_filename}")
+                else:
+                    image.simple_filename = image.filename
+            else:
+                image.simple_filename = image.filename
+        else:
+            image.simple_filename = image.filename
+    
     context = {
         'page_obj': page_obj,
         'images': images_list,  # リストに変換してテンプレートでインデックスアクセス可能にする
@@ -271,7 +311,7 @@ def admin_image_table(request: HttpRequest):
         return redirect('v2_user_image_table')
     
     # 新しいモデルを使用して画像を取得
-    images = TransUploadedImage.objects.all().order_by('-upload_date')
+    images = TransUploadedImage.objects.all().order_by('-upload_started_at')
     users = MstUser.objects.all().order_by('username')
     
     # View All機能のチェック
@@ -293,8 +333,30 @@ def admin_image_table(request: HttpRequest):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
+    # 各画像にシンプルなファイル名を追加
+    images_list = list(page_obj.object_list)
+    for image in images_list:
+        print(f"DEBUG admin_image_table: Processing image {image.image_id}: {image.filename}")
+        print(f"DEBUG admin_image_table: created_at = {image.created_at}")
+        if image.filename and '__' in image.filename:
+            # ファイル名から拡張子を取得
+            if '.' in image.filename:
+                name_part, extension = image.filename.rsplit('.', 1)
+                # アンダースコア2つ以降の部分を取得
+                if '__' in name_part:
+                    simple_part = name_part.split('__', 1)[1]
+                    image.simple_filename = f"{simple_part}.{extension}"
+                    print(f"DEBUG admin_image_table: {image.filename} -> {image.simple_filename}")
+                else:
+                    image.simple_filename = image.filename
+            else:
+                image.simple_filename = image.filename
+        else:
+            image.simple_filename = image.filename
+    
     context = {
         'page_obj': page_obj,
+        'images': images_list,
         'users': users,
         'view_all': view_all,
         'user': request.user,
@@ -313,7 +375,7 @@ def image_upload(request: HttpRequest):
     try:
         # 既存のUserからMstUserを取得
         mst_user = MstUser.objects.get(username=request.user.username)
-        uploaded_images = TransUploadedImage.objects.filter(user_id=mst_user).order_by('-upload_date')
+        uploaded_images = TransUploadedImage.objects.filter(user_id=mst_user).order_by('-created_at')
     except MstUser.DoesNotExist:
         # MstUserが存在しない場合は空のクエリセット
         uploaded_images = TransUploadedImage.objects.none()
@@ -404,8 +466,26 @@ def re_image_upload(request: HttpRequest):
             print(f"DEBUG: Found mst_user = {mst_user}")
             selected_image = TransUploadedImage.objects.get(image_id=selected_image_id, user_id=mst_user)
             selected_image_status = selected_image.status  # 画像の状態を設定
-            print(f"DEBUG: selected_image found = {selected_image.filename}, status = {selected_image.status}")
-            logger.info(f"DEBUG: selected_image found = {selected_image.filename}, status = {selected_image.status}")
+            
+            # 進捗バーとタイムラインの表示を同期させる
+            # analysis_completed_atが設定されていない場合は、まだ完全に完了していない
+            if selected_image.status == 'completed' and selected_image.analysis_completed_at is None:
+                # 解析結果が存在するかどうかで進捗を調整
+                has_analysis_results = TransImageAnalysis.objects.filter(image_id=selected_image).exists()
+                if has_analysis_results:
+                    # 解析結果はあるが、まだ完全に完了していない
+                    # analysis_completed_atを設定して完全に完了させる
+                    selected_image.analysis_completed_at = timezone.now()
+                    selected_image.save()
+                    print(f"DEBUG: analysis_completed_at設定完了: 画像ID={selected_image.image_id}")
+                    logger.info(f"DEBUG: analysis_completed_at設定完了: 画像ID={selected_image.image_id}")
+                else:
+                    # 解析結果がない場合は、そのまま表示
+                    print(f"DEBUG: No analysis results, keeping status as completed")
+                    logger.info(f"DEBUG: No analysis results, keeping status as completed")
+            
+            print(f"DEBUG: selected_image found = {selected_image.filename}, status = {selected_image.status}, analysis_completed_at = {selected_image.analysis_completed_at}")
+            logger.info(f"DEBUG: selected_image found = {selected_image.filename}, status = {selected_image.status}, analysis_completed_at = {selected_image.analysis_completed_at}")
         except (TransUploadedImage.DoesNotExist, MstUser.DoesNotExist) as e:
             selected_image = None
             print(f"DEBUG: Image not found for ID {selected_image_id}, error: {e}")
@@ -421,7 +501,7 @@ def re_image_upload(request: HttpRequest):
         # セッションに画像IDがない場合は、最新の画像を取得
         try:
             mst_user = MstUser.objects.get(username=request.user.username)
-            selected_image = TransUploadedImage.objects.filter(user_id=mst_user).order_by('-upload_date').first()
+            selected_image = TransUploadedImage.objects.filter(user_id=mst_user).order_by('-created_at').first()
             if selected_image:
                 selected_image_status = selected_image.status
                 print(f"DEBUG: Using latest image as fallback: {selected_image.filename}, status = {selected_image.status}")
@@ -439,26 +519,31 @@ def re_image_upload(request: HttpRequest):
     print(f"DEBUG: selected_image_status = {selected_image_status}")
     logger.info(f"DEBUG: selected_image_status = {selected_image_status}")
     
-    # タイムライン情報を取得
-    print("DEBUG: Getting timeline information")
-    timeline_log = None
+    # 画像情報を取得（タイムライン情報は不要）
+    print("DEBUG: Getting image information")
+    image_info = None
     if selected_image:
-        try:
-            timeline_log = TransAnalysisTimeline.objects.get(image_id=selected_image)
-            print(f"DEBUG: Found timeline_log = {timeline_log}")
-        except TransAnalysisTimeline.DoesNotExist:
-            timeline_log = None
-            print("DEBUG: No timeline_log found")
+        image_info = selected_image
+        print(f"DEBUG: Found image_info = {image_info.filename}")
     else:
-        print("DEBUG: No selected_image, skipping timeline")
+        print("DEBUG: No selected_image, skipping image info")
     
     # 前回の解析結果を取得（v1と同じロジック）
     print("DEBUG: Getting previous analysis results")
     previous_results = []
     if selected_image:
         try:
-            # 最新の解析結果を取得（上位3件まで）
-            previous_results = TransImageAnalysis.objects.filter(image_id=selected_image).order_by('-confidence')[:3]
+            # 最新の解析結果を取得（最新の解析実行の結果を信頼度順で取得）
+            # まず最新の解析完了時刻を取得
+            latest_analysis_time = TransImageAnalysis.objects.filter(image_id=selected_image).order_by('-analysis_completed_at').first()
+            if latest_analysis_time:
+                # 最新の解析実行の結果を信頼度順で取得（上位3件まで）
+                previous_results = TransImageAnalysis.objects.filter(
+                    image_id=selected_image,
+                    analysis_completed_at=latest_analysis_time.analysis_completed_at
+                ).order_by('-confidence')[:3]
+            else:
+                previous_results = []
             print(f"DEBUG: previous_results count = {previous_results.count()}")
             for i, result in enumerate(previous_results):
                 print(f"DEBUG: previous_results[{i}] = {result.label} ({result.confidence}%)")
@@ -472,10 +557,15 @@ def re_image_upload(request: HttpRequest):
     else:
         print("DEBUG: No selected_image, skipping previous_results")
     
-    # 解析完了済みの場合のみ、3つ目のタイムライン（解析完了）に前回の解析結果を表示
-    print("DEBUG: Setting timeline description")
-    if timeline_log and previous_results and selected_image_status == 'completed':
-        print("DEBUG: All conditions met for timeline description")
+    # 前回解析結果のテキスト生成（TransAnalysisTimelineを使わない方法）
+    print("DEBUG: Generating previous results text")
+    print(f"DEBUG: previous_results type = {type(previous_results)}")
+    print(f"DEBUG: previous_results count = {len(previous_results) if previous_results else 0}")
+    print(f"DEBUG: selected_image_status = {selected_image_status}")
+    
+    previous_results_text = None
+    if previous_results and selected_image_status == 'completed':
+        print("DEBUG: All conditions met for previous results text")
         results_text = "直近の解析結果: "
         for i, r in enumerate(previous_results):
             # 新しいモデルの構造に合わせて調整
@@ -484,17 +574,11 @@ def re_image_upload(request: HttpRequest):
             results_text += f"{i+1}位: {label} ({confidence:.1f}%)"
             if i < len(previous_results) - 1:
                 results_text += " / "
-        print(f"DEBUG: results_text = {results_text}")
-        # v1と同じフィールド名を使用
-        timeline_log.completion_step_description = results_text
-        timeline_log.save()
-        logger.info("DEBUG: Timeline description saved to completion_step_description field")
-        # データベースから再取得して最新の値を確認
-        timeline_log.refresh_from_db()
-        logger.info(f"DEBUG: timeline_log.completion_step_description after save = {timeline_log.completion_step_description}")
-        logger.info(f"DEBUG: Set timeline description = {results_text}")
+        
+        previous_results_text = results_text
+        print(f"DEBUG: previous_results_text = {previous_results_text}")
     else:
-        print(f"DEBUG: Timeline description conditions not met: timeline_log={timeline_log is not None}, previous_results={len(previous_results) if previous_results else 0}, status={selected_image_status}")
+        print(f"DEBUG: Previous results text conditions not met: previous_results={len(previous_results) if previous_results else 0}, status={selected_image_status}")
     
     # デバッグ情報を追加
     print("DEBUG: Final debug information")
@@ -507,13 +591,7 @@ def re_image_upload(request: HttpRequest):
     else:
         print("DEBUG: selected_image is None")
     
-    print(f"DEBUG: timeline_log = {timeline_log}")
-    if timeline_log:
-        print(f"DEBUG: timeline_log.previous_results = '{timeline_log.previous_results}'")
-        print(f"DEBUG: timeline_log.previous_results type = {type(timeline_log.previous_results)}")
-        print(f"DEBUG: timeline_log.previous_results length = {len(timeline_log.previous_results) if timeline_log.previous_results else 0}")
-        print(f"DEBUG: timeline_log.previous_results bool = {bool(timeline_log.previous_results)}")
-        print(f"DEBUG: timeline_log.analysis_status = {timeline_log.analysis_status}")
+    print(f"DEBUG: previous_results_text = {previous_results_text}")
     print(f"DEBUG: previous_results count = {len(previous_results) if previous_results else 0}")
     
     logger.info(f"DEBUG: selected_image = {selected_image}")
@@ -528,9 +606,10 @@ def re_image_upload(request: HttpRequest):
     context = {
         'selected_image': selected_image,
         'selected_image_status': selected_image_status,
-        'timeline_log': timeline_log,
+        'image_info': image_info,
         # 直近の解析結果（上位3件まで）をテンプレートに渡す
         'previous_results': previous_results,
+        'previous_results_text': previous_results_text,
     }
     
     logger.info("DEBUG: Rendering template")
@@ -589,24 +668,17 @@ def api_form_upload(request: HttpRequest):
             img = save_file_and_create_image_v2(f, request.user)
             print(f"DEBUG: 画像保存成功: {img.image_id}, {img.filename}")
             
-            # タイムラインログの作成・更新（解析ステップは保留）
-            timeline, created = TransAnalysisTimeline.objects.get_or_create(
-                image_id=img,
-                defaults={
-                    'analysis_status': 'uploaded',
-                    'previous_results': None,
-                }
-            )
-            if not created:
-                timeline.analysis_status = 'uploaded'
-                timeline.previous_results = None
-                timeline.save()
+            # 画像のステータスを更新
+            img.status = 'uploaded'
+            img.upload_completed_at = timezone.now()
+            img.save()
             
             saved.append(img)
-            print(f"DEBUG: タイムライン作成完了: {timeline.timeline_id}")
+            print(f"DEBUG: 画像保存完了: {img.image_id}")
         except Exception as e:
             print(f"DEBUG: ファイル保存エラー: {f.name} - {str(e)}")
-            errors.append(f'{f.name}: 保存エラー - {str(e)}')
+            # インフラ側のエラー（ディスク容量不足、権限エラーなど）
+            errors.append(f'{f.name}: サーバーエラーが発生しました')
     
     # エラーハンドリング
     if not saved:
@@ -689,41 +761,13 @@ def api_start_analysis(request: HttpRequest):
                 logger.error(f"指定された画像が見つからないか、解析対象ではありません: ID={image_id}")
                 return JsonResponse({'ok': False, 'error': '指定された画像が見つからないか、解析対象ではありません'}, status=400)
             
-            # 再解析の場合、古い解析結果を削除
+            # 再解析の場合、古い解析結果は削除しない（前回解析結果の表示のため）
             if image.status == 'completed':
-                logger.info(f"再解析のため、古い解析結果を削除: 画像ID={image.image_id}")
-                old_results = TransImageAnalysis.objects.filter(image_id=image)
-                deleted_count = old_results.count()
-                old_results.delete()
-                logger.info(f"削除された解析結果数: {deleted_count}")
+                logger.info(f"再解析開始: 画像ID={image.image_id} (既存の解析結果は保持)")
             
-            # 解析開始時にタイムライン情報を保存
-            timeline_log, created = TransAnalysisTimeline.objects.get_or_create(
-                image_id=image,
-                defaults={
-                    'analysis_started_at': timezone.now(),
-                    'analysis_step_title': '解析開始',
-                    'analysis_step_description': 'AIによる画像解析を開始しました。',
-                    'analysis_step_status': '解析中',
-                    'analysis_step_icon': 'brain',
-                    'analysis_step_color': 'warning',
-                    'analysis_progress_percentage': 0,
-                    'analysis_progress_stage': 'preparing'
-                }
-            )
-            if not created:
-                timeline_log.analysis_started_at = timezone.now()
-                timeline_log.analysis_step_title = '解析開始'
-                timeline_log.analysis_step_description = 'AIによる画像解析を開始しました。'
-                timeline_log.analysis_step_status = '解析中'
-                timeline_log.analysis_step_icon = 'brain'
-                timeline_log.analysis_step_color = 'warning'
-                timeline_log.analysis_progress_percentage = 0
-                timeline_log.analysis_progress_stage = 'preparing'
-                timeline_log.save()
-            
-            # 画像のステータスを準備中に更新
-            image.status = 'preparing'
+            # TransAnalysisTimelineは削除されたため、画像のステータスを直接更新
+            image.analysis_started_at = timezone.now()
+            image.status = 'analyzing'
             image.save()
             
             logger.info(f"個別画像の解析を開始: ID={image.image_id}")
@@ -739,7 +783,7 @@ def api_start_analysis(request: HttpRequest):
             available_images = TransUploadedImage.objects.filter(
                 image_id__in=uploaded_image_ids,
                 status__in=['uploaded', 'preparing', 'analyzing']
-            ).order_by('-upload_date')
+            ).order_by('-created_at')
             
             # セッションから解析済みの画像IDを除外して更新
             active_image_ids = [img.image_id for img in available_images]
@@ -798,28 +842,30 @@ def process_single_image_analysis(image_id, model_name):
     try:
         image = TransUploadedImage.objects.get(image_id=image_id)
         
+        # 再解析の場合は古い解析結果を削除
+        was_completed = image.status == 'completed'
+        if was_completed:
+            old_results = TransImageAnalysis.objects.filter(image_id=image)
+            old_count = old_results.count()
+            old_results.delete()
+            logger.info(f"再解析開始: 画像ID={image.image_id} (古い解析結果{old_count}件を削除)")
+        else:
+            logger.info(f"解析処理開始: 画像ID={image.image_id}")
+        
         # ステータスを解析中に更新
         image.status = 'analyzing'
+        image.analysis_started_at = timezone.now()
         image.save()
-        
-        # タイムラインを更新
-        timeline = TransAnalysisTimeline.objects.filter(image_id=image).first()
-        if timeline:
-            timeline.analysis_step_title = 'AI解析実行中'
-            timeline.analysis_step_description = f'{model_name}モデルで画像を解析しています...'
-            timeline.analysis_step_status = '解析中'
-            timeline.analysis_progress_percentage = 50
-            timeline.analysis_progress_stage = 'analyzing'
-            timeline.save()
-        
-        # 既存の解析結果を削除（重複を防ぐ）
-        TransImageAnalysis.objects.filter(image_id=image).delete()
-        logger.info(f"既存の解析結果を削除しました: 画像ID={image.image_id}")
         
         # 実際の解析処理（ここでは簡単な例）
         analysis_results = perform_image_analysis(image, model_name)
         
-        # 解析結果を保存
+        # 進捗バーとの同期のため、解析完了前に少し待機
+        import time
+        time.sleep(2)  # 2秒待機して進捗バーの更新を待つ
+        
+        # 解析結果を保存（同じ解析実行なので同じ時刻を使用）
+        analysis_time = timezone.now()
         for i, result in enumerate(analysis_results):
             TransImageAnalysis.objects.create(
                 image_id=image,
@@ -827,25 +873,16 @@ def process_single_image_analysis(image_id, model_name):
                 confidence=result.get('confidence', 0.0),
                 model_name=result.get('model_name', 'unknown'),
                 rank=i + 1,
-                analysis_started_at=timezone.now(),
-                analysis_completed_at=timezone.now()
+                analysis_started_at=analysis_time,
+                analysis_completed_at=analysis_time
             )
         
         # ステータスを完了に更新
         image.status = 'completed'
+        image.analysis_completed_at = analysis_time  # 解析完了時刻も設定
         image.save()
         
-        # タイムラインを完了に更新
-        if timeline:
-            timeline.analysis_step_title = '解析完了'
-            timeline.analysis_step_description = '画像の解析が正常に完了しました。'
-            timeline.analysis_step_status = '完了'
-            timeline.analysis_step_icon = 'check-circle'
-            timeline.analysis_step_color = 'success'
-            timeline.analysis_progress_percentage = 100
-            timeline.analysis_progress_stage = 'completed'
-            timeline.analysis_completed_at = timezone.now()
-            timeline.save()
+        # TransAnalysisTimelineは削除されたため、タイムライン更新は不要
         
         logger.info(f"個別画像解析完了: ID={image_id}")
         
@@ -949,59 +986,49 @@ def api_analysis_progress(request: HttpRequest):
             # 個別画像の進捗を取得
             try:
                 image = TransUploadedImage.objects.get(image_id=image_id)
-                timeline = TransAnalysisTimeline.objects.filter(image_id=image).first()
                 
-                if timeline:
-                    # 画像のステータスに基づいて進捗を決定
-                    if image.status == 'completed':
-                        progress_percentage = 100
-                        progress_stage = 'completed'
-                        step_title = '解析完了'
-                        step_description = '画像解析が正常に完了しました'
-                        step_icon = 'check'
-                        step_color = 'success'
-                    elif image.status == 'analyzing':
-                        progress_percentage = 50
-                        progress_stage = 'analyzing'
-                        step_title = '解析中'
-                        step_description = '画像を解析しています...'
-                        step_icon = 'spinner'
-                        step_color = 'primary'
+                # 画像のステータスに基づいて進捗を決定
+                if image.status == 'completed':
+                    progress_percentage = 100
+                    progress_stage = 'completed'
+                    step_title = '解析完了'
+                    step_description = '画像解析が正常に完了しました'
+                    step_icon = 'check'
+                    step_color = 'success'
+                elif image.status == 'analyzing':
+                    # 実際の解析進捗を計算
+                    if image.analysis_started_at:
+                        elapsed_time = timezone.now() - image.analysis_started_at
+                        # 解析時間に基づいて進捗を計算（最大90%まで）
+                        progress_percentage = min(90, int(elapsed_time.total_seconds() * 2))
                     else:
-                        progress_percentage = 0
-                        progress_stage = 'waiting'
-                        step_title = '待機中'
-                        step_description = '解析の準備をしています...'
-                        step_icon = 'clock'
-                        step_color = 'info'
-                    
-                    progress_data = {
-                        'image_id': image.image_id,
-                        'status': image.status,
-                        'progress_percentage': progress_percentage,
-                        'progress_stage': progress_stage,
-                        'step_title': step_title,
-                        'step_description': step_description,
-                        'step_status': timeline.analysis_status,
-                        'step_icon': step_icon,
-                        'step_color': step_color,
-                        'started_at': None,
-                        'completed_at': None
-                    }
+                        progress_percentage = 10
+                    progress_stage = 'analyzing'
+                    step_title = '解析中'
+                    step_description = f'画像を解析しています... ({progress_percentage}%)'
+                    step_icon = 'spinner'
+                    step_color = 'primary'
                 else:
-                    progress_data = {
-                        'image_id': image.image_id,
-                        'status': image.status,
-                        'progress_percentage': 0,
-                        'progress_stage': 'waiting',
-                        'step_title': '待機中',
-                        'step_description': '解析の準備をしています...',
-                        'step_status': '待機中',
-                        'step_icon': 'clock',
-                        'step_color': 'info',
-                        'started_at': None,
-                        'completed_at': None
-                    }
+                    progress_percentage = 0
+                    progress_stage = 'waiting'
+                    step_title = '待機中'
+                    step_description = '解析の準備をしています...'
+                    step_icon = 'clock'
+                    step_color = 'info'
+                
+                progress_data = {
+                    'image_id': image.image_id,
+                    'status': image.status,
+                    'progress_percentage': progress_percentage,
+                    'progress_stage': progress_stage,
+                    'step_title': step_title,
+                    'step_description': step_description,
+                    'step_status': image.status,
+                    'step_icon': step_icon,
+                    'step_color': step_color,
+                    'started_at': image.analysis_started_at,
+                    'completed_at': image.analysis_completed_at
+                }
                 
                 return JsonResponse(progress_data)
                 
@@ -1020,7 +1047,7 @@ def api_analysis_progress(request: HttpRequest):
             
             # 最新の画像の進捗を取得
             try:
-                latest_image = TransUploadedImage.objects.filter(image_id__in=uploaded_image_ids).order_by('-upload_date').first()
+                latest_image = TransUploadedImage.objects.filter(image_id__in=uploaded_image_ids).order_by('-created_at').first()
                 if not latest_image:
                     return JsonResponse({
                         'status': 'waiting',
@@ -1028,59 +1055,42 @@ def api_analysis_progress(request: HttpRequest):
                         'progress_stage': 'waiting'
                     })
                 
-                timeline = TransAnalysisTimeline.objects.filter(image_id=latest_image).first()
-                
-                if timeline:
-                    # 画像のステータスに基づいて進捗を決定
-                    if latest_image.status == 'completed':
-                        progress_percentage = 100
-                        progress_stage = 'completed'
-                        step_title = '解析完了'
-                        step_description = '画像解析が正常に完了しました'
-                        step_icon = 'check'
-                        step_color = 'success'
-                    elif latest_image.status == 'analyzing':
-                        progress_percentage = 50
-                        progress_stage = 'analyzing'
-                        step_title = '解析中'
-                        step_description = '画像を解析しています...'
-                        step_icon = 'spinner'
-                        step_color = 'primary'
-                    else:
-                        progress_percentage = 0
-                        progress_stage = 'waiting'
-                        step_title = '待機中'
-                        step_description = '解析の準備をしています...'
-                        step_icon = 'clock'
-                        step_color = 'info'
-                    
-                    progress_data = {
-                        'image_id': latest_image.image_id,
-                        'status': latest_image.status,
-                        'progress_percentage': progress_percentage,
-                        'progress_stage': progress_stage,
-                        'step_title': step_title,
-                        'step_description': step_description,
-                        'step_status': timeline.analysis_status,
-                        'step_icon': step_icon,
-                        'step_color': step_color,
-                        'started_at': None,
-                        'completed_at': None
-                    }
+                # 画像のステータスに基づいて進捗を決定
+                if latest_image.status == 'completed':
+                    progress_percentage = 100
+                    progress_stage = 'completed'
+                    step_title = '解析完了'
+                    step_description = '画像解析が正常に完了しました'
+                    step_icon = 'check'
+                    step_color = 'success'
+                elif latest_image.status == 'analyzing':
+                    progress_percentage = 50
+                    progress_stage = 'analyzing'
+                    step_title = '解析中'
+                    step_description = '画像を解析しています...'
+                    step_icon = 'spinner'
+                    step_color = 'primary'
                 else:
-                    progress_data = {
-                        'image_id': latest_image.image_id,
-                        'status': latest_image.status,
-                        'progress_percentage': 0,
-                        'progress_stage': 'waiting',
-                        'step_title': '待機中',
-                        'step_description': '解析の準備をしています...',
-                        'step_status': '待機中',
-                        'step_icon': 'clock',
-                        'step_color': 'info',
-                        'started_at': None,
-                        'completed_at': None
-                    }
+                    progress_percentage = 0
+                    progress_stage = 'waiting'
+                    step_title = '待機中'
+                    step_description = '解析の準備をしています...'
+                    step_icon = 'clock'
+                    step_color = 'info'
+                
+                progress_data = {
+                    'image_id': latest_image.image_id,
+                    'status': latest_image.status,
+                    'progress_percentage': progress_percentage,
+                    'progress_stage': progress_stage,
+                    'step_title': step_title,
+                    'step_description': step_description,
+                    'step_status': latest_image.status,
+                    'step_icon': step_icon,
+                    'step_color': step_color,
+                    'started_at': latest_image.analysis_started_at,
+                    'completed_at': latest_image.analysis_completed_at
+                }
                 
                 return JsonResponse(progress_data)
                 
@@ -1136,22 +1146,12 @@ def api_complete_analysis(request: HttpRequest):
                 'rank': analysis.rank
             })
         
-        # 画像のステータスを完了に更新
-        image.status = 'completed'
-        image.save()
+        # 解析結果の保存は完了したが、進捗バーが100%になるまでステータスは更新しない
+        # 画像のステータスは進捗バーが100%になってから更新される
+        logger.info(f"解析結果保存完了: 画像ID={image_id}, 結果数={len(saved_results)}")
         
-        # タイムラインを完了に更新
-        timeline = TransAnalysisTimeline.objects.filter(image_id=image).first()
-        if timeline:
-            timeline.analysis_step_title = '解析完了'
-            timeline.analysis_step_description = f'{len(saved_results)}件の解析結果が保存されました。'
-            timeline.analysis_step_status = '完了'
-            timeline.analysis_step_icon = 'check-circle'
-            timeline.analysis_step_color = 'success'
-            timeline.analysis_progress_percentage = 100
-            timeline.analysis_progress_stage = 'completed'
-            timeline.analysis_completed_at = timezone.now()
-            timeline.save()
+        # 解析結果が保存されたことを示すフラグを設定（進捗バー用）
+        # この時点ではまだステータスは'analyzing'のまま
         
         logger.info(f"解析完了: 画像ID={image_id}, 結果数={len(saved_results)}")
         
@@ -1193,76 +1193,64 @@ def api_get_timeline(request: HttpRequest, image_id: int):
         except TransUploadedImage.DoesNotExist:
             return JsonResponse({'ok': False, 'error': '指定された画像が見つかりません'}, status=404)
         
-        # タイムライン情報を取得
-        timeline = TransAnalysisTimeline.objects.filter(image_id=image).first()
+        # 解析結果の存在を確認
+        has_analysis_results = TransImageAnalysis.objects.filter(image_id=image).exists()
         
-        if timeline:
-            # 画像のステータスに基づいて進捗を決定
-            if image.status == 'completed':
-                progress_percentage = 100
-                progress_stage = 'completed'
-                step_title = '解析完了'
-                step_description = '画像解析が正常に完了しました'
-                step_icon = 'check'
-                step_color = 'success'
-            elif image.status == 'analyzing':
+        # 画像のステータスに基づいて進捗を決定（シンプルなロジック）
+        if image.status == 'completed':
+            # 完了ステータスの場合は100%
+            progress_percentage = 100
+            progress_stage = 'completed'
+            step_title = '解析完了'
+            step_description = '画像解析が正常に完了しました'
+            step_icon = 'check'
+            step_color = 'success'
+        elif image.status == 'analyzing':
+            # 解析中の場合
+            if has_analysis_results:
+                progress_percentage = 90  # 解析結果はあるが、まだ完了していない
+                progress_stage = 'analyzing'
+                step_title = '解析中'
+                step_description = '解析結果を処理中...'
+                step_icon = 'spinner'
+                step_color = 'primary'
+            else:
                 progress_percentage = 50
                 progress_stage = 'analyzing'
                 step_title = '解析中'
                 step_description = '画像を解析しています...'
                 step_icon = 'spinner'
                 step_color = 'primary'
-            else:
-                progress_percentage = 0
-                progress_stage = 'waiting'
-                step_title = '待機中'
-                step_description = '解析の準備をしています...'
-                step_icon = 'clock'
-                step_color = 'info'
-            
-            timeline_data = {
-                'image_id': image.image_id,
-                'filename': image.filename,
-                'status': image.status,
-                'analysis_started_at': None,
-                'analysis_completed_at': None,
-                'current_step': {
-                    'title': step_title,
-                    'description': step_description,
-                    'status': timeline.analysis_status,
-                    'icon': step_icon,
-                    'color': step_color
-                },
-                'progress': {
-                    'percentage': progress_percentage,
-                    'stage': progress_stage
-                },
-                'model_used': '未指定'
-            }
         else:
-            # タイムライン情報がない場合のデフォルト値
-            timeline_data = {
-                'image_id': image.image_id,
-                'filename': image.filename,
+            progress_percentage = 0
+            progress_stage = 'waiting'
+            step_title = '待機中'
+            step_description = '解析の準備をしています...'
+            step_icon = 'clock'
+            step_color = 'info'
+        
+        timeline_data = {
+            'image_id': image.image_id,
+            'filename': image.filename,
+            'status': image.status,
+            'analysis_started_at': image.analysis_started_at,
+            'analysis_completed_at': image.analysis_completed_at,
+            'current_step': {
+                'title': step_title,
+                'description': step_description,
                 'status': image.status,
-                'analysis_started_at': None,
-                'analysis_completed_at': None,
-                'current_step': {
-                    'title': '待機中',
-                    'description': '解析の準備をしています...',
-                    'status': '待機中',
-                    'icon': 'clock',
-                    'color': 'info'
-                },
-                'progress': {
-                    'percentage': 0,
-                    'stage': 'waiting'
-                },
-                'model_used': '未指定'
-            }
+                'icon': step_icon,
+                'color': step_color
+            },
+            'progress': {
+                'percentage': progress_percentage,
+                'stage': progress_stage
+            },
+            'model_used': '未指定'
+        }
         
         # 解析結果も取得
-        analysis_results = TransImageAnalysis.objects.filter(image_id=image).order_by('-created_at')
+        analysis_results = TransImageAnalysis.objects.filter(image_id=image).order_by('-analysis_completed_at')
         results_data = []
         
         for result in analysis_results:
@@ -1272,7 +1260,7 @@ def api_get_timeline(request: HttpRequest, image_id: int):
                 'confidence': result.confidence,
                 'model_name': result.model_name,
                 'rank': result.rank,
-                'created_at': result.created_at.isoformat()
+                'created_at': result.analysis_completed_at.isoformat() if result.analysis_completed_at else None
             })
         
         timeline_data['analysis_results'] = results_data
@@ -1313,11 +1301,7 @@ def api_delete_image(request: HttpRequest, image_id: int):
         analysis_results.delete()
         deleted_count += analysis_count
         
-        # タイムライン情報を削除
-        timeline_results = TransAnalysisTimeline.objects.filter(image_id=image)
-        timeline_count = timeline_results.count()
-        timeline_results.delete()
-        deleted_count += timeline_count
+        # TransAnalysisTimelineは削除されたため、タイムライン情報の削除は不要
         
         # 画像レコードを削除
         image.delete()
@@ -1425,8 +1409,7 @@ def api_delete_image(request: HttpRequest, image_id: int):
         # 関連する解析結果を削除
         TransImageAnalysis.objects.filter(image_id=image).delete()
         
-        # 関連するタイムラインログを削除
-        TransAnalysisTimeline.objects.filter(image_id=image).delete()
+        # TransAnalysisTimelineは削除されたため、タイムラインログの削除は不要
         
         # ファイルを削除
         if image.file_path and os.path.exists(image.file_path):
@@ -1461,3 +1444,217 @@ def api_delete_image(request: HttpRequest, image_id: int):
             'success': False,
             'error': f'削除中にエラーが発生しました: {str(e)}'
         }, status=500)
+
+@require_GET
+def api_analysis_progress(request: HttpRequest):
+    """解析進捗取得API"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        image_id = request.GET.get('image_id')
+        
+        if image_id:
+            # 個別画像の進捗を取得
+            try:
+                image = TransUploadedImage.objects.get(image_id=image_id)
+                
+                # 解析結果の存在を確認
+                has_analysis_results = TransImageAnalysis.objects.filter(image_id=image).exists()
+                
+                # 画像のステータスに基づいて進捗を決定（連続的な進捗）
+                if image.status == 'completed':
+                    # 完了ステータスの場合は100%
+                    progress_percentage = 100
+                    current_stage = 'completed'
+                    description = '画像解析が正常に完了しました'
+                elif image.status == 'analyzing':
+                    # 解析中の場合は連続的な進捗を計算
+                    if has_analysis_results:
+                        # 解析結果がある場合は90-99%の範囲でランダムに進捗
+                        import random
+                        progress_percentage = random.randint(90, 99)
+                        current_stage = 'analyzing'
+                        description = '解析結果を処理中...'
+                    else:
+                        # 解析開始からの経過時間に基づいて段階的な進捗を計算
+                        import time
+                        elapsed_time = time.time() - image.analysis_started_at.timestamp()
+                        
+                        # 実際の解析時間に合わせた進捗計算（5-10秒で完了想定）
+                        if elapsed_time < 1.0:
+                            progress_percentage = 10
+                        elif elapsed_time < 2.0:
+                            progress_percentage = 20
+                        elif elapsed_time < 3.0:
+                            progress_percentage = 30
+                        elif elapsed_time < 4.0:
+                            progress_percentage = 40
+                        elif elapsed_time < 5.0:
+                            progress_percentage = 50
+                        elif elapsed_time < 6.0:
+                            progress_percentage = 60
+                        elif elapsed_time < 7.0:
+                            progress_percentage = 70
+                        elif elapsed_time < 8.0:
+                            progress_percentage = 80
+                        elif elapsed_time < 9.0:
+                            progress_percentage = 85
+                        else:
+                            progress_percentage = 89
+                        current_stage = 'analyzing'
+                        description = '画像を解析しています...'
+                else:
+                    progress_percentage = 0
+                    current_stage = 'waiting'
+                    description = '解析の準備をしています...'
+                
+                # 解析結果を取得
+                results = TransImageAnalysis.objects.filter(image_id=image).order_by('-confidence')[:3]
+                result_data = []
+                for result in results:
+                    result_data.append({
+                        'label': result.label,
+                        'confidence': result.confidence,
+                        'rank': result.rank
+                    })
+                
+                return JsonResponse({
+                    'ok': True,
+                    'progress': progress_percentage,
+                    'status': image.status,
+                    'current_stage': current_stage,
+                    'description': description,
+                    'result': result_data if result_data else None
+                })
+                
+            except TransUploadedImage.DoesNotExist:
+                return JsonResponse({
+                    'ok': False,
+                    'error': '画像が見つかりません'
+                }, status=404)
+        else:
+            # 全体の進捗を取得（最新の画像の進捗）
+            try:
+                latest_image = TransUploadedImage.objects.order_by('-created_at').first()
+                if latest_image:
+                    # 個別画像の進捗を取得
+                    has_analysis_results = TransImageAnalysis.objects.filter(image_id=latest_image).exists()
+                    
+                    if latest_image.status == 'completed':
+                        progress_percentage = 100
+                        current_stage = 'completed'
+                        description = '画像解析が正常に完了しました'
+                    elif latest_image.status == 'analyzing':
+                        # 解析中の場合は連続的な進捗を計算
+                        if has_analysis_results:
+                            # 解析結果がある場合は90-99%の範囲でランダムに進捗
+                            import random
+                            progress_percentage = random.randint(90, 99)
+                            current_stage = 'analyzing'
+                            description = '解析結果を処理中...'
+                        else:
+                            # 解析開始からの経過時間に基づいて段階的な進捗を計算
+                            import time
+                            elapsed_time = time.time() - latest_image.analysis_started_at.timestamp()
+                            
+                            # 実際の解析時間に合わせた進捗計算（5-10秒で完了想定）
+                            if elapsed_time < 1.0:
+                                progress_percentage = 10
+                            elif elapsed_time < 2.0:
+                                progress_percentage = 20
+                            elif elapsed_time < 3.0:
+                                progress_percentage = 30
+                            elif elapsed_time < 4.0:
+                                progress_percentage = 40
+                            elif elapsed_time < 5.0:
+                                progress_percentage = 50
+                            elif elapsed_time < 6.0:
+                                progress_percentage = 60
+                            elif elapsed_time < 7.0:
+                                progress_percentage = 70
+                            elif elapsed_time < 8.0:
+                                progress_percentage = 80
+                            elif elapsed_time < 9.0:
+                                progress_percentage = 85
+                            else:
+                                progress_percentage = 89
+                            current_stage = 'analyzing'
+                            description = '画像を解析しています...'
+                    else:
+                        progress_percentage = 0
+                        current_stage = 'waiting'
+                        description = '解析の準備をしています...'
+                    
+                    return JsonResponse({
+                        'ok': True,
+                        'progress': progress_percentage,
+                        'status': latest_image.status,
+                        'current_stage': current_stage,
+                        'description': description
+                    })
+                else:
+                    return JsonResponse({
+                        'ok': True,
+                        'progress': 0,
+                        'status': 'waiting',
+                        'current_stage': 'waiting',
+                        'description': '解析待機中...'
+                    })
+            except Exception as e:
+                logger.error(f"進捗取得エラー: {e}")
+                return JsonResponse({
+                    'ok': False,
+                    'error': str(e)
+                }, status=500)
+                
+    except Exception as e:
+        logger.error(f"進捗取得APIエラー: {e}")
+        return JsonResponse({
+            'ok': False,
+            'error': str(e)
+        }, status=500)
+
+@require_GET
+def api_image_detail(request: HttpRequest, image_id: int):
+    """画像詳細取得API（最新の解析結果を含む）"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # 画像の存在確認
+        try:
+            image = TransUploadedImage.objects.get(image_id=image_id)
+        except TransUploadedImage.DoesNotExist:
+            return JsonResponse({'ok': False, 'error': '指定された画像が見つかりません'}, status=404)
+        
+        # 最新の解析結果を取得
+        latest_results = image.get_previous_results()
+        
+        # 解析結果データを構築
+        result_data = []
+        for result in latest_results:
+            result_data.append({
+                'label': result.label,
+                'confidence': float(result.confidence),
+                'rank': result.rank,
+                'model_name': result.model_name
+            })
+        
+        # 画像詳細データを返す
+        return JsonResponse({
+            'ok': True,
+            'image': {
+                'image_id': image.image_id,
+                'filename': image.filename,
+                'status': image.status,
+                'created_at': image.created_at.isoformat() if image.created_at else None,
+                'analysis_started_at': image.analysis_started_at.isoformat() if image.analysis_started_at else None,
+                'analysis_completed_at': image.analysis_completed_at.isoformat() if image.analysis_completed_at else None,
+            },
+            'results': result_data
+        })
+        
+    except Exception as e:
+        logger.error(f"画像詳細取得エラー: {e}")
+        return JsonResponse({'ok': False, 'error': str(e)}, status=500)

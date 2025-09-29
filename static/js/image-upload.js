@@ -425,11 +425,8 @@ function startProgressMonitoring() {
           // 解析中の場合、UIを更新してから進捗バーを更新
           updateAnalysisUI('analyzing', data.progress_percentage);
 
-          // 進捗バーを段階的に更新（0% → 50% → 100%）
-          let progressPercentage = data.progress_percentage || 0;
-          if (progressPercentage === 0) {
-            progressPercentage = 50; // 解析中は50%に設定
-          }
+          // 進捗バーを実際の進捗値で更新
+          let progressPercentage = data.progress || 0;
           updateProgressBar(progressPercentage);
 
           // v1と同様に進捗説明も更新
@@ -527,19 +524,10 @@ function updateAnalysisUI(status, progress = 0) {
     console.log('updateAnalysisUI: calling createAnalysisProgressPreviews with', uploadedImages.length, 'images');
     createAnalysisProgressPreviews(uploadedImages);
 
-    // 進捗バーを強制的に更新（0% → 50% → 100%の段階的更新）
+    // 進捗バーを実際の進捗値で更新
     let progressPercentage = progress || 0;
-    if (progressPercentage === 0) {
-      progressPercentage = 50; // 解析中は50%に設定
-    }
-    console.log('updateAnalysisUI: 強制的に進捗を更新:', progressPercentage + '%');
+    console.log('updateAnalysisUI: 進捗を更新:', progressPercentage + '%');
     updateProgressBar(progressPercentage);
-
-    // 少し遅延してから100%に更新（アニメーション効果）
-    setTimeout(() => {
-      console.log('updateAnalysisUI: 遅延後に100%に更新');
-      updateProgressBar(100);
-    }, 1000);
   }
 }
 
