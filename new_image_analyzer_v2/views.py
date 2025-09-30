@@ -2,7 +2,7 @@ from __future__ import annotations
 import os
 import threading
 from django.conf import settings
-from django.db import transaction
+from django.db import transaction, models
 from django.http import JsonResponse, HttpRequest, HttpResponseRedirect
 from django.shortcuts import render, redirect
 from django.views.decorators.http import require_POST, require_GET, require_http_methods
@@ -101,11 +101,21 @@ def save_file_and_create_image_v2(file, user):
     print(f"DEBUG: ファイル保存完了: {file_path}")
     print(f"DEBUG: ファイル存在確認: {os.path.exists(file_path)}")
     
+    # ユーザーごとのアップロード順序番号を取得
+    max_order = TransUploadedImage.objects.filter(
+        user_id=mst_user
+    ).aggregate(models.Max('upload_order'))['upload_order__max']
+    
+    next_order = (max_order or 0) + 1
+    
+    print(f"DEBUG: 次のアップロード順序: {next_order}")
+    
     # 新しいモデルで画像レコードを作成
     img = TransUploadedImage.objects.create(
         user_id=mst_user,  # MstUserのインスタンスを渡す
         filename=display_filename,  # 表示用ファイル名を保存
         file_path=file_path,  # 物理ファイルパス
+        upload_order=next_order,  # アップロード順序
         status='analyzing'  # 直接解析中に
     )
     
@@ -365,13 +375,20 @@ def image_upload(request: HttpRequest):
         messages.error(request, 'ログインが必要です。')
         return redirect('v2_login')
     
-    # 新しいモデルを使用して画像を取得
-    try:
-        # 既存のUserからMstUserを取得
-        mst_user = MstUser.objects.get(username=request.user.username)
-        uploaded_images = TransUploadedImage.objects.filter(user_id=mst_user).order_by('-created_at')
-    except MstUser.DoesNotExist:
-        # MstUserが存在しない場合は空のクエリセット
+    # 新規アップロードページでは、セッションをクリア（まっさらな状態から開始）
+    if 'clear_session' not in request.GET:
+        # 初回アクセス時はセッションをクリア
+        request.session['uploaded_image_ids'] = []
+        request.session['selected_model'] = ''
+        request.session.modified = True
+    
+    # セッションから画像IDを取得（新規アップロードページではセッションの画像のみ表示）
+    uploaded_image_ids = request.session.get('uploaded_image_ids', [])
+    
+    # セッションの画像のみを取得
+    if uploaded_image_ids:
+        uploaded_images = TransUploadedImage.objects.filter(image_id__in=uploaded_image_ids).order_by('-created_at')
+    else:
         uploaded_images = TransUploadedImage.objects.none()
     
     # 選択されたモデルを取得
@@ -388,10 +405,13 @@ def image_upload(request: HttpRequest):
     # アップロード済み画像の情報をJSON形式で準備
     uploaded_images_json = []
     for img in uploaded_images:
+        # file_pathから実際のファイル名を取得
+        import os
+        physical_filename = os.path.basename(img.file_path)
         uploaded_images_json.append({
             'id': img.image_id,
             'filename': img.filename,
-            'thumbnail_url': f'/uploads/images/{img.filename}',
+            'thumbnail_url': f'/uploads/images/{physical_filename}',
             'status': img.status
         })
     
@@ -690,10 +710,13 @@ def api_form_upload(request: HttpRequest):
     # レスポンス用の画像情報を準備
     response_data = []
     for img in saved:
+        # file_pathから実際のファイル名を取得
+        import os
+        physical_filename = os.path.basename(img.file_path)
         response_data.append({
             'id': img.image_id,
             'filename': img.filename,
-            'thumbnail_url': f'/uploads/images/{img.filename}',
+            'thumbnail_url': f'/uploads/images/{physical_filename}',
             'status': img.status
         })
     
@@ -966,138 +989,6 @@ def perform_image_analysis(image, model_name):
             }
         ]
 
-@require_GET
-def api_analysis_progress(request: HttpRequest):
-    """解析進捗API"""
-    import logging
-    logger = logging.getLogger(__name__)
-    
-    image_id = request.GET.get('image_id')
-    logger.info(f"進捗API呼び出し: image_id={image_id}")
-    
-    try:
-        if image_id:
-            # 個別画像の進捗を取得
-            try:
-                image = TransUploadedImage.objects.get(image_id=image_id)
-                
-                # 画像のステータスに基づいて進捗を決定
-                if image.status == 'completed':
-                    progress_percentage = 100
-                    progress_stage = 'completed'
-                    step_title = '解析完了'
-                    step_description = '画像解析が正常に完了しました'
-                    step_icon = 'check'
-                    step_color = 'success'
-                elif image.status == 'analyzing':
-                    # 実際の解析進捗を計算
-                    if image.analysis_started_at:
-                        elapsed_time = timezone.now() - image.analysis_started_at
-                        # 解析時間に基づいて進捗を計算（最大90%まで）
-                        progress_percentage = min(90, int(elapsed_time.total_seconds() * 2))
-                    else:
-                        progress_percentage = 10
-                    progress_stage = 'analyzing'
-                    step_title = '解析中'
-                    step_description = f'画像を解析しています... ({progress_percentage}%)'
-                    step_icon = 'spinner'
-                    step_color = 'primary'
-                else:
-                    progress_percentage = 0
-                    progress_stage = 'waiting'
-                    step_title = '待機中'
-                    step_description = '解析の準備をしています...'
-                    step_icon = 'clock'
-                    step_color = 'info'
-                
-                progress_data = {
-                    'image_id': image.image_id,
-                    'status': image.status,
-                    'progress_percentage': progress_percentage,
-                    'progress_stage': progress_stage,
-                    'step_title': step_title,
-                    'step_description': step_description,
-                    'step_status': image.status,
-                    'step_icon': step_icon,
-                    'step_color': step_color,
-                    'started_at': image.analysis_started_at,
-                    'completed_at': image.analysis_completed_at
-                }
-                
-                return JsonResponse(progress_data)
-                
-            except TransUploadedImage.DoesNotExist:
-                return JsonResponse({'status': 'error', 'error': '指定された画像が見つかりません'}, status=404)
-        
-        else:
-            # セッション画像の一括進捗を取得
-            uploaded_image_ids = request.session.get('uploaded_image_ids', [])
-            if not uploaded_image_ids:
-                return JsonResponse({
-                    'status': 'waiting',
-                    'progress_percentage': 0,
-                    'progress_stage': 'waiting'
-                })
-            
-            # 最新の画像の進捗を取得
-            try:
-                latest_image = TransUploadedImage.objects.filter(image_id__in=uploaded_image_ids).order_by('-created_at').first()
-                if not latest_image:
-                    return JsonResponse({
-                        'status': 'waiting',
-                        'progress_percentage': 0,
-                        'progress_stage': 'waiting'
-                    })
-                
-                # 画像のステータスに基づいて進捗を決定
-                if latest_image.status == 'completed':
-                    progress_percentage = 100
-                    progress_stage = 'completed'
-                    step_title = '解析完了'
-                    step_description = '画像解析が正常に完了しました'
-                    step_icon = 'check'
-                    step_color = 'success'
-                elif latest_image.status == 'analyzing':
-                    progress_percentage = 50
-                    progress_stage = 'analyzing'
-                    step_title = '解析中'
-                    step_description = '画像を解析しています...'
-                    step_icon = 'spinner'
-                    step_color = 'primary'
-                else:
-                    progress_percentage = 0
-                    progress_stage = 'waiting'
-                    step_title = '待機中'
-                    step_description = '解析の準備をしています...'
-                    step_icon = 'clock'
-                    step_color = 'info'
-                
-                progress_data = {
-                    'image_id': latest_image.image_id,
-                    'status': latest_image.status,
-                    'progress_percentage': progress_percentage,
-                    'progress_stage': progress_stage,
-                    'step_title': step_title,
-                    'step_description': step_description,
-                    'step_status': latest_image.status,
-                    'step_icon': step_icon,
-                    'step_color': step_color,
-                    'started_at': latest_image.analysis_started_at,
-                    'completed_at': latest_image.analysis_completed_at
-                }
-                
-                return JsonResponse(progress_data)
-                
-            except Exception as e:
-                logger.error(f"セッション画像進捗取得エラー: {e}")
-                return JsonResponse({
-                    'status': 'error',
-                    'error': str(e)
-                }, status=500)
-    
-    except Exception as e:
-        logger.error(f"進捗取得エラー: {e}")
-        return JsonResponse({'status': 'error', 'error': str(e)}, status=500)
 
 @require_POST
 @csrf_protect
@@ -1440,6 +1331,79 @@ def api_delete_image(request: HttpRequest, image_id: int):
         }, status=500)
 
 @require_GET
+def api_get_uploaded_images(request: HttpRequest):
+    """セッションのアップロード済み画像情報を取得"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        uploaded_image_ids = request.session.get('uploaded_image_ids', [])
+        
+        if not uploaded_image_ids:
+            return JsonResponse({'ok': True, 'images': []})
+        
+        images = TransUploadedImage.objects.filter(image_id__in=uploaded_image_ids).order_by('-created_at')
+        
+        images_data = []
+        for img in images:
+            import os
+            physical_filename = os.path.basename(img.file_path)
+            images_data.append({
+                'id': img.image_id,
+                'filename': img.filename,
+                'thumbnail_url': f'/uploads/images/{physical_filename}',
+                'status': img.status
+            })
+        
+        logger.info(f"アップロード済み画像情報を返却: {len(images_data)}件")
+        return JsonResponse({'ok': True, 'images': images_data})
+        
+    except Exception as e:
+        logger.error(f"画像情報取得エラー: {e}")
+        return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+
+@require_GET
+def api_get_images_status(request: HttpRequest):
+    """複数画像のステータス一括取得API（テーブル画面用）"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # リクエストから画像IDリストを取得
+        image_ids_str = request.GET.get('image_ids', '')
+        if not image_ids_str:
+            return JsonResponse({'ok': False, 'error': '画像IDが指定されていません'}, status=400)
+        
+        # カンマ区切りのIDリストをパース
+        image_ids = [int(id.strip()) for id in image_ids_str.split(',') if id.strip()]
+        
+        # 画像のステータスを取得
+        images = TransUploadedImage.objects.filter(image_id__in=image_ids)
+        
+        # 結果を構築
+        status_data = {}
+        for image in images:
+            # 解析結果を取得
+            latest_result = TransImageAnalysis.objects.filter(
+                image_id=image
+            ).order_by('-confidence').first()
+            
+            status_data[str(image.image_id)] = {
+                'status': image.status,
+                'label': latest_result.label if latest_result else None,
+                'confidence': latest_result.confidence if latest_result else None
+            }
+        
+        return JsonResponse({
+            'ok': True,
+            'statuses': status_data
+        })
+        
+    except Exception as e:
+        logger.error(f"ステータス取得エラー: {e}")
+        return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+
+@require_GET
 def api_analysis_progress(request: HttpRequest):
     """解析進捗取得API"""
     import logging
@@ -1528,73 +1492,75 @@ def api_analysis_progress(request: HttpRequest):
                     'error': '画像が見つかりません'
                 }, status=404)
         else:
-            # 全体の進捗を取得（最新の画像の進捗）
+            # セッション画像の一括進捗を取得（複数画像対応）
+            uploaded_image_ids = request.session.get('uploaded_image_ids', [])
+            
+            if not uploaded_image_ids:
+                return JsonResponse({
+                    'ok': True,
+                    'progress': 0,
+                    'status': 'waiting',
+                    'current_stage': 'waiting',
+                    'description': '解析待機中...',
+                    'total_images': 0,
+                    'completed_images': 0
+                })
+            
             try:
-                latest_image = TransUploadedImage.objects.order_by('-created_at').first()
-                if latest_image:
-                    # 個別画像の進捗を取得
-                    has_analysis_results = TransImageAnalysis.objects.filter(image_id=latest_image).exists()
-                    
-                    if latest_image.status == 'completed':
-                        progress_percentage = 100
-                        current_stage = 'completed'
-                        description = '画像解析が正常に完了しました'
-                    elif latest_image.status == 'analyzing':
-                        # 解析中の場合は連続的な進捗を計算
-                        if has_analysis_results:
-                            # 解析結果がある場合は90-99%の範囲でランダムに進捗
-                            import random
-                            progress_percentage = random.randint(90, 99)
-                            current_stage = 'analyzing'
-                            description = '解析結果を処理中...'
-                        else:
-                            # 解析開始からの経過時間に基づいて段階的な進捗を計算
-                            import time
-                            elapsed_time = time.time() - latest_image.analysis_started_at.timestamp()
-                            
-                            # 実際の解析時間に合わせた進捗計算（5-10秒で完了想定）
-                            if elapsed_time < 1.0:
-                                progress_percentage = 10
-                            elif elapsed_time < 2.0:
-                                progress_percentage = 20
-                            elif elapsed_time < 3.0:
-                                progress_percentage = 30
-                            elif elapsed_time < 4.0:
-                                progress_percentage = 40
-                            elif elapsed_time < 5.0:
-                                progress_percentage = 50
-                            elif elapsed_time < 6.0:
-                                progress_percentage = 60
-                            elif elapsed_time < 7.0:
-                                progress_percentage = 70
-                            elif elapsed_time < 8.0:
-                                progress_percentage = 80
-                            elif elapsed_time < 9.0:
-                                progress_percentage = 85
-                            else:
-                                progress_percentage = 89
-                            current_stage = 'analyzing'
-                            description = '画像を解析しています...'
-                    else:
-                        progress_percentage = 0
-                        current_stage = 'waiting'
-                        description = '解析の準備をしています...'
-                    
-                    return JsonResponse({
-                        'ok': True,
-                        'progress': progress_percentage,
-                        'status': latest_image.status,
-                        'current_stage': current_stage,
-                        'description': description
-                    })
-                else:
+                # 対象画像を全て取得
+                images = TransUploadedImage.objects.filter(image_id__in=uploaded_image_ids)
+                total_count = images.count()
+                
+                if total_count == 0:
                     return JsonResponse({
                         'ok': True,
                         'progress': 0,
                         'status': 'waiting',
                         'current_stage': 'waiting',
-                        'description': '解析待機中...'
+                        'description': '解析待機中...',
+                        'total_images': 0,
+                        'completed_images': 0
                     })
+                
+                # 完了した画像数をカウント
+                completed_count = images.filter(status='completed').count()
+                analyzing_count = images.filter(status='analyzing').count()
+                preparing_count = images.filter(status='preparing').count()
+                
+                # 実際の進捗を計算（完了画像数 / 総画像数）
+                progress_percentage = int((completed_count / total_count) * 100)
+                
+                # ステータスと説明文を決定
+                if completed_count == total_count:
+                    # 全て完了
+                    current_stage = 'completed'
+                    description = f'{total_count}枚の画像解析が全て完了しました'
+                    status = 'completed'
+                elif analyzing_count > 0 or preparing_count > 0:
+                    # 解析中または準備中
+                    current_stage = 'analyzing'
+                    description = f'{completed_count}/{total_count}枚完了（解析中: {analyzing_count}枚、準備中: {preparing_count}枚）'
+                    status = 'analyzing'
+                else:
+                    # 待機中
+                    current_stage = 'waiting'
+                    description = '解析の準備をしています...'
+                    status = 'waiting'
+                
+                logger.info(f"一括進捗: {completed_count}/{total_count}枚完了 ({progress_percentage}%)")
+                
+                return JsonResponse({
+                    'ok': True,
+                    'progress': progress_percentage,
+                    'status': status,
+                    'current_stage': current_stage,
+                    'description': description,
+                    'total_images': total_count,
+                    'completed_images': completed_count,
+                    'analyzing_images': analyzing_count,
+                    'preparing_images': preparing_count
+                })
+                
             except Exception as e:
                 logger.error(f"進捗取得エラー: {e}")
                 return JsonResponse({

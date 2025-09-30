@@ -37,7 +37,7 @@
         padding: 6px 0;
         border-bottom: 1px solid #ccc;
         display: grid;
-        grid-template-columns: 100px 35px 140px 80px 350px;
+        grid-template-columns: 120px 35px 160px 80px 350px;
         align-items: center;
       }
 
@@ -96,6 +96,13 @@
         <div class="field-col">"ファイルパス"</div>
         <div class="field-col field-type">varchar(500)</div>
         <div class="field-col">NOT NULL</div>
+      </div>
+      <div class="field">
+        <div class="field-col">upload_order</div>
+        <div class="field-col"></div>
+        <div class="field-col">"アップロード順序"</div>
+        <div class="field-col field-type">int</div>
+        <div class="field-col">NOT NULL DEFAULT 0</div>
       </div>
       <div class="field">
         <div class="field-col">created_at</div>

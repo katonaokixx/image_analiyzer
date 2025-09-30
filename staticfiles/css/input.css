@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@plugin "flyonui" {
+  themes: light --default, dark --prefersdark, shadcn;
+}
+
+@import "../../node_modules/flyonui/src/vendor/datatables.css";
+@import "../../node_modules/flyonui/variants.css";
+
+@source "../../node_modules/flyonui/dist/index.js";
+@source "../../node_modules/flyonui/dist/accordion.js";
+@plugin "@iconify/tailwind4";

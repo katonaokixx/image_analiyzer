@@ -1,5 +1,6 @@
 // グローバル変数
 let progressInterval = null;
+// uploadedImagesData は upload-simplified.js で定義済み
 
 // セッションから保存されたモデル選択を復元
 document.addEventListener('DOMContentLoaded', function () {
@@ -17,15 +18,22 @@ document.addEventListener('DOMContentLoaded', function () {
   let uploadedImages = [];
   try {
     uploadedImages = JSON.parse(uploadedImagesStr);
+    // グローバル変数にも保存
+    uploadedImagesData = uploadedImages;
+    console.log('DOMContentLoaded: uploadedImagesDataを復元:', uploadedImagesData);
   } catch (e) {
     console.error('JSON解析エラー:', e);
     uploadedImages = [];
+    uploadedImagesData = [];
   }
 
   // リロード時の状態復元中であることを示すフラグを設定
   window.isRestoringState = true;
 
-  // リロード時にuploadSuccessShownフラグをリセットしない
+  // 初期状態では uploadSuccessShown をfalseに設定
+  window.uploadSuccessShown = false;
+
+  // リロード時にuploadSuccessShownフラグを設定（画像がある場合のみ）
   if (uploadedImages && uploadedImages.length > 0) {
     window.uploadSuccessShown = true;
     // uploadedImagesは既にJavaScriptオブジェクトなので、そのまま使用
@@ -137,17 +145,17 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
 
-} else {
-  // アップロード済み画像がない場合は、アップロードボタンを表示し、解析ボタンを非表示にする
-  const analysisButton = document.getElementById('analysis-button-container');
-  const uploadButtonContainer = document.getElementById('upload-button-container');
+  } else {
+    // アップロード済み画像がない場合は、アップロードボタンを表示し、解析ボタンを非表示にする
+    const analysisButton = document.getElementById('analysis-button-container');
+    const uploadButtonContainer = document.getElementById('upload-button-container');
 
     if (analysisButton) {
-    analysisButton.classList.add('hidden');
-  }
+      analysisButton.classList.add('hidden');
+    }
 
     if (uploadButtonContainer) {
-    uploadButtonContainer.classList.remove('hidden');
+      uploadButtonContainer.classList.remove('hidden');
     }
   }
 
@@ -251,9 +259,13 @@ function uploadFiles(files) {
   })
     .then(response => response.json())
     .then(data => {
-      if (data.success) {
+      if (data.ok && data.images) {
         // アップロード成功
         window.uploadSuccessShown = true;
+
+        // 画像データをグローバル変数に保存（IDを含む）
+        uploadedImagesData = data.images;
+        console.log('アップロード済み画像データを保存:', uploadedImagesData);
 
         // タイムラインを表示
         const timelineContainer = document.getElementById('timeline-container');
@@ -279,7 +291,7 @@ function uploadFiles(files) {
         }
 
         // アップロードした画像を表示
-        displayUploadedImages(data.uploaded_images);
+        displayUploadedImages(data.images);
 
       } else {
         alert('アップロードに失敗しました: ' + (data.error || '不明なエラー'));
@@ -356,7 +368,7 @@ function startAnalysis(model) {
         startProgressMonitoring();
       } else {
         alert('解析の開始に失敗しました: ' + (data.error || '不明なエラー'));
-          analysisButton.disabled = false;
+        analysisButton.disabled = false;
         analysisButtonText.textContent = originalText;
       }
     })
@@ -401,20 +413,32 @@ function startProgressMonitoring() {
         console.log('進捗ステータス:', data.status);
         console.log('進捗パーセンテージ:', data.progress_percentage);
 
-        if (data.status === 'completed') {
-          console.log('進捗監視: 完了ステータス検出');
-          clearInterval(progressInterval);
-          progressInterval = null;
-          updateAnalysisUI('completed');
+        if (data.status === 'completed' && data.progress >= 100) {
+          // 全画像が完了したことを確認
+          if (data.completed_images === data.total_images && data.total_images > 0) {
+            console.log(`進捗監視: 全画像完了検出 (${data.completed_images}/${data.total_images}枚)`);
+            clearInterval(progressInterval);
+            progressInterval = null;
+            updateAnalysisUI('completed');
 
-          // 進捗バーのステータステキストを「解析成功」に変更
-          const progressBars = document.querySelectorAll('[data-analysis-progress-bar-pane]');
-          progressBars.forEach(progressBar => {
-            const statusText = progressBar.closest('.progress-container').querySelector('[data-analysis-file-size]');
-            if (statusText) {
-              statusText.textContent = '解析成功';
-            }
-          });
+            // 進捗バーのステータステキストを「解析成功」に変更
+            const progressBars = document.querySelectorAll('[data-analysis-progress-bar-pane]');
+            progressBars.forEach(progressBar => {
+              const statusText = progressBar.closest('.progress-container').querySelector('[data-analysis-file-size]');
+              if (statusText) {
+                statusText.textContent = '解析成功';
+              }
+            });
+
+            // 3秒後にリダイレクト
+            setTimeout(() => {
+              window.location.href = '/v2/';
+            }, 3000);
+          } else {
+            console.log(`進捗監視: 解析継続中 (${data.completed_images}/${data.total_images}枚完了)`);
+            // まだ完了していない画像がある場合は個別進捗を更新
+            updateIndividualImagesProgress();
+          }
         } else if (data.status === 'failed') {
           console.log('進捗監視: 失敗ステータス検出');
           clearInterval(progressInterval);
@@ -429,10 +453,13 @@ function startProgressMonitoring() {
           let progressPercentage = data.progress || 0;
           updateProgressBar(progressPercentage);
 
+          // 各画像の個別進捗を更新
+          updateIndividualImagesProgress();
+
           // v1と同様に進捗説明も更新
           const progressDescription = document.querySelector('#timeline-item-2 .text-xs');
-          if (progressDescription && data.step_description) {
-            progressDescription.textContent = data.step_description;
+          if (progressDescription && data.description) {
+            progressDescription.textContent = data.description;
           }
         }
       })
@@ -460,7 +487,7 @@ function updateAnalysisUI(status, progress = 0) {
   }
 
   if (status === 'completed') {
-        analysisButton.disabled = false;
+    analysisButton.disabled = false;
     analysisButtonText.textContent = '解析完了';
 
     // 3つ目のタイムラインを表示
@@ -519,10 +546,43 @@ function updateAnalysisUI(status, progress = 0) {
       console.log('updateAnalysisUI: timeline2 not found');
     }
 
-    // 進捗バーを生成（再解析と同じ処理）
-    const uploadedImages = getUploadedImages();
-    console.log('updateAnalysisUI: calling createAnalysisProgressPreviews with', uploadedImages.length, 'images');
-    createAnalysisProgressPreviews(uploadedImages);
+    // 進捗バーを生成（初回のみ）
+    const container = document.getElementById('analysis-progress-previews');
+    console.log('updateAnalysisUI: container =', container);
+    console.log('updateAnalysisUI: container.children.length =', container ? container.children.length : 'N/A');
+    console.log('updateAnalysisUI: uploadedImagesData.length =', uploadedImagesData.length);
+
+    if (container) {
+      if (container.children.length === 0) {
+        // uploadedImagesDataが空の場合、セッションから取得を試みる
+        if (uploadedImagesData.length === 0) {
+          console.log('updateAnalysisUI: uploadedImagesDataが空です。セッションから画像情報を取得します');
+          // 新しいAPIからアップロード済み画像情報を取得
+          fetch('/v2/api/images/uploaded/')
+            .then(response => response.json())
+            .then(data => {
+              if (data.ok && data.images && data.images.length > 0) {
+                console.log('updateAnalysisUI: アップロード済み画像情報を取得しました:', data.images);
+                uploadedImagesData = data.images;
+                console.log('updateAnalysisUI: calling createAnalysisProgressPreviews with', uploadedImagesData.length, 'images');
+                createAnalysisProgressPreviews(uploadedImagesData);
+              } else {
+                console.log('updateAnalysisUI: アップロード済み画像が見つかりません');
+              }
+            })
+            .catch(error => {
+              console.error('画像情報の取得エラー:', error);
+            });
+        } else {
+          console.log('updateAnalysisUI: calling createAnalysisProgressPreviews with', uploadedImagesData.length, 'images');
+          createAnalysisProgressPreviews(uploadedImagesData);
+        }
+      } else {
+        console.log('updateAnalysisUI: 進捗バーは既に生成済み');
+      }
+    } else {
+      console.log('updateAnalysisUI: コンテナが見つかりません');
+    }
 
     // 進捗バーを実際の進捗値で更新
     let progressPercentage = progress || 0;
@@ -597,94 +657,18 @@ function createAnalysisProgressPreviews(uploadedImages) {
   });
 }
 
-// アップロード済み画像を取得（v1のロジックを完全に移植）
+// アップロード済み画像を取得（グローバル変数から取得）
 function getUploadedImages() {
   console.log('getUploadedImages: 開始');
 
-  // ページからアップロード済み画像の情報を取得
-  const uploadedImages = [];
-
-  // アップロード済み画像の要素を取得（正しいセレクターを使用）
-  const previewsContainer = document.querySelector('[data-file-upload-previews]');
-  let imageElements = [];
-
-  if (previewsContainer) {
-    // コンテナ内の実際の画像要素を取得
-    imageElements = previewsContainer.querySelectorAll('.rounded-box.bg-base-100');
+  // グローバル変数に保存された画像データを使用
+  if (uploadedImagesData && uploadedImagesData.length > 0) {
+    console.log('getUploadedImages: グローバル変数から取得:', uploadedImagesData);
+    return uploadedImagesData;
   }
 
-  // フォールバック: Dropzoneの要素を検索
-  if (imageElements.length === 0) {
-    imageElements = document.querySelectorAll('.dz-preview, .file-upload-preview');
-  }
-
-  // さらにフォールバック: アップロードエリア内のすべての要素を検索
-  if (imageElements.length === 0) {
-    const uploadArea = document.querySelector('#file-upload-limit');
-    if (uploadArea) {
-      imageElements = uploadArea.querySelectorAll('.rounded-box, .dz-preview, [data-dz-thumbnail]');
-    }
-  }
-
-  console.log('getUploadedImages: 画像要素数:', imageElements.length);
-
-  imageElements.forEach((element, index) => {
-    // ファイル名を取得（実際の要素から直接取得）
-    const filenameElement = element.querySelector('[data-file-upload-file-name]');
-    const fileExtElement = element.querySelector('[data-file-upload-file-ext]');
-
-    let filename = filenameElement ? filenameElement.textContent.trim() : '';
-    let fileExt = fileExtElement ? fileExtElement.textContent.trim() : '';
-
-    // ファイル名が空の場合は、要素の属性から取得を試行
-    if (!filename) {
-      const fileInput = element.querySelector('input[type="file"]');
-      if (fileInput && fileInput.files && fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        const fullName = file.name;
-        const lastDot = fullName.lastIndexOf('.');
-        if (lastDot > 0) {
-          filename = fullName.substring(0, lastDot);
-          fileExt = fullName.substring(lastDot + 1);
-        } else {
-          filename = fullName;
-          fileExt = '';
-        }
-      }
-    }
-
-    const fullFilename = filename && fileExt ? `${filename}.${fileExt}` :
-      filename ? filename : `image${index + 1}.jpg`;
-
-    // 画像の状態を判定（簡易版）
-    const progressBar = element.querySelector('[data-file-upload-progress-bar-pane]');
-    const progressWidth = progressBar ? progressBar.style.width : '0%';
-    let status = 'uploaded';
-
-    if (progressWidth === '100%') {
-      status = 'analyzing'; // アップロード完了後は解析中と仮定
-    }
-
-    // サムネイルURLを取得
-    const thumbnailImg = element.querySelector('[data-dz-thumbnail]');
-    const thumbnailUrl = thumbnailImg ? thumbnailImg.src : '';
-
-    console.log(`getUploadedImages: 画像${index + 1}:`, {
-      filename: fullFilename,
-      thumbnailUrl: thumbnailUrl,
-      status: status
-    });
-
-    uploadedImages.push({
-      id: `image${index + 1}`,
-      filename: fullFilename,
-      thumbnail_url: thumbnailUrl,
-      status: status
-    });
-  });
-
-  console.log('getUploadedImages: 結果:', uploadedImages);
-  return uploadedImages;
+  console.log('getUploadedImages: グローバル変数が空のため、空配列を返します');
+  return [];
 }
 
 // 進捗バー更新
@@ -744,5 +728,74 @@ function getCSRFToken() {
 
   console.warn('CSRFトークンが見つかりません');
   return '';
+}
+
+// 各画像の個別進捗を更新
+function updateIndividualImagesProgress() {
+  // グローバル変数から画像IDを取得
+  if (!uploadedImagesData || uploadedImagesData.length === 0) {
+    console.log('個別進捗更新: アップロード済み画像データがありません');
+    return;
+  }
+
+  const imageIds = uploadedImagesData.map(img => img.id);
+  console.log('個別進捗更新: 画像ID =', imageIds);
+
+  // ステータスを一括取得
+  fetch(`/v2/api/images/status/?image_ids=${imageIds.join(',')}`)
+    .then(response => response.json())
+    .then(data => {
+      console.log('個別ステータスレスポンス:', data);
+      if (data.ok && data.statuses) {
+        uploadedImagesData.forEach(image => {
+          const statusInfo = data.statuses[image.id];
+          if (statusInfo) {
+            console.log(`画像 ${image.id} のステータス:`, statusInfo);
+            updateSingleImageProgress(image.id, statusInfo);
+          }
+        });
+      }
+    })
+    .catch(error => {
+      console.error('個別ステータス取得エラー:', error);
+    });
+}
+
+// 個別画像の進捗バーを更新
+function updateSingleImageProgress(imageId, statusInfo) {
+  const progressBar = document.querySelector(`[data-analysis-progress-bar-pane="${imageId}"]`);
+  const progressValueEl = document.querySelector(`[data-analysis-progress-bar-value="${imageId}"]`);
+  const statusTextEl = document.querySelector(`[data-analysis-file-size="${imageId}"]`);
+
+  if (!progressBar) {
+    console.log(`画像 ${imageId} の進捗バーが見つかりません`);
+    return;
+  }
+
+  console.log(`画像 ${imageId} のステータス更新:`, statusInfo.status);
+
+  // ステータスに応じて進捗を設定
+  if (statusInfo.status === 'completed') {
+    progressBar.style.width = '100%';
+    if (progressValueEl) progressValueEl.textContent = '100';
+    progressBar.className = 'progress-bar progress-success transition-all duration-500';
+    if (statusTextEl) statusTextEl.textContent = '解析完了';
+  } else if (statusInfo.status === 'analyzing') {
+    // 解析中は50-90%の範囲で徐々に増加
+    const currentWidth = parseInt(progressBar.style.width) || 50;
+    const newWidth = Math.min(90, currentWidth + 10);
+    progressBar.style.width = newWidth + '%';
+    if (progressValueEl) progressValueEl.textContent = newWidth.toString();
+    progressBar.className = 'progress-bar progress-info transition-all duration-500';
+    if (statusTextEl) statusTextEl.textContent = '解析中';
+  } else if (statusInfo.status === 'preparing') {
+    // 準備中は10-30%の範囲
+    const currentWidth = parseInt(progressBar.style.width) || 10;
+    const newWidth = Math.min(30, currentWidth + 5);
+    progressBar.style.width = newWidth + '%';
+    if (progressValueEl) progressValueEl.textContent = newWidth.toString();
+    progressBar.className = 'progress-bar progress-warning transition-all duration-500';
+    if (statusTextEl) statusTextEl.textContent = '準備中';
+  }
 }
 

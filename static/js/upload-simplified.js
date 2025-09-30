@@ -6,6 +6,30 @@ let uploadEl = null; // グローバルスコープで定義
 let individualProgressIntervalId = null; // 個別進捗監視用
 let progressMonitoringInterval = null; // 解析進捗監視用
 let animationInterval = null; // アニメーション用
+let uploadedImagesData = []; // アップロード済み画像のデータ（IDを含む） - image-upload.jsと共有
+
+// 初期状態を強制的に設定（FlyonUIが削除する前に）
+document.addEventListener('DOMContentLoaded', () => {
+  // できるだけ早く実行
+  const c = document.getElementById('upload-button-container');
+  if (c) {
+    c.classList.add('hidden');
+    c.classList.remove('flex');
+    console.log('初期状態を強制設定: hidden クラスを追加');
+  }
+
+  // 複数回チェックして強制的に hidden を維持
+  for (let i = 0; i < 5; i++) {
+    setTimeout(() => {
+      const c = document.getElementById('upload-button-container');
+      if (c && !c.classList.contains('hidden')) {
+        console.log(`${i * 100}ms後: hidden が削除されていたので再設定`);
+        c.classList.add('hidden');
+        c.classList.remove('flex');
+      }
+    }, i * 100);
+  }
+});
 
 // ページ離脱時の処理
 window.addEventListener('beforeunload', function () {
@@ -383,6 +407,82 @@ function updateIndividualProgressBasedOnStage(currentStage, status, actualProgre
   });
 }
 
+// 全画像の進捗を個別に取得して更新
+function updateIndividualProgressForAllImages() {
+  const uploadedImages = getUploadedImages();
+
+  console.log('updateIndividualProgressForAllImages呼び出し、画像数:', uploadedImages.length);
+
+  if (uploadedImages.length === 0) {
+    console.log('アップロード済み画像が見つかりません');
+    return;
+  }
+
+  // 各画像のIDリストを作成
+  const imageIds = uploadedImages.map(img => img.id);
+  console.log('取得した画像ID:', imageIds);
+
+  // ステータスを一括取得
+  const apiUrl = `/v2/api/images/status/?image_ids=${imageIds.join(',')}`;
+  console.log('ステータス取得API呼び出し:', apiUrl);
+
+  fetch(apiUrl)
+    .then(response => response.json())
+    .then(data => {
+      console.log('ステータス取得レスポンス:', data);
+      if (data.ok && data.statuses) {
+        uploadedImages.forEach(image => {
+          const statusInfo = data.statuses[image.id];
+          if (statusInfo) {
+            console.log(`画像 ${image.id} のステータス:`, statusInfo);
+            updateIndividualImageProgress(image.id, statusInfo);
+          }
+        });
+      }
+    })
+    .catch(error => {
+      console.error('個別ステータス取得エラー:', error);
+    });
+}
+
+// 個別画像の進捗バーを更新
+function updateIndividualImageProgress(imageId, statusInfo) {
+  const progressBar = document.querySelector(`[data-analysis-progress-bar-pane="${imageId}"]`);
+  const progressValueEl = document.querySelector(`[data-analysis-progress-bar-value="${imageId}"]`);
+  const statusText = document.querySelector(`[data-analysis-file-size="${imageId}"]`);
+
+  if (!progressBar || !progressValueEl) return;
+
+  // ステータスに応じて進捗を設定
+  if (statusInfo.status === 'completed') {
+    progressBar.style.width = '100%';
+    progressValueEl.textContent = '100';
+    progressBar.className = 'progress-bar progress-success transition-all duration-500';
+    if (statusText) statusText.textContent = '解析完了';
+  } else if (statusInfo.status === 'analyzing') {
+    // 解析中は推定進捗（50-90%）
+    const currentWidth = parseInt(progressBar.style.width) || 50;
+    const newWidth = Math.min(90, currentWidth + 5);
+    progressBar.style.width = newWidth + '%';
+    progressValueEl.textContent = newWidth;
+    progressBar.className = 'progress-bar progress-info transition-all duration-500';
+    if (statusText) statusText.textContent = '解析中';
+  } else if (statusInfo.status === 'preparing') {
+    // 準備中は0-30%
+    const currentWidth = parseInt(progressBar.style.width) || 0;
+    const newWidth = Math.min(30, currentWidth + 5);
+    progressBar.style.width = newWidth + '%';
+    progressValueEl.textContent = newWidth;
+    progressBar.className = 'progress-bar progress-warning transition-all duration-500';
+    if (statusText) statusText.textContent = '準備中';
+  } else if (statusInfo.status === 'uploaded') {
+    // アップロード完了
+    progressBar.style.width = '100%';
+    progressValueEl.textContent = '100';
+    progressBar.className = 'progress-bar progress-success transition-all duration-500';
+  }
+}
+
 // アップロード済み画像を取得
 let lastUploadedImagesCache = null;
 let lastCacheTime = 0;
@@ -738,8 +838,9 @@ window.addEventListener('load', () => {
 
   // イベント登録
   emitter.on('addedfile', (file) => {
+    console.log('addedfile event triggered:', file.name);
     if (!firstFileAddedAt) firstFileAddedAt = Date.now();
-    showUploadButton();
+    checkFilesAndUpdateButton();
 
     // ファイル追加時にエラータイムラインを非表示にする
     const errorTimeline = document.getElementById('timeline-item-1-error');
@@ -769,18 +870,31 @@ window.addEventListener('load', () => {
       reader.readAsDataURL(file);
     }
     function checkFilesAndUpdateButton() {
-      const previews = uploadEl.querySelectorAll('[data-file-upload-preview]');
+      // Dropzoneの内部ファイル数を直接チェック
       const c = document.getElementById('upload-button-container');
       if (!c) return;
 
+      const fileCount = dz.files ? dz.files.length : 0;
+      console.log('checkFilesAndUpdateButton: Dropzone fileCount =', fileCount);
+      console.log('checkFilesAndUpdateButton: uploadInProgress =', uploadInProgress);
+      console.log('checkFilesAndUpdateButton: window.uploadSuccessShown =', window.uploadSuccessShown);
+
       // uploadInProgress または 成功表示中 は非表示にしない
       if (uploadInProgress || window.uploadSuccessShown) {
+        console.log('checkFilesAndUpdateButton: ボタンを表示（進行中または成功表示中）');
         c.classList.remove('hidden');
         return;
       }
 
-      if (previews.length === 0) c.classList.add('hidden');
-      else c.classList.remove('hidden');
+      if (fileCount === 0) {
+        console.log('checkFilesAndUpdateButton: ボタンを非表示（ファイルなし）');
+        c.classList.add('hidden');
+        c.classList.remove('flex');
+      } else {
+        console.log('checkFilesAndUpdateButton: ボタンを表示（ファイルあり）');
+        c.classList.remove('hidden');
+        c.classList.add('flex');
+      }
     }
   });
 
@@ -1073,16 +1187,29 @@ window.addEventListener('load', () => {
   }
 
   function showUploadButton() {
+    console.log('showUploadButton: called');
     const c = document.getElementById('upload-button-container');
-    if (c) c.classList.remove('hidden');
+    if (c) {
+      console.log('showUploadButton: ボタンを表示');
+      c.classList.remove('hidden');
+    }
   }
 
   function checkFilesAndUpdateButton() {
-    const previews = uploadEl.querySelectorAll('[data-file-upload-preview]');
+    // Dropzoneの内部ファイル数を直接チェック
     const c = document.getElementById('upload-button-container');
     if (!c) return;
-    if (previews.length === 0) c.classList.add('hidden');
-    else c.classList.remove('hidden');
+
+    const fileCount = dz.files ? dz.files.length : 0;
+    console.log('checkFilesAndUpdateButton(2): Dropzone fileCount =', fileCount);
+
+    if (fileCount === 0) {
+      c.classList.add('hidden');
+      c.classList.remove('flex');
+    } else {
+      c.classList.remove('hidden');
+      c.classList.add('flex');
+    }
   }
 
   function forceHideTimelineItems() {
@@ -1353,9 +1480,8 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
             progressDescription.textContent = data.description;
           }
 
-          // 個別進捗も更新（実際の進捗値を渡す）
-          // ただし、完了タイムラインの表示はメインの進捗監視でのみ行う
-          updateIndividualProgressBasedOnStage(data.current_stage, data.status, progress);
+          // 個別進捗も更新（各画像のステータスを個別に取得）
+          updateIndividualProgressForAllImages();
 
           // 失敗時の処理
           if (data.status === 'failed') {
@@ -1385,148 +1511,33 @@ function monitorAnalysisProgress(bar, valEl, animInterval) {
             updatePreparingProgress(progress);
           }
 
-          // 完了時の処理（進捗が100%になった時のみ）
-          if (progress >= 100) {
-            clearInterval(progressMonitoringInterval);
-            clearInterval(animInterval);
-            progressMonitoringInterval = null;
+          // 完了時の処理（全画像が完了した時のみ）
+          if (progress >= 100 && data.status === 'completed') {
+            // 全画像が完了したことを確認
+            if (data.completed_images === data.total_images && data.total_images > 0) {
+              console.log(`全ての画像が完了しました (${data.completed_images}/${data.total_images}枚)`);
 
-            // 個別進捗監視も停止
-            stopIndividualProgressWatcher();
+              clearInterval(progressMonitoringInterval);
+              clearInterval(animInterval);
+              progressMonitoringInterval = null;
 
+              // 個別進捗監視も停止
+              stopIndividualProgressWatcher();
 
+              // カードの内容を「解析完了」に変更
+              updateAnalysisCardToCompleted();
 
-            // カードの内容を「解析完了」に変更
-            updateAnalysisCardToCompleted();
+              // DBの状態を更新
+              updateDatabaseStatus();
 
-            // DBの状態を更新
-            updateDatabaseStatus();
-
-            // 解析完了後、リダイレクト機能を無効化（テスト用）
-            setTimeout(() => {
-
-              window.location.href = '/user_image_table/';
-            }, 3000);
-
-            // 3点アニメーションを停止して完了アイコンを表示
-
-
-            // 方法1: IDで検索
-            const dots = [document.getElementById('dot-1'), document.getElementById('dot-2'), document.getElementById('dot-3')];
-
-
-            // 方法2: クラスで検索（フォールバック）
-            const dotsByClass = document.querySelectorAll('.animate-pulse');
-
-            // 両方の方法でアニメーションを停止
-            [...dots, ...dotsByClass].forEach((dot, index) => {
-              if (dot && dot.classList.contains('animate-pulse')) {
-
-                dot.classList.remove('opacity-50', 'animate-pulse');
-                dot.style.opacity = '1';
-
-              }
-            });
-
-            // 完了アイコンを表示
-            const dot1 = document.getElementById('dot-1') || document.querySelector('.animate-pulse');
-            if (dot1) {
-              dot1.innerHTML = '<i class="icon-[tabler--check] text-success size-3"></i>';
-              dot1.classList.remove('bg-warning', 'animate-pulse');
-              dot1.classList.add('text-success');
-            } else {
-
+              // 全画像完了後にリダイレクト
+              setTimeout(() => {
+                window.location.href = '/v2/';
+              }, 3000);
             }
-
-            // 他のドットを非表示
-            const dot2 = document.getElementById('dot-2');
-            const dot3 = document.getElementById('dot-3');
-            if (dot2) dot2.style.display = 'none';
-            if (dot3) dot3.style.display = 'none';
-
-            // 進捗バーを完了状態に変更
-            if (bar) {
-              bar.classList.remove('bg-info');
-              bar.classList.add('bg-success');
-            }
-
-            // ステータス表示を完了状態に変更
-            const statusText = document.querySelector('#timeline-item-2 .text-warning');
-            if (statusText) {
-              statusText.textContent = '解析完了';
-              statusText.classList.remove('text-warning');
-              statusText.classList.add('text-success');
-            }
-
-            // 進捗バー横のステータステキストを更新
-            const analysisStatusText = document.getElementById('analysis-status-text');
-            if (analysisStatusText) {
-              analysisStatusText.textContent = '解析完了';
-              analysisStatusText.classList.remove('text-warning');
-              analysisStatusText.classList.add('text-success');
-
-            }
-
-            // 進捗バー下のステータステキストを更新
-            const analysisStatusText2 = document.getElementById('analysis-status-text-2');
-            if (analysisStatusText2) {
-              analysisStatusText2.textContent = '解析完了';
-              analysisStatusText2.classList.remove('text-warning');
-              analysisStatusText2.classList.add('text-success');
-
-            }
-
-            // ステータスアイコンを更新
-            const analysisStatusIcon = document.getElementById('analysis-status-icon');
-            if (analysisStatusIcon) {
-              analysisStatusIcon.innerHTML = '<i class="icon-[tabler--check] text-success size-4 sm:size-5"></i>';
-
-            }
-
-            // 解析開始タイムラインの背景色を緑色に更新
-            const timelineItem2 = document.getElementById('timeline-item-2');
-            if (timelineItem2) {
-              const timelineEnd2 = timelineItem2.querySelector('.timeline-end');
-              if (timelineEnd2) {
-                timelineEnd2.classList.remove('bg-warning/5', 'border-warning/20');
-                timelineEnd2.classList.add('bg-success/5', 'border-success/20');
-
-              }
-            }
-
-            // 進捗監視が確実に停止した後に完了タイムラインを表示
-            setTimeout(() => {
-              // 進捗監視が停止していることを確認
-              if (progressMonitoringInterval === null) {
-                const item3 = document.getElementById('timeline-item-3');
-                if (item3) {
-                  item3.className = '';
-                  item3.style.display = 'block';
-                } else {
-
-                }
-              } else {
-                // 進捗監視が継続している場合は、再度チェック
-                setTimeout(() => {
-                  if (progressMonitoringInterval === null) {
-                    const item3 = document.getElementById('timeline-item-3');
-                    if (item3) {
-                      item3.className = '';
-                      item3.style.display = 'block';
-                    }
-                  }
-                }, 1000); // 1秒後に再チェック
-              }
-              // 解析完了後にセッションカウンターをリセット
-              if (typeof sessionUploadCount !== 'undefined') {
-                sessionUploadCount = 0;
-              }
-
-              // 解析完了後はUI状態をリセットしない（100%の状態を維持）
-              // 次の解析開始時にリセットする
-            }, 600);
-
-            return; // 完了時は処理を終了
+          } else if (data.total_images > 0) {
+            // 進捗中の場合、説明文を更新
+            console.log(`解析進捗: ${data.completed_images}/${data.total_images}枚完了 (${progress}%)`);
           }
         } else {
         }

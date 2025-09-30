@@ -145,6 +145,12 @@ class TransUploadedImage(models.Model):
         verbose_name='ファイルパス'
     )
     
+    upload_order = models.IntegerField(
+        default=0,
+        verbose_name='アップロード順序',
+        help_text='ユーザーごとのアップロード順序（1から始まる連番）'
+    )
+    
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,

@@ -114,7 +114,7 @@
         </div>
 
         <!-- アップロード開始ボタン -->
-        <div id="upload-button-container" class="hidden flex justify-center mt-4">
+        <div id="upload-button-container" class="hidden justify-center mt-4">
           <button id="start-upload-btn" class="btn btn-primary btn-outline waves waves-primary">
             <span class="icon-[tabler--upload] size-5 mr-2"></span>アップロード開始
           </button>
@@ -353,7 +353,7 @@
 
 {% block extra_js %}
 <!-- 簡素化されたアップロード機能 -->
-<script src="{% static 'js/upload-simplified.js' %}?v={{ timestamp|default:'1.0' }}"></script>
+<script src="{% static 'js/upload-simplified.js' %}?v=3.5"></script>
 <script>
   // テンプレート変数をJavaScriptに渡す
   window.uploadedImagesJson = '{{ uploaded_images_json|default:"[]"|escapejs }}';
@@ -373,7 +373,7 @@
     }
   });
 </script>
-<script src="{% static 'js/image-upload.js' %}?v={{ timestamp|default:'1.0' }}"></script>
+<script src="{% static 'js/image-upload.js' %}?v=3.5"></script>
 {% endblock %}
 
 {% block extra_css %}
