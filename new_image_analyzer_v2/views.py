@@ -425,7 +425,7 @@ def image_upload(request: HttpRequest):
 
 @csrf_protect
 @login_required
-def re_image_upload(request: HttpRequest):
+def re_analysis(request: HttpRequest):
     """再解析専用ページ（新しいモデル使用）"""
     import logging
     logger = logging.getLogger(__name__)
@@ -433,7 +433,7 @@ def re_image_upload(request: HttpRequest):
     # 最初に必ずログを出力
     
     logger.info("=" * 50)
-    logger.info("DEBUG: re_image_upload view called")
+    logger.info("DEBUG: re_analysis view called")
     logger.info(f"DEBUG: request.method = {request.method}")
     logger.info(f"DEBUG: request.GET = {request.GET}")
     logger.info(f"DEBUG: request.user = {request.user}")
@@ -584,7 +584,7 @@ def re_image_upload(request: HttpRequest):
     }
     
     logger.info("DEBUG: Rendering template")
-    return render(request, 'main/re_image_upload.html', context)
+    return render(request, 'main/re_analysis.html', context)
 
 # API ビュー（新しいモデルを使用）
 @require_POST

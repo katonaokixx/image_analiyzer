@@ -2,7 +2,7 @@
 function navigateToReanalysis() {
   const currentImageId = window.currentModalImageId;
   if (currentImageId) {
-    window.location.href = `/v2/re_image_upload/?selected_image_id=${currentImageId}&image_status=completed`;
+    window.location.href = `/v2/re_analysis/?selected_image_id=${currentImageId}&image_status=completed`;
   } else {
     console.error('画像IDが取得できません');
   }

@@ -674,6 +674,6 @@ function navigateToUploadPage(imageId, imageStatus) {
   console.log('navigateToUploadPage called with:', imageId, imageStatus);
 
   // URLパラメータで画像IDを渡す（CSRFトークン不要）
-  window.location.href = `/re_image_upload/?selected_image_id=${imageId}&image_status=${imageStatus}`;
+  window.location.href = `/v2/re_analysis/?selected_image_id=${imageId}&image_status=${imageStatus}`;
 }
 

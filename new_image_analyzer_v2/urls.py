@@ -14,7 +14,7 @@ urlpatterns = [
     path('', views.user_image_table, name='v2_user_image_table'),
     path('user_image_table/', views.user_image_table, name='v2_user_image_table_alt'),
     path('image_upload/', views.image_upload, name='v2_image_upload'),
-    path('re_image_upload/', views.re_image_upload, name='v2_re_image_upload'),
+    path('re_analysis/', views.re_analysis, name='v2_re_analysis'),
     path('admin_table/', views.admin_image_table, name='v2_admin_image_table'),
     
     # API URL（新しいモデルを使用）
