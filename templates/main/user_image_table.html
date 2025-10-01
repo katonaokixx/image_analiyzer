@@ -404,46 +404,6 @@
 </div>
 
 <!-- モデル選択モーダル -->
-<div id="model-selection-modal" class="overlay modal hidden" role="dialog" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 class="modal-title">解析モデルを選択</h3>
-        <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
-          data-overlay="#model-selection-modal">
-          <span class="icon-[tabler--x] size-4"></span>
-        </button>
-      </div>
-      <div class="modal-body">
-        <div class="flex flex-col gap-4">
-          <div>
-            <label class="form-label" for="model-selector">解析モデル</label>
-            <select class="select select-bordered w-full" id="model-selector">
-              <option value="">モデルを選択してください</option>
-              <option value="resnet50">ResNet-50 v2.1 (汎用画像分類)</option>
-              <option value="efficientnet">EfficientNet-B0 (軽量・高速)</option>
-              <option value="mobilenet">MobileNet v2 (モバイル最適化)</option>
-              <option value="vgg16">VGG-16 (高精度・詳細分析)</option>
-              <option value="clip">CLIP (アニメ・イラスト検出特化)</option>
-              <option value="custom">カスタムモデル (特定用途特化)</option>
-            </select>
-          </div>
-          <div class="bg-base-200 rounded-lg p-3">
-            <h4 class="font-semibold text-sm mb-2">選択されたモデルの特徴</h4>
-            <p id="model-description" class="text-sm text-gray-600">モデルを選択すると詳細が表示されます</p>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-soft btn-secondary" data-overlay="#model-selection-modal">キャンセル</button>
-        <button type="button" class="btn btn-primary" id="modal-start-analysis-btn">
-          <span class="icon-[tabler--player-play] size-4 mr-2"></span>解析開始
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- タイムライン表示モーダル -->
 <div id="timeline-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden" role="dialog"
   tabindex="-1">
