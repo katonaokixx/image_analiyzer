@@ -125,7 +125,7 @@ function setupModalButtonEvents() {
 // モーダルを閉じる共通処理
 function closeModal() {
   const modal = document.getElementById('slide-down-animated-modal');
-  
+
   if (modal) {
     // オーバーレイを完全に削除
     modal.classList.add('hidden');
@@ -491,65 +491,6 @@ function showRetryCompletedTimeline() {
       completedAt.textContent = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     }
   }
-}
-
-// アップロードUIを流用した解析進捗表示を生成
-function createAnalysisProgressPreviews() {
-  const container = document.getElementById('analysis-progress-previews');
-  if (!container) return;
-
-  container.innerHTML = '';
-
-  const ctxEl = document.getElementById('page-context');
-  const selectedImage = {
-    id: ctxEl?.dataset.selectedImageId || '',
-    filename: ctxEl?.dataset.selectedImageFilename || '',
-    thumbnail_url: ctxEl?.dataset.selectedImageThumbnailUrl || '',
-    status: ctxEl?.dataset.selectedImageStatus || '',
-    progress_percentage: Number(ctxEl?.dataset.analysisProgressPercentage || 0),
-    progress_stage: ctxEl?.dataset.analysisProgressStage || 'preparing'
-  };
-
-  if (!selectedImage.id) return;
-
-  const lastDot = selectedImage.filename.lastIndexOf('.');
-  const filename = lastDot > 0 ? selectedImage.filename.substring(0, lastDot) : selectedImage.filename;
-  const fileExt = lastDot > 0 ? selectedImage.filename.substring(lastDot + 1) : '';
-
-  const progressItem = document.createElement('div');
-  progressItem.className = 'mb-2';
-  progressItem.id = `analysis-progress-item-${selectedImage.id}`;
-
-  progressItem.innerHTML = `
-      <div class="rounded-box bg-base-100 shadow-base-300/20 p-3 shadow-lg">
-        <div class="mb-1 flex items-center justify-between">
-          <div class="flex items-center gap-x-3">
-            <span class="text-base-content/80 border-base-content/20 flex size-8 items-center justify-center rounded-lg border p-0.5">
-              <img class="rounded-md w-full h-full object-cover" data-analysis-thumbnail="${selectedImage.id}" src="${selectedImage.thumbnail_url || ''}" alt="" style="display: ${selectedImage.thumbnail_url ? 'block' : 'none'}">
-              <span class="icon-[tabler--photo] text-base-content/70 size-5" data-analysis-icon="${selectedImage.id}" style="display: ${selectedImage.thumbnail_url ? 'none' : 'block'}"></span>
-            </span>
-            <div>
-              <p class="text-base-content text-sm font-medium">
-                <span class="inline-block truncate align-bottom" data-analysis-file-name="${selectedImage.id}">${filename}.${fileExt}</span>
-                <span data-analysis-file-ext="${selectedImage.id}" style="display: none;">${fileExt}</span>
-              </p>
-              <p class="text-base-content/50 text-xs" data-analysis-file-size="${selectedImage.id}">解析完了</p>
-            </div>
-          </div>
-        </div>
-        <div class="flex items-center gap-x-3 whitespace-nowrap">
-          <div class="progress h-2" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" data-analysis-progress-bar="${selectedImage.id}">
-            <div class="progress-bar progress-primary transition-all duration-500" style="width:0%" data-analysis-progress-bar-pane="${selectedImage.id}"></div>
-          </div>
-          <span class="text-base-content mb-0.5 text-sm">
-            <span data-analysis-progress-bar-value="${selectedImage.id}">0</span>%
-          </span>
-        </div>
-      </div>
-    `;
-
-  container.appendChild(progressItem);
-  updateIndividualProgress(selectedImage.id, selectedImage.status, selectedImage.progress_percentage, selectedImage.progress_stage);
 }
 
 // 個別進捗を更新
