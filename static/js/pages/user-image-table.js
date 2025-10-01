@@ -1002,12 +1002,8 @@ async function loadTimelineModal(imageId) {
   try {
     console.log('タイムラインデータを取得中:', imageId);
 
-    const response = await fetch(`/api/timeline/${imageId}/`);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
+    // api.js統合版を使用
+    const data = await getTimeline(imageId);
     if (!data.ok) {
       throw new Error(data.error || 'タイムラインデータの取得に失敗');
     }
@@ -1092,12 +1088,8 @@ function startTimelineProgressMonitoring(imageId) {
 
   timelineProgressInterval = setInterval(async () => {
     try {
-      const response = await fetch(`/api/analysis/progress/?image_id=${imageId}`);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      // api.js統合版を使用
+      const data = await getAnalysisProgress(imageId);
       if (data.ok) {
         updateTimelineProgress(data);
 
@@ -1250,8 +1242,8 @@ function retryAnalysis() {
   retryBtn.disabled = true;
   retryBtn.innerHTML = '<span class="icon-[tabler--loader-2] size-4 mr-2 animate-spin"></span>再解析中...';
 
-  // 再解析APIを呼び出し
-  fetch('/api/analysis/retry/', {
+  // 再解析APIを呼び出し（api.js未統合、modelパラメータが必要なため直接fetch）
+  fetch('/v2/api/analysis/retry/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -1263,7 +1255,7 @@ function retryAnalysis() {
   })
     .then(response => response.json())
     .then(data => {
-      if (data.success) {
+      if (data.success || data.ok) {
         // 成功時はモーダルを閉じてページをリロード
         closeTimelineModal();
         location.reload();
@@ -1412,10 +1404,8 @@ function startStatusMonitoring(initialImageIds) {
       return;
     }
 
-    // ステータスを一括取得
-    const imageIdsParam = monitoringImageIds.join(',');
-    fetch(`/v2/api/images/status/?image_ids=${imageIdsParam}`)
-      .then(response => response.json())
+    // ステータスを一括取得（api.js統合版）
+    getImagesStatus(monitoringImageIds)
       .then(data => {
         if (data.ok && data.statuses) {
           // 各画像のステータスを更新
