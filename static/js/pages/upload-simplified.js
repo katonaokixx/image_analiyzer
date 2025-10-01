@@ -222,7 +222,7 @@ function checkIndividualProgress() {
   }
 
   // アップロード済み画像の進捗をチェック
-  const uploadedImages = getUploadedImages();
+  const uploadedImages = getLocalUploadedImagesFromDOM();
   if (uploadedImages.length === 0) return;
 
   uploadedImages.forEach(image => {
@@ -305,7 +305,7 @@ function updateIndividualProgress(imageId, status) {
 
 // 解析開始時に全画像のステータスを準備中に更新
 function updateAllImagesToPreparing() {
-  const uploadedImages = getUploadedImages();
+  const uploadedImages = getLocalUploadedImagesFromDOM();
   uploadedImages.forEach(image => {
     updateIndividualProgress(image.id, 'preparing');
   });
@@ -313,7 +313,7 @@ function updateAllImagesToPreparing() {
 
 // 解析開始時に全画像のステータスを解析中に更新
 function updateAllImagesToAnalyzing() {
-  const uploadedImages = getUploadedImages();
+  const uploadedImages = getLocalUploadedImagesFromDOM();
   uploadedImages.forEach(image => {
     updateIndividualProgress(image.id, 'analyzing');
   });
@@ -321,7 +321,7 @@ function updateAllImagesToAnalyzing() {
 
 // 解析失敗時に全画像のステータスを失敗に更新
 function updateAllImagesToFailed() {
-  const uploadedImages = getUploadedImages();
+  const uploadedImages = getLocalUploadedImagesFromDOM();
   uploadedImages.forEach(image => {
     updateIndividualProgress(image.id, 'failed');
   });
@@ -329,7 +329,7 @@ function updateAllImagesToFailed() {
 
 // 準備中の進捗を段階的に更新
 function updatePreparingProgress(overallProgress) {
-  const uploadedImages = getUploadedImages();
+  const uploadedImages = getLocalUploadedImagesFromDOM();
 
   uploadedImages.forEach((image, index) => {
     const progressBar = document.querySelector(`[data-analysis-progress-bar-pane="${image.id}"]`);
@@ -347,7 +347,7 @@ function updatePreparingProgress(overallProgress) {
 
 // 解析段階に基づいて個別進捗を更新
 function updateIndividualProgressBasedOnStage(currentStage, status, actualProgress = 0) {
-  const uploadedImages = getUploadedImages();
+  const uploadedImages = getLocalUploadedImagesFromDOM();
 
   uploadedImages.forEach((image, index) => {
     let progressStatus = 'preparing';
@@ -409,7 +409,7 @@ function updateIndividualProgressBasedOnStage(currentStage, status, actualProgre
 
 // 全画像の進捗を個別に取得して更新
 function updateIndividualProgressForAllImages() {
-  const uploadedImages = getUploadedImages();
+  const uploadedImages = getLocalUploadedImagesFromDOM();
 
   console.log('updateIndividualProgressForAllImages呼び出し、画像数:', uploadedImages.length);
 
@@ -488,7 +488,7 @@ let lastUploadedImagesCache = null;
 let lastCacheTime = 0;
 const CACHE_DURATION = 1000; // 1秒間キャッシュ
 
-function getUploadedImages() {
+function getLocalUploadedImagesFromDOM() {
   // キャッシュをチェック
   const now = Date.now();
   if (lastUploadedImagesCache && (now - lastCacheTime) < CACHE_DURATION) {
@@ -1394,7 +1394,7 @@ function handleAnalysisStart(modelName) {
         }
 
         // アップロードUIを流用した解析進捗表示を生成
-        const uploadedImages = getUploadedImages();
+        const uploadedImages = getLocalUploadedImagesFromDOM();
         createAnalysisProgressPreviews(uploadedImages);
 
         // 全画像のステータスを準備中に更新
@@ -1636,7 +1636,7 @@ function saveModelSelection(modelName) {
 function updateDatabaseStatus() {
 
   // アップロードされた画像IDを取得
-  const uploadedImageIds = getUploadedImages().map(img => img.id);
+  const uploadedImageIds = getLocalUploadedImagesFromDOM().map(img => img.id);
 
   if (uploadedImageIds.length === 0) {
     return;

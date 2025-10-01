@@ -543,21 +543,35 @@ function updateAnalysisUI(status, progress = 0) {
         // uploadedImagesDataが空の場合、セッションから取得を試みる
         if (uploadedImagesData.length === 0) {
           console.log('updateAnalysisUI: uploadedImagesDataが空です。セッションから画像情報を取得します');
+          console.log('DEBUG: typeof getUploadedImages =', typeof getUploadedImages);
+          console.log('DEBUG: getUploadedImages関数 =', getUploadedImages);
+
           // API呼び出しラッパーを使用
-          getUploadedImages()
-            .then(data => {
-              if (data.ok && data.images && data.images.length > 0) {
-                console.log('updateAnalysisUI: アップロード済み画像情報を取得しました:', data.images);
-                uploadedImagesData = data.images;
-                console.log('updateAnalysisUI: calling createAnalysisProgressPreviews with', uploadedImagesData.length, 'images');
-                createAnalysisProgressPreviews(uploadedImagesData);
-              } else {
-                console.log('updateAnalysisUI: アップロード済み画像が見つかりません');
-              }
-            })
-            .catch(error => {
-              console.error('画像情報の取得エラー:', error);
-            });
+          try {
+            const promise = getUploadedImages();
+            console.log('DEBUG: getUploadedImages()の戻り値 =', promise);
+            console.log('DEBUG: isPromise?', promise instanceof Promise);
+
+            promise
+              .then(data => {
+                console.log('DEBUG: API応答データ =', data);
+                if (data.ok && data.images && data.images.length > 0) {
+                  console.log('updateAnalysisUI: アップロード済み画像情報を取得しました:', data.images);
+                  uploadedImagesData = data.images;
+                  console.log('updateAnalysisUI: calling createAnalysisProgressPreviews with', uploadedImagesData.length, 'images');
+                  createAnalysisProgressPreviews(uploadedImagesData);
+                } else {
+                  console.log('updateAnalysisUI: アップロード済み画像が見つかりません');
+                }
+              })
+              .catch(error => {
+                console.error('画像情報の取得エラー（詳細）:', error);
+                console.error('エラースタック:', error.stack);
+              });
+          } catch (e) {
+            console.error('getUploadedImages()呼び出しでエラー:', e);
+            console.error('エラースタック:', e.stack);
+          }
         } else {
           console.log('updateAnalysisUI: calling createAnalysisProgressPreviews with', uploadedImagesData.length, 'images');
           createAnalysisProgressPreviews(uploadedImagesData);
