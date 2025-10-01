@@ -765,5 +765,23 @@ window.addEventListener('load', () => {
   window.addEventListener('unhandledrejection', (e) => {
     showUploadError('アップロード処理でエラーが発生しました');
   });
+
+  // モーダル内の解析開始ボタンのイベントリスナー
+  // （元 image-upload.js から統合）
+  const modalAnalysisButton = document.getElementById('modal-start-analysis-btn');
+  if (modalAnalysisButton) {
+    modalAnalysisButton.addEventListener('click', function () {
+      const model = document.getElementById('model-selector').value;
+      if (!model) {
+        alert('モデルを選択してください');
+        return;
+      }
+
+      console.log('選択されたモデル:', model);
+      // 初回解析を実行（image-analysis.jsのhandleAnalysisStart()を呼び出し）
+      window.isRetryAnalysis = false;
+      handleAnalysisStart(model);
+    });
+  }
 });
 
