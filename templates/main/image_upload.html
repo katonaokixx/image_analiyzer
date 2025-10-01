@@ -353,7 +353,7 @@
 
 {% block extra_js %}
 <!-- 簡素化されたアップロード機能 -->
-<script src="{% static 'js/pages/upload-simplified.js' %}?v=4.1"></script>
+<script src="{% static 'js/pages/upload-simplified.js' %}?v=5.0"></script>
 <script>
   // テンプレート変数をJavaScriptに渡す
   window.uploadedImagesJson = '{{ uploaded_images_json|default:"[]"|escapejs }}';
@@ -373,7 +373,7 @@
     }
   });
 </script>
-<script src="{% static 'js/pages/image-upload.js' %}?v=4.1"></script>
+<script src="{% static 'js/pages/image-upload.js' %}?v=5.0"></script>
 {% endblock %}
 
 {% block extra_css %}
