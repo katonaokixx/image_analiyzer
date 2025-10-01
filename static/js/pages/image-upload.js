@@ -206,7 +206,7 @@ document.addEventListener('DOMContentLoaded', function () {
       console.log('選択されたモデル:', model);
       // 初回解析を実行
       window.isRetryAnalysis = false;
-      startAnalysis(model);
+      handleAnalysisStart(model);
     });
   }
 });
@@ -329,7 +329,7 @@ function displayUploadedImages(images) {
 }
 
 // 解析開始関数
-function startAnalysis(model) {
+function handleAnalysisStart(model) {
   const analysisButton = document.getElementById('start-analysis-btn');
   if (!analysisButton) {
     console.error('解析ボタンが見つかりません');
@@ -352,7 +352,7 @@ function startAnalysis(model) {
   startAnalysis(model)
     .then(data => {
       console.log('解析開始API応答:', data);
-      if (data.success) {
+      if (data.ok || data.success) {
         // 解析開始成功
         console.log('解析開始直後: analyzingステータスを表示');
         updateAnalysisUI('analyzing', 0);
@@ -659,13 +659,13 @@ function getUploadedImages() {
 // 進捗バー更新は共通モジュール（progress.js）のupdateProgressBar()とupdateProgressValue()を使用
 function updateProgressBar(percentage) {
   console.log('updateProgressBar: 進捗更新開始', percentage);
-  
+
   // 共通モジュールの関数を使用
   const progressBars = document.querySelectorAll('[data-analysis-progress-bar-pane]');
   progressBars.forEach(bar => {
     bar.style.width = `${percentage}%`;
     bar.setAttribute('aria-valuenow', percentage);
-    
+
     // 色の変更
     if (percentage >= 100) {
       bar.classList.remove('progress-primary', 'progress-warning');
@@ -675,7 +675,7 @@ function updateProgressBar(percentage) {
       bar.classList.add('progress-primary');
     }
   });
-  
+
   const progressValues = document.querySelectorAll('[data-analysis-progress-bar-value]');
   progressValues.forEach(value => {
     value.textContent = Math.round(percentage);

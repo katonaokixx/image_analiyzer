@@ -1314,7 +1314,7 @@ document.addEventListener('DOMContentLoaded', () => {
       closeModelSelectionModal();
       // 初回解析を実行
       window.isRetryAnalysis = false;
-      startAnalysis(model);
+      handleAnalysisStart(model);
     });
   }
 
@@ -1362,7 +1362,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function setRetryCompletedTime() { setTimeIfEmpty('timeline-retry-completed-at'); }
 });
 
-function startAnalysis(modelName) {
+function handleAnalysisStart(modelName) {
 
   // 既存の解析進捗監視を停止
   if (progressMonitoringInterval) {
@@ -1377,27 +1377,10 @@ function startAnalysis(modelName) {
   const bar = document.getElementById('analysis-progress-bar');
   const valEl = document.getElementById('analysis-progress-value');
 
-  // 実際のAPI呼び出し
-  fetch('/api/analysis/start/', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'X-CSRFToken': getCSRFToken()
-    },
-    body: new URLSearchParams({
-      'model': modelName
-    })
-  })
-    .then(response => {
-      // レスポンスがJSONかどうかをチェック
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('サーバーから無効なレスポンスが返されました');
-      }
-      return response.json();
-    })
+  // API呼び出しラッパーを使用
+  startAnalysis(modelName)
     .then(data => {
-      if (data.ok) {
+      if (data.ok || data.success) {
         // API成功時のみ解析開始UIを表示
         const item2 = document.getElementById('timeline-item-2');
         if (item2) {
