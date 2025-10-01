@@ -1224,68 +1224,6 @@ def api_delete_image(request: HttpRequest, image_id: int):
         logger.error(f"画像削除エラー: {e}")
         return JsonResponse({'ok': False, 'error': str(e)}, status=500)
 
-# キュー管理ビュー（新しいモデルを使用）
-@login_required
-def queue_management_view(request: HttpRequest):
-    """キュー管理ページ表示"""
-    # TODO: 新しいモデルを使用した処理を実装
-    return render(request, 'admin/queue_management.html')
-
-@require_POST
-@csrf_protect
-def add_to_queue_view(request: HttpRequest):
-    """キューに追加API"""
-    # TODO: 新しいモデルを使用した処理を実装
-    return JsonResponse({'status': 'success'})
-
-@require_POST
-@csrf_protect
-def remove_from_queue_view(request: HttpRequest):
-    """キューから削除API"""
-    # TODO: 新しいモデルを使用した処理を実装
-    return JsonResponse({'status': 'success'})
-
-@require_POST
-@csrf_protect
-def change_queue_position_view(request: HttpRequest):
-    """キュー位置変更API"""
-    # TODO: 新しいモデルを使用した処理を実装
-    return JsonResponse({'status': 'success'})
-
-@require_POST
-@csrf_protect
-def change_queue_priority_view(request: HttpRequest):
-    """キュー優先度変更API"""
-    # TODO: 新しいモデルを使用した処理を実装
-    return JsonResponse({'status': 'success'})
-
-@require_POST
-@csrf_protect
-def change_queue_model_view(request: HttpRequest):
-    """キューモデル変更API"""
-    # TODO: 新しいモデルを使用した処理を実装
-    return JsonResponse({'status': 'success'})
-
-@require_GET
-def get_queue_status_view(request: HttpRequest):
-    """キュー状態取得API"""
-    # TODO: 新しいモデルを使用した処理を実装
-    return JsonResponse({'status': 'success', 'queue': []})
-
-@require_POST
-@csrf_protect
-def start_queue_processing_view(request: HttpRequest):
-    """キュー処理開始API"""
-    # TODO: 新しいモデルを使用した処理を実装
-    return JsonResponse({'status': 'success'})
-
-@require_POST
-@csrf_protect
-def complete_queue_processing_view(request: HttpRequest):
-    """キュー処理完了API"""
-    # TODO: 新しいモデルを使用した処理を実装
-    return JsonResponse({'status': 'success'})
-
 @require_POST
 @csrf_protect
 def api_delete_image(request: HttpRequest, image_id: int):

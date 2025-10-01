@@ -31,18 +31,4 @@ urlpatterns = [
     path('api/timeline/<int:image_id>/', views.api_get_timeline, name='v2_api_get_timeline'),
     path('api/images/<int:image_id>/detail/', views.api_image_detail, name='v2_api_image_detail'),
     path('api/images/<int:image_id>/delete/', views.api_delete_image, name='v2_api_delete_image'),
-    
-    # 解析キュー管理システム（新しいモデルを使用）
-    path('queue/', views.queue_management_view, name='v2_queue_management'),
-    path('api/queue/add/', views.add_to_queue_view, name='v2_add_to_queue'),
-    path('api/queue/remove/', views.remove_from_queue_view, name='v2_remove_from_queue'),
-    path('api/queue/change-position/', views.change_queue_position_view, name='v2_change_queue_position'),
-    path('api/queue/change-priority/', views.change_queue_priority_view, name='v2_change_queue_priority'),
-    path('api/queue/change-model/', views.change_queue_model_view, name='v2_change_queue_model'),
-    path('api/queue/status/', views.get_queue_status_view, name='v2_get_queue_status'),
-    path('api/queue/start-processing/', views.start_queue_processing_view, name='v2_start_queue_processing'),
-    path('api/queue/complete-processing/', views.complete_queue_processing_view, name='v2_complete_queue_processing'),
-    
-    # 画像削除API
-    path('api/images/<int:image_id>/delete/', views.api_delete_image, name='v2_api_delete_image'),
 ]
