@@ -62,7 +62,6 @@ def save_file_and_create_image_v2(file, user):
         }
     )
     
-    print(f"DEBUG: MstUser: {mst_user.username} (created: {created})")
     
     # 重複チェックと番号付与
     display_filename = original_filename
@@ -85,10 +84,6 @@ def save_file_and_create_image_v2(file, user):
     physical_filename = f"{timestamp}_{unique_id}{file_ext}"
     file_path = os.path.join(settings.MEDIA_ROOT, 'images', physical_filename)
     
-    print(f"DEBUG: 元のファイル名: {original_filename}")
-    print(f"DEBUG: 表示用ファイル名: {display_filename}")
-    print(f"DEBUG: 物理ファイル名: {physical_filename}")
-    print(f"DEBUG: ファイルパス: {file_path}")
     
     # ディレクトリを作成
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
@@ -98,8 +93,6 @@ def save_file_and_create_image_v2(file, user):
         for chunk in file.chunks():
             destination.write(chunk)
     
-    print(f"DEBUG: ファイル保存完了: {file_path}")
-    print(f"DEBUG: ファイル存在確認: {os.path.exists(file_path)}")
     
     # ユーザーごとのアップロード順序番号を取得
     max_order = TransUploadedImage.objects.filter(
@@ -108,7 +101,6 @@ def save_file_and_create_image_v2(file, user):
     
     next_order = (max_order or 0) + 1
     
-    print(f"DEBUG: 次のアップロード順序: {next_order}")
     
     # 新しいモデルで画像レコードを作成
     img = TransUploadedImage.objects.create(
@@ -119,8 +111,6 @@ def save_file_and_create_image_v2(file, user):
         status='analyzing'  # 直接解析中に
     )
     
-    print(f"DEBUG: アップロード完了: {img.created_at}")
-    print(f"DEBUG: TransUploadedImage作成完了: ID={img.image_id}")
     
     return img
 
@@ -266,7 +256,6 @@ def password_reset_success_view(request: HttpRequest):
 @login_required
 def user_image_table(request: HttpRequest):
     """ユーザー画像テーブル表示（新しいモデル使用）"""
-    print("DEBUG: user_image_table view called")
     # ログイン認証チェック
     if not request.user.is_authenticated:
         messages.error(request, 'ログインが必要です。')
@@ -278,6 +267,7 @@ def user_image_table(request: HttpRequest):
         images = TransUploadedImage.objects.all().order_by('-created_at')
     else:
         try:
+            pass
             # 既存のUserからMstUserを取得
             mst_user = MstUser.objects.get(username=request.user.username)
             images = TransUploadedImage.objects.filter(user_id=mst_user).order_by('-created_at')
@@ -295,8 +285,7 @@ def user_image_table(request: HttpRequest):
     
     # 各画像にシンプルなファイル名を追加
     for image in images_list:
-        print(f"DEBUG user_image_table: Processing image {image.image_id}: {image.filename}")
-        print(f"DEBUG user_image_table: created_at = {image.created_at}")
+        pass
         
         # ファイル名をそのまま表示（番号付与方式）
         image.simple_filename = image.filename
@@ -329,6 +318,7 @@ def admin_image_table(request: HttpRequest):
         # 管理者またはView Allが有効な場合は全ユーザーの画像を表示
         filtered_images = images
     else:
+        pass
         # 一般ユーザーの場合は自分の画像のみ表示
         try:
             mst_user = MstUser.objects.get(username=request.user.username)
@@ -344,16 +334,6 @@ def admin_image_table(request: HttpRequest):
     # 各画像にシンプルなファイル名を追加
     images_list = list(page_obj.object_list)
     for image in images_list:
-        print(f"DEBUG admin_image_table: Processing image {image.image_id}: {image.filename}")
-        print(f"DEBUG admin_image_table: created_at = {image.created_at}")
-        print(f"DEBUG admin_image_table: user_id = {image.user_id}")
-        print(f"DEBUG admin_image_table: user_id type = {type(image.user_id)}")
-        if image.user_id:
-            print(f"DEBUG admin_image_table: user_id.username = {image.user_id.username}")
-            print(f"DEBUG admin_image_table: user_id.__str__ = {str(image.user_id)}")
-        else:
-            print("DEBUG admin_image_table: user_id is None!")
-        
         # ファイル名をそのまま表示（番号付与方式）
         image.simple_filename = image.filename
     
@@ -451,12 +431,6 @@ def re_image_upload(request: HttpRequest):
     logger = logging.getLogger(__name__)
     
     # 最初に必ずログを出力
-    print("=" * 50)
-    print("DEBUG: re_image_upload view called")
-    print(f"DEBUG: request.method = {request.method}")
-    print(f"DEBUG: request.GET = {request.GET}")
-    print(f"DEBUG: request.user = {request.user}")
-    print(f"DEBUG: request.user.is_authenticated = {request.user.is_authenticated}")
     
     logger.info("=" * 50)
     logger.info("DEBUG: re_image_upload view called")
@@ -467,7 +441,6 @@ def re_image_upload(request: HttpRequest):
     
     # ログイン認証チェック
     if not request.user.is_authenticated:
-        print("DEBUG: User not authenticated, redirecting to login")
         logger.info("DEBUG: User not authenticated, redirecting to login")
         messages.error(request, 'ログインが必要です。')
         return redirect('v2_login')
@@ -477,18 +450,15 @@ def re_image_upload(request: HttpRequest):
     selected_image_id = request.GET.get('selected_image_id') or request.session.get('selected_image_id')
     selected_image_status = request.session.get('selected_image_status')
     
-    print(f"DEBUG: selected_image_id = {selected_image_id}")
-    print(f"DEBUG: selected_image_status = {selected_image_status}")
     logger.info(f"DEBUG: selected_image_id = {selected_image_id}")
     logger.info(f"DEBUG: selected_image_status = {selected_image_status}")
     
     selected_image = None
     if selected_image_id:
-        print(f"DEBUG: Processing selected_image_id = {selected_image_id}")
         try:
+            pass
             # 新しいモデルを使用
             mst_user = MstUser.objects.get(username=request.user.username)
-            print(f"DEBUG: Found mst_user = {mst_user}")
             selected_image = TransUploadedImage.objects.get(image_id=selected_image_id, user_id=mst_user)
             selected_image_status = selected_image.status  # 画像の状態を設定
             
@@ -502,18 +472,15 @@ def re_image_upload(request: HttpRequest):
                     # analysis_completed_atを設定して完全に完了させる
                     selected_image.analysis_completed_at = timezone.now()
                     selected_image.save()
-                    print(f"DEBUG: analysis_completed_at設定完了: 画像ID={selected_image.image_id}")
                     logger.info(f"DEBUG: analysis_completed_at設定完了: 画像ID={selected_image.image_id}")
                 else:
+                    pass
                     # 解析結果がない場合は、そのまま表示
-                    print(f"DEBUG: No analysis results, keeping status as completed")
                     logger.info(f"DEBUG: No analysis results, keeping status as completed")
             
-            print(f"DEBUG: selected_image found = {selected_image.filename}, status = {selected_image.status}, analysis_completed_at = {selected_image.analysis_completed_at}")
             logger.info(f"DEBUG: selected_image found = {selected_image.filename}, status = {selected_image.status}, analysis_completed_at = {selected_image.analysis_completed_at}")
         except (TransUploadedImage.DoesNotExist, MstUser.DoesNotExist) as e:
             selected_image = None
-            print(f"DEBUG: Image not found for ID {selected_image_id}, error: {e}")
             logger.info(f"DEBUG: Image not found for ID {selected_image_id}, error: {e}")
             # 画像が存在しない場合はセッションをクリア
             if 'selected_image_id' in request.session:
@@ -521,7 +488,7 @@ def re_image_upload(request: HttpRequest):
             if 'selected_image_status' in request.session:
                 del request.session['selected_image_status']
     else:
-        print("DEBUG: No selected_image_id in session")
+        pass
         logger.info("DEBUG: No selected_image_id in session")
         # セッションに画像IDがない場合は、最新の画像を取得
         try:
@@ -529,35 +496,29 @@ def re_image_upload(request: HttpRequest):
             selected_image = TransUploadedImage.objects.filter(user_id=mst_user).order_by('-created_at').first()
             if selected_image:
                 selected_image_status = selected_image.status
-                print(f"DEBUG: Using latest image as fallback: {selected_image.filename}, status = {selected_image.status}")
                 logger.info(f"DEBUG: Using latest image as fallback: {selected_image.filename}, status = {selected_image.status}")
         except Exception as e:
-            print(f"DEBUG: Error getting latest image: {e}")
             logger.info(f"DEBUG: Error getting latest image: {e}")
     
     # selected_image_statusがNoneの場合は、selected_imageの状態を使用
     if selected_image and selected_image_status is None:
         selected_image_status = selected_image.status
-        print(f"DEBUG: selected_image_status was None, using image status: {selected_image_status}")
         logger.info(f"DEBUG: selected_image_status was None, using image status: {selected_image_status}")
     
-    print(f"DEBUG: selected_image_status = {selected_image_status}")
     logger.info(f"DEBUG: selected_image_status = {selected_image_status}")
     
     # 画像情報を取得（タイムライン情報は不要）
-    print("DEBUG: Getting image information")
     image_info = None
     if selected_image:
         image_info = selected_image
-        print(f"DEBUG: Found image_info = {image_info.filename}")
     else:
-        print("DEBUG: No selected_image, skipping image info")
+        pass
     
     # 前回の解析結果を取得（v1と同じロジック）
-    print("DEBUG: Getting previous analysis results")
     previous_results = []
     if selected_image:
         try:
+            pass
             # 最新の解析結果を取得（最新の解析実行の結果を信頼度順で取得）
             # まず最新の解析完了時刻を取得
             latest_analysis_time = TransImageAnalysis.objects.filter(image_id=selected_image).order_by('-analysis_completed_at').first()
@@ -569,28 +530,21 @@ def re_image_upload(request: HttpRequest):
                 ).order_by('-confidence')[:3]
             else:
                 previous_results = []
-            print(f"DEBUG: previous_results count = {previous_results.count()}")
             for i, result in enumerate(previous_results):
-                print(f"DEBUG: previous_results[{i}] = {result.label} ({result.confidence}%)")
+                pass
             logger.info(f"DEBUG: previous_results count = {previous_results.count()}")
             for i, result in enumerate(previous_results):
                 logger.info(f"DEBUG: previous_results[{i}] = {result.label} ({result.confidence}%)")
         except Exception as e:
-            print(f"DEBUG: Error getting previous_results: {e}")
             logger.info(f"DEBUG: Error getting previous_results: {e}")
             previous_results = []
     else:
-        print("DEBUG: No selected_image, skipping previous_results")
+        pass
     
     # 前回解析結果のテキスト生成（TransAnalysisTimelineを使わない方法）
-    print("DEBUG: Generating previous results text")
-    print(f"DEBUG: previous_results type = {type(previous_results)}")
-    print(f"DEBUG: previous_results count = {len(previous_results) if previous_results else 0}")
-    print(f"DEBUG: selected_image_status = {selected_image_status}")
     
     previous_results_text = None
     if previous_results and selected_image_status == 'completed':
-        print("DEBUG: All conditions met for previous results text")
         results_text = "直近の解析結果: "
         for i, r in enumerate(previous_results):
             # 新しいモデルの構造に合わせて調整
@@ -601,23 +555,15 @@ def re_image_upload(request: HttpRequest):
                 results_text += " / "
         
         previous_results_text = results_text
-        print(f"DEBUG: previous_results_text = {previous_results_text}")
     else:
-        print(f"DEBUG: Previous results text conditions not met: previous_results={len(previous_results) if previous_results else 0}, status={selected_image_status}")
+        pass
     
     # デバッグ情報を追加
-    print("DEBUG: Final debug information")
-    print(f"DEBUG: selected_image = {selected_image}")
     if selected_image:
-        print(f"DEBUG: selected_image.filename = {selected_image.filename}")
-        print(f"DEBUG: selected_image.thumbnail_url = {selected_image.thumbnail_url}")
-        print(f"DEBUG: selected_image.file_path = {selected_image.file_path}")
-        print(f"DEBUG: selected_image.image_id = {selected_image.image_id}")
+        pass
     else:
-        print("DEBUG: selected_image is None")
+        pass
     
-    print(f"DEBUG: previous_results_text = {previous_results_text}")
-    print(f"DEBUG: previous_results count = {len(previous_results) if previous_results else 0}")
     
     logger.info(f"DEBUG: selected_image = {selected_image}")
     if selected_image:
@@ -645,12 +591,8 @@ def re_image_upload(request: HttpRequest):
 @csrf_protect
 def api_form_upload(request: HttpRequest):
     """画像アップロードAPI（新しいモデル使用）"""
-    print("DEBUG: === アップロードAPI開始 ===")
-    print(f"DEBUG: ユーザー: {request.user}")
-    print(f"DEBUG: 認証状態: {request.user.is_authenticated}")
     
     if not request.user.is_authenticated:
-        print("DEBUG: 認証エラー")
         return JsonResponse({'ok': False, 'errors': ['ログインが必要です']}, status=401)
     
     # Dropzoneからの直接ファイル送信に対応
@@ -658,12 +600,10 @@ def api_form_upload(request: HttpRequest):
     if not files:
         files = request.FILES.getlist('files')  # フォールバック: 'files' も試す
     
-    print(f"DEBUG: Found {len(files)} files")
     for i, file in enumerate(files):
-        print(f"DEBUG: ファイル{i+1}: {file.name}, サイズ: {file.size}")
+        pass
     
     if not files:
-        print("DEBUG: ファイルが選択されていません")
         return JsonResponse({'ok': False, 'errors': ['ファイルが選択されていません']}, status=400)
     
     # 個別ファイルバリデーション
@@ -671,27 +611,23 @@ def api_form_upload(request: HttpRequest):
     valid_files = []
     
     for f in files:
-        print(f"DEBUG: ファイル検証開始: {f.name}")
         error = validate_file(f)
         if error:
-            print(f"DEBUG: 検証エラー: {f.name} - {error}")
             errors.append(f'{f.name}: {error}')
         else:
-            print(f"DEBUG: 検証成功: {f.name}")
+            pass
             valid_files.append(f)
     
     if errors:
-        print(f"DEBUG: 検証エラー: {errors}")
         return JsonResponse({'ok': False, 'errors': errors}, status=400)
     
     # ファイル保存
     saved = []
     for f in valid_files:
-        print(f"DEBUG: ファイル保存開始: {f.name}")
         try:
+            pass
             # 新しいモデルを使用して画像を保存
             img = save_file_and_create_image_v2(f, request.user)
-            print(f"DEBUG: 画像保存成功: {img.image_id}, {img.filename}")
             
             # 画像のステータスを更新
             img.status = 'uploaded'
@@ -699,26 +635,21 @@ def api_form_upload(request: HttpRequest):
             img.save()
             
             saved.append(img)
-            print(f"DEBUG: 画像保存完了: {img.image_id}")
         except Exception as e:
-            print(f"DEBUG: ファイル保存エラー: {f.name} - {str(e)}")
             # インフラ側のエラー（ディスク容量不足、権限エラーなど）
             errors.append(f'{f.name}: サーバーエラーが発生しました')
     
     # エラーハンドリング
     if not saved:
-        print("DEBUG: 保存できたファイルがありません")
         return JsonResponse({'ok': False, 'errors': errors}, status=400)
     
     # セッションにアップロードした画像IDを保存
     uploaded_image_ids = request.session.get('uploaded_image_ids', [])
-    print(f"DEBUG: セッション保存前のimage_ids = {uploaded_image_ids}")
     for img in saved:
         if img.image_id not in uploaded_image_ids:
             uploaded_image_ids.append(img.image_id)
     request.session['uploaded_image_ids'] = uploaded_image_ids
     request.session.modified = True
-    print(f"DEBUG: セッション保存後のimage_ids = {uploaded_image_ids}")
     
     # レスポンス用の画像情報を準備
     response_data = []
@@ -733,9 +664,8 @@ def api_form_upload(request: HttpRequest):
             'status': img.status
         })
     
-    print(f"DEBUG: レスポンス準備完了: {len(response_data)}件")
     for img_data in response_data:
-        print(f"DEBUG: Response image: {img_data}")
+        pass
     
     return JsonResponse({
         'ok': True, 
@@ -803,6 +733,7 @@ def api_start_analysis(request: HttpRequest):
             logger.info(f"個別画像の解析を開始: ID={image.image_id}")
             
         else:
+            pass
             # 一括解析の場合（このセッションでアップロードした画像のみを対象）
             uploaded_image_ids = request.session.get('uploaded_image_ids', [])
             if not uploaded_image_ids:
@@ -854,6 +785,7 @@ def start_analysis_processing(image_id, model_name):
                 # 個別画像解析
                 process_single_image_analysis(image_id, model_name)
             else:
+                pass
                 # 一括解析
                 process_batch_analysis(model_name)
         except Exception as e:
@@ -932,6 +864,7 @@ def process_batch_analysis(model_name):
     logger = logging.getLogger(__name__)
     
     try:
+        pass
         # 準備中の画像を取得
         images = TransUploadedImage.objects.filter(status='preparing')
         
@@ -991,7 +924,6 @@ def perform_image_analysis(image, model_name):
         
     except Exception as e:
         logger.error(f"個別画像解析エラー: {e}")
-        print(f"個別画像解析エラー: {e}")
         # エラー時はサンプルデータを返す
         return [
             {
@@ -1085,6 +1017,7 @@ def api_get_timeline(request: HttpRequest, image_id: int):
     logger = logging.getLogger(__name__)
     
     try:
+        pass
         # 画像の存在確認
         try:
             image = TransUploadedImage.objects.get(image_id=image_id)
@@ -1181,6 +1114,7 @@ def api_delete_image(request: HttpRequest, image_id: int):
     logger = logging.getLogger(__name__)
     
     try:
+        pass
         # 画像の存在確認
         try:
             image = TransUploadedImage.objects.get(image_id=image_id)
@@ -1234,6 +1168,7 @@ def api_delete_image(request: HttpRequest, image_id: int):
     logger.info(f"画像削除API呼び出し: 画像ID={image_id}, ユーザー={request.user.username}")
     
     try:
+        pass
         # 既存のUserからMstUserを取得
         mst_user = MstUser.objects.get(username=request.user.username)
         logger.info(f"MstUser取得成功: {mst_user.username}")
@@ -1320,6 +1255,7 @@ def api_get_images_status(request: HttpRequest):
     logger = logging.getLogger(__name__)
     
     try:
+        pass
         # リクエストから画像IDリストを取得
         image_ids_str = request.GET.get('image_ids', '')
         if not image_ids_str:
@@ -1386,6 +1322,7 @@ def api_analysis_progress(request: HttpRequest):
                         current_stage = 'analyzing'
                         description = '解析結果を処理中...'
                     else:
+                        pass
                         # 解析開始からの経過時間に基づいて段階的な進捗を計算
                         import time
                         elapsed_time = time.time() - image.analysis_started_at.timestamp()
@@ -1443,10 +1380,9 @@ def api_analysis_progress(request: HttpRequest):
                     'error': '画像が見つかりません'
                 }, status=404)
         else:
+            pass
             # セッション画像の一括進捗を取得（複数画像対応）
             uploaded_image_ids = request.session.get('uploaded_image_ids', [])
-            print(f"DEBUG進捗API: セッションから取得したimage_ids = {uploaded_image_ids}")
-            print(f"DEBUG進捗API: セッションキー一覧 = {list(request.session.keys())}")
             
             if not uploaded_image_ids:
                 return JsonResponse({
@@ -1460,12 +1396,10 @@ def api_analysis_progress(request: HttpRequest):
                 })
             
             try:
+                pass
                 # 対象画像を全て取得
                 images = TransUploadedImage.objects.filter(image_id__in=uploaded_image_ids)
                 total_count = images.count()
-                print(f"DEBUG進捗API: クエリ実行 image_ids={uploaded_image_ids}")
-                print(f"DEBUG進捗API: 取得した画像数={total_count}")
-                print(f"DEBUG進捗API: 画像リスト={list(images.values_list('image_id', 'status'))}")
                 
                 if total_count == 0:
                     return JsonResponse({
@@ -1482,11 +1416,9 @@ def api_analysis_progress(request: HttpRequest):
                 completed_count = images.filter(status='completed').count()
                 analyzing_count = images.filter(status='analyzing').count()
                 preparing_count = images.filter(status='preparing').count()
-                print(f"DEBUG進捗API: 完了={completed_count}, 解析中={analyzing_count}, 準備中={preparing_count}, 合計={total_count}")
                 
                 # 実際の進捗を計算（完了画像数 / 総画像数）
                 progress_percentage = int((completed_count / total_count) * 100)
-                print(f"DEBUG進捗API: 進捗パーセンテージ={progress_percentage}%")
                 
                 # ステータスと説明文を決定
                 if completed_count == total_count:
@@ -1500,6 +1432,7 @@ def api_analysis_progress(request: HttpRequest):
                     description = f'{completed_count}/{total_count}枚完了（解析中: {analyzing_count}枚、準備中: {preparing_count}枚）'
                     status = 'analyzing'
                 else:
+                    pass
                     # 待機中
                     current_stage = 'waiting'
                     description = '解析の準備をしています...'
@@ -1540,6 +1473,7 @@ def api_image_detail(request: HttpRequest, image_id: int):
     logger = logging.getLogger(__name__)
     
     try:
+        pass
         # 画像の存在確認
         try:
             image = TransUploadedImage.objects.get(image_id=image_id)
