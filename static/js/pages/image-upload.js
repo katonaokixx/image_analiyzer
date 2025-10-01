@@ -656,35 +656,29 @@ function getUploadedImages() {
   return [];
 }
 
-// 進捗バー更新
+// 進捗バー更新は共通モジュール（progress.js）のupdateProgressBar()とupdateProgressValue()を使用
 function updateProgressBar(percentage) {
   console.log('updateProgressBar: 進捗更新開始', percentage);
-
-  // 生成された進捗バーを更新
+  
+  // 共通モジュールの関数を使用
   const progressBars = document.querySelectorAll('[data-analysis-progress-bar-pane]');
-  const progressValues = document.querySelectorAll('[data-analysis-progress-bar-value]');
-
-  console.log('updateProgressBar: 進捗バー要素数:', progressBars.length);
-  console.log('updateProgressBar: 進捗値要素数:', progressValues.length);
-
-  progressBars.forEach((progressBar, index) => {
-    console.log(`updateProgressBar: 進捗バー${index + 1}を更新:`, percentage + '%');
-    progressBar.style.width = `${percentage}%`;
-    progressBar.setAttribute('aria-valuenow', percentage);
-
-    // v1と同様に色を変更
+  progressBars.forEach(bar => {
+    bar.style.width = `${percentage}%`;
+    bar.setAttribute('aria-valuenow', percentage);
+    
+    // 色の変更
     if (percentage >= 100) {
-      progressBar.classList.remove('progress-primary', 'progress-warning');
-      progressBar.classList.add('progress-success');
+      bar.classList.remove('progress-primary', 'progress-warning');
+      bar.classList.add('progress-success');
     } else if (percentage > 0) {
-      progressBar.classList.remove('progress-success', 'progress-warning');
-      progressBar.classList.add('progress-primary');
+      bar.classList.remove('progress-success', 'progress-warning');
+      bar.classList.add('progress-primary');
     }
   });
-
-  progressValues.forEach((progressValue, index) => {
-    console.log(`updateProgressBar: 進捗値${index + 1}を更新:`, Math.round(percentage));
-    progressValue.textContent = Math.round(percentage);
+  
+  const progressValues = document.querySelectorAll('[data-analysis-progress-bar-value]');
+  progressValues.forEach(value => {
+    value.textContent = Math.round(percentage);
   });
 }
 

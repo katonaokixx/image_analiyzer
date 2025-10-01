@@ -115,10 +115,10 @@ async function startAnalysis(model, imageId = null) {
  * @returns {Promise<Object>} 進捗情報
  */
 async function getAnalysisProgress(imageId = null) {
-  const endpoint = imageId 
+  const endpoint = imageId
     ? `/v2/api/analysis/progress/?image_id=${imageId}`
     : '/v2/api/analysis/progress/';
-  
+
   return apiCall(endpoint, { method: 'GET' });
 }
 
