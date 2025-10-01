@@ -348,17 +348,8 @@ function startAnalysis(model) {
   const csrfToken = getCSRFToken();
   console.log('CSRFトークン:', csrfToken);
 
-  fetch('/v2/api/analysis/start/', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'X-CSRFToken': csrfToken
-    },
-    body: new URLSearchParams({
-      model: model
-    })
-  })
-    .then(response => response.json())
+  // API呼び出しラッパーを使用
+  startAnalysis(model)
     .then(data => {
       console.log('解析開始API応答:', data);
       if (data.success) {
@@ -401,13 +392,8 @@ function startProgressMonitoring() {
       updateAnalysisUI('failed');
       return;
     }
-    fetch('/v2/api/analysis/progress/')
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        return response.json();
-      })
+    // API呼び出しラッパーを使用
+    getAnalysisProgress()
       .then(data => {
         console.log('進捗データ:', data);
         console.log('進捗ステータス:', data.status);
@@ -557,9 +543,8 @@ function updateAnalysisUI(status, progress = 0) {
         // uploadedImagesDataが空の場合、セッションから取得を試みる
         if (uploadedImagesData.length === 0) {
           console.log('updateAnalysisUI: uploadedImagesDataが空です。セッションから画像情報を取得します');
-          // 新しいAPIからアップロード済み画像情報を取得
-          fetch('/v2/api/images/uploaded/')
-            .then(response => response.json())
+          // API呼び出しラッパーを使用
+          getUploadedImages()
             .then(data => {
               if (data.ok && data.images && data.images.length > 0) {
                 console.log('updateAnalysisUI: アップロード済み画像情報を取得しました:', data.images);

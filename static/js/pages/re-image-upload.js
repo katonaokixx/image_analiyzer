@@ -397,18 +397,8 @@ function startRetryAnalysis() {
     model: selectedModel // 選択されたモデルを使用
   };
 
-  // 解析APIを呼び出し
-  fetch('/v2/api/analysis/start/', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'X-CSRFToken': csrfToken
-    },
-    body: new URLSearchParams(requestData)
-  })
-    .then(response => {
-      return response.json();
-    })
+  // API呼び出しラッパーを使用
+  startAnalysis(requestData.model, requestData.image_id)
     .then(data => {
       if (data.ok || data.success) {
         startRetryProgressMonitoring();
@@ -665,8 +655,8 @@ function checkRetryProgress() {
     return;
   }
 
-  fetch(`/v2/api/analysis/progress/?image_id=${window.currentImageId}`)
-    .then(response => response.json())
+  // API呼び出しラッパーを使用
+  getAnalysisProgress(window.currentImageId)
     .then(data => {
 
       // 進捗パーセンテージを更新（最初のアップロード時と同じロジックを使用）

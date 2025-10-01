@@ -70,7 +70,7 @@ function showNotification(message, type = 'info', duration = 3000) {
     warning: 'alert-warning',
     info: 'alert-info'
   };
-  
+
   notification.className = `alert ${typeClasses[type] || 'alert-info'} shadow-lg max-w-md`;
   notification.innerHTML = `
     <div class="flex items-center gap-2">
@@ -98,11 +98,11 @@ function showNotification(message, type = 'info', duration = 3000) {
  */
 function formatFileSize(bytes) {
   if (bytes === 0) return '0 Bytes';
-  
+
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
+
   return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
