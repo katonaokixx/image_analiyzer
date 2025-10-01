@@ -1380,6 +1380,11 @@ function handleAnalysisStart(modelName) {
   // API呼び出しラッパーを使用
   startAnalysis(modelName)
     .then(data => {
+      console.log('=== 解析開始API応答 ===', data);
+      console.log('data.ok:', data.ok);
+      console.log('data.success:', data.success);
+      console.log('条件判定:', data.ok || data.success);
+
       if (data.ok || data.success) {
         // API成功時のみ解析開始UIを表示
         const item2 = document.getElementById('timeline-item-2');

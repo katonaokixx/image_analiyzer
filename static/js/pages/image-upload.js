@@ -643,16 +643,16 @@ function createAnalysisProgressPreviews(uploadedImages) {
 }
 
 // アップロード済み画像を取得（グローバル変数から取得）
-function getUploadedImages() {
-  console.log('getUploadedImages: 開始');
+function getLocalUploadedImages() {
+  console.log('getLocalUploadedImages: 開始');
 
   // グローバル変数に保存された画像データを使用
   if (uploadedImagesData && uploadedImagesData.length > 0) {
-    console.log('getUploadedImages: グローバル変数から取得:', uploadedImagesData);
+    console.log('getLocalUploadedImages: グローバル変数から取得:', uploadedImagesData);
     return uploadedImagesData;
   }
 
-  console.log('getUploadedImages: グローバル変数が空のため、空配列を返します');
+  console.log('getLocalUploadedImages: グローバル変数が空のため、空配列を返します');
   return [];
 }
 
