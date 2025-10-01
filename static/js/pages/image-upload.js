@@ -39,15 +39,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // uploadedImagesは既にJavaScriptオブジェクトなので、そのまま使用
     const images = uploadedImages;
     // 1つ目のタイムライン（アップロード完了）を表示
-    const timelineContainer = document.getElementById('timeline-container');
-    const timeline1 = document.getElementById('timeline-item-1-success');
-
-    if (timelineContainer && timeline1) {
-      timelineContainer.classList.remove('hidden');
-      timelineContainer.style.display = 'block';
-      timeline1.classList.remove('hidden');
-      timeline1.style.display = 'block';
-    }
+    // 共通関数を使用してタイムライン表示
+    toggleTimelineContainer(true);
+    toggleTimelineItem('timeline-item-1-success', true);
 
     // アップロード完了後は解析ボタンを表示し、アップロードボタンを非表示にする
     const analysisButton = document.getElementById('analysis-button-container');
@@ -476,12 +470,8 @@ function updateAnalysisUI(status, progress = 0) {
     analysisButton.disabled = false;
     analysisButtonText.textContent = '解析完了';
 
-    // 3つ目のタイムラインを表示
-    const timeline3 = document.getElementById('timeline-item-3');
-    if (timeline3) {
-      timeline3.classList.remove('hidden');
-      timeline3.style.display = 'block';
-    }
+    // 3つ目のタイムラインを表示（共通関数使用）
+    toggleTimelineItem('timeline-item-3', true);
 
     // 進捗バーを100%に設定
     updateProgressBar(100);
@@ -510,27 +500,16 @@ function updateAnalysisUI(status, progress = 0) {
     analysisButton.disabled = false;
     analysisButtonText.textContent = '解析失敗';
 
-    // 失敗タイムラインを表示
-    const timeline2Error = document.getElementById('timeline-item-2-error');
-    if (timeline2Error) {
-      timeline2Error.classList.remove('hidden');
-      timeline2Error.style.display = 'block';
-    }
+    // 失敗タイムラインを表示（共通関数使用）
+    toggleTimelineItem('timeline-item-2-error', true);
 
   } else if (status === 'analyzing') {
     console.log('updateAnalysisUI: analyzing status detected');
     analysisButtonText.textContent = `解析中... ${progress}%`;
 
-    // 2つ目のタイムラインを表示（解析開始時）
-    const timeline2 = document.getElementById('timeline-item-2');
-    console.log('updateAnalysisUI: timeline2 element:', timeline2);
-    if (timeline2) {
-      console.log('updateAnalysisUI: showing timeline2');
-      timeline2.classList.remove('hidden');
-      timeline2.style.display = 'block';
-    } else {
-      console.log('updateAnalysisUI: timeline2 not found');
-    }
+    // 2つ目のタイムラインを表示（解析開始時）（共通関数使用）
+    console.log('updateAnalysisUI: showing timeline2');
+    toggleTimelineItem('timeline-item-2', true);
 
     // 進捗バーを生成（初回のみ）
     const container = document.getElementById('analysis-progress-previews');

@@ -1043,38 +1043,16 @@ window.addEventListener('load', () => {
 
 
 
-    // 1つ目のタイムライン（アップロード完了）のみを表示
-    if (successTimeline) {
-      successTimeline.classList.remove('hidden');
-      successTimeline.style.display = 'block';
-    } else {
-
-    }
-
-    if (errorTimeline) {
-      errorTimeline.classList.add('hidden');
-      errorTimeline.style.display = 'none';
-    } else {
-
-    }
-
-    if (timelineDescription) {
-      timelineDescription.textContent = message;
-    } else {
-
-    }
+    // 1つ目のタイムライン（アップロード完了）のみを表示（共通関数使用）
+    toggleTimelineItem('timeline-item-1-success', true);
+    toggleTimelineItem('timeline-item-1-error', false);
+    updateTimelineDescription('timeline-description', message);
 
     if (analysisButton) {
       analysisButton.classList.remove('hidden');
-    } else {
-
     }
 
-    if (timelineContainer) {
-      timelineContainer.classList.remove('hidden');
-    } else {
-
-    }
+    toggleTimelineContainer(true);
 
     // アップロードボタンを非表示にして、解析ボタンを強調
     if (uploadButtonContainer) {
@@ -1157,15 +1135,11 @@ window.addEventListener('load', () => {
   }
 
   function forceHideTimelineItems() {
-    const timelineContainer = document.getElementById('timeline-container');
-    if (timelineContainer) timelineContainer.classList.add('hidden');
+    // 共通関数を使用してタイムラインを非表示
+    toggleTimelineContainer(false);
     ['timeline-item-1-success', 'timeline-item-1-error',
       'timeline-item-2', 'timeline-item-2-error', 'timeline-item-3', 'timeline-item-3-error'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-          el.className = 'hidden';
-          el.style.display = 'none';
-        }
+        toggleTimelineItem(id, false);
       });
     const analysisButton = document.getElementById('analysis-button-container');
     if (analysisButton) analysisButton.classList.add('hidden');
