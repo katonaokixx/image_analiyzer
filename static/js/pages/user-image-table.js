@@ -362,44 +362,19 @@ function startIndividualAnalysis(imageId, modelName) {
   const csrfToken = getCSRFToken();
   console.log('CSRFトークン:', csrfToken);
 
-  // API呼び出し
-  console.log('API呼び出し開始: /api/analysis/start/');
-  console.log('リクエストボディ:', { image_id: imageId, model: modelName });
+  // API呼び出しラッパーを使用
+  console.log('API呼び出し開始: startAnalysis()');
+  console.log('リクエストパラメータ:', { image_id: imageId, model: modelName });
 
-  fetch('/api/analysis/start/', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'X-CSRFToken': csrfToken
-    },
-    body: new URLSearchParams({
-      'image_id': imageId,
-      'model': modelName
-    })
-  })
-    .then(response => {
-      console.log('=== API応答受信 ===');
-      console.log('ステータス:', response.status);
-      console.log('ステータステキスト:', response.statusText);
-      console.log('ヘッダー:', response.headers);
-
-      // レスポンスがJSONかどうかをチェック
-      const contentType = response.headers.get('content-type');
-      console.log('Content-Type:', contentType);
-
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('サーバーから無効なレスポンスが返されました');
-      }
-      return response.json();
-    })
+  startAnalysis(modelName, imageId)
     .then(data => {
       console.log('=== 解析開始API応答 ===');
-      console.log('成功:', data.ok);
+      console.log('成功:', data.ok || data.success);
       console.log('メッセージ:', data.message);
       console.log('結果:', data.results);
       console.log('エラー:', data.error);
 
-      if (data.ok) {
+      if (data.ok || data.success) {
         console.log('解析開始成功:', data);
 
         // モデル選択時刻を記録

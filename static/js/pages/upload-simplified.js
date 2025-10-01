@@ -1606,7 +1606,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // モデル選択をセッションに保存する関数
 function saveModelSelection(modelName) {
-  fetch('/api/select-model/', {
+  fetch('/v2/api/select-model/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
