@@ -1,17 +1,7 @@
-
-// アップロードページに遷移する関数
-function navigateToUploadPage(imageId, imageStatus) {
-  console.log('navigateToUploadPage called with:', imageId, imageStatus);
-
-  // URLパラメータで画像IDを渡す（CSRFトークン不要）
-  window.location.href = `/v2/re_image_upload/?selected_image_id=${imageId}&image_status=${imageStatus}`;
-}
-
 // 再解析ページに遷移する関数
 function navigateToReanalysis() {
   const currentImageId = window.currentModalImageId;
   if (currentImageId) {
-    console.log('navigateToReanalysis called with imageId:', currentImageId);
     window.location.href = `/v2/re_image_upload/?selected_image_id=${currentImageId}&image_status=completed`;
   } else {
     console.error('画像IDが取得できません');
@@ -23,8 +13,6 @@ function navigateToReanalysis() {
 function openDeleteConfirmModal() {
   const currentImageId = window.currentModalImageId;
   if (currentImageId) {
-    console.log('削除確認状態に切り替え、画像ID:', currentImageId);
-
     // 画像詳細表示を非表示
     document.getElementById('modal-image-detail').classList.add('hidden');
     document.getElementById('modal-normal-buttons').classList.add('hidden');
@@ -51,28 +39,15 @@ function confirmDeleteImage() {
     return;
   }
 
-  console.log('confirmDeleteImage called with imageId:', currentImageId);
-
-  // CSRFトークンを取得
-  console.log('CSRFトークン取得開始...');
   const csrfToken = getCSRFToken();
-  console.log('取得されたCSRFトークン:', csrfToken);
-  console.log('CSRFトークンの長さ:', csrfToken ? csrfToken.length : 'null');
-  console.log('CSRFトークンの型:', typeof csrfToken);
-
   if (!csrfToken) {
     alert('CSRFトークンが取得できません。ページを再読み込みしてください。');
     return;
   }
 
-  // 削除APIを呼び出し
-  console.log('削除API呼び出し開始:', `/v2/api/images/${currentImageId}/delete/`);
-  console.log('使用するCSRFトークン:', csrfToken);
-
   // api.js統合版を使用
   deleteImage(currentImageId)
     .then(data => {
-      console.log('削除API応答データ:', data);
       if (data.success || data.ok) {
         // 成功時はモーダルを閉じてページをリロード
         const modal = document.getElementById('slide-down-animated-modal');
@@ -99,8 +74,6 @@ function confirmDeleteImage() {
 
 // 削除確認をキャンセルして通常状態に戻す関数
 function cancelDeleteConfirm() {
-  console.log('削除確認をキャンセル、通常状態に戻します');
-
   // 削除確認表示を非表示
   document.getElementById('modal-delete-confirm').classList.add('hidden');
   document.getElementById('modal-delete-buttons').classList.add('hidden');
@@ -228,41 +201,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // イベント委譲を使用して解析中バッジのクリックイベントを処理
-  document.addEventListener('click', function (event) {
-    console.log('クリックされた要素:', event.target);
-    console.log('クラス一覧:', event.target.classList.toString());
-    console.log('data-overlay属性:', event.target.getAttribute('data-overlay'));
-
-    // 解析中バッジがクリックされた場合
-    if (event.target.classList.contains('badge-info') &&
-      event.target.getAttribute('data-overlay') === '#analysis-progress-modal') {
-      const row = event.target.closest('tr');
-      const imageId = row ? row.getAttribute('data-image-id') : null;
-      console.log('解析中バッジクリック、画像ID:', imageId);
-
-      // 進捗監視を開始
-      if (imageId) {
-        startProgressMonitoring(imageId);
-      } else {
-        console.error('解析中バッジ: 画像IDを取得できませんでした');
-      }
-    }
-
-    // 解析成功バッジがクリックされた場合
-    if (event.target.classList.contains('badge-success') &&
-      event.target.getAttribute('data-overlay') === '#slide-down-animated-modal') {
-      const row = event.target.closest('tr');
-      const imageId = row ? row.getAttribute('data-image-id') : null;
-      console.log('解析成功バッジクリック、画像ID:', imageId);
-
-      // 画像詳細モーダルを開く
-      if (imageId) {
-        openImageDetailModal(imageId);
-      }
-    }
-  });
-
   // 解析開始ボタン
   const modalStartBtn = document.getElementById('modal-start-analysis-btn');
   if (modalStartBtn) {
@@ -330,36 +268,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 個別画像解析開始
 function startIndividualAnalysis(imageId, modelName) {
-  console.log('=== 個別画像解析開始 ===');
-  console.log('画像ID:', imageId);
-  console.log('モデル名:', modelName);
-  console.log('タイムスタンプ:', new Date().toISOString());
-
-  // 画像IDが取得できない場合の処理
   if (!imageId) {
     console.error('画像IDが取得できません');
     alert('画像IDが取得できません。ページを再読み込みしてください。');
     return;
   }
 
-  // CSRFトークンを取得
-  const csrfToken = getCSRFToken();
-  console.log('CSRFトークン:', csrfToken);
-
-  // API呼び出しラッパーを使用
-  console.log('API呼び出し開始: startAnalysis()');
-  console.log('リクエストパラメータ:', { image_id: imageId, model: modelName });
-
   startAnalysis(modelName, imageId)
     .then(data => {
-      console.log('=== 解析開始API応答 ===');
-      console.log('成功:', data.ok || data.success);
-      console.log('メッセージ:', data.message);
-      console.log('結果:', data.results);
-      console.log('エラー:', data.error);
-
       if (data.ok || data.success) {
-        console.log('解析開始成功:', data);
 
         // モデル選択時刻を記録
         recordModelSelection(imageId, modelName);
@@ -377,10 +294,7 @@ function startIndividualAnalysis(imageId, modelName) {
       }
     })
     .catch(error => {
-      console.error('=== API呼び出しエラー ===');
-      console.error('エラー詳細:', error);
-      console.error('エラーメッセージ:', error.message);
-      console.error('エラースタック:', error.stack);
+      console.error('API呼び出しエラー:', error);
       handleAnalysisError('解析の開始中にエラーが発生しました: ' + error.message);
     });
 }
@@ -389,9 +303,7 @@ function startIndividualAnalysis(imageId, modelName) {
 function handleAnalysisError(errorMessage) {
   console.error('解析エラー:', errorMessage);
 
-  // 画像IDを取得
   const imageId = clickedImageId;
-  console.log('エラー処理時の画像ID:', imageId);
 
   // 画像IDをリセット
   clickedImageId = null;
@@ -450,9 +362,6 @@ function handleAnalysisError(errorMessage) {
 
 // モデル選択時刻を記録
 function recordModelSelection(imageId, modelName) {
-  console.log('モデル選択記録:', imageId, modelName);
-
-  // モデル名の表示名を取得
   const modelDisplayNames = {
     'resnet50': 'ResNet-50 v2.1',
     'efficientnet': 'EfficientNet-B0',
@@ -467,26 +376,11 @@ function recordModelSelection(imageId, modelName) {
   const now = new Date();
   document.getElementById('model-selection-time').textContent = formatDateTime(now);
   document.getElementById('selected-model').textContent = `選択モデル: ${displayName}`;
-
-  console.log('モデル選択記録完了:', displayName);
 }
 
-// 画像ステータスを失敗に更新
+// 画像ステータスを失敗に更新（api.js統合版を使用）
 function updateImageStatusToFailed(imageId) {
-  const csrfToken = getCSRFToken();
-
-  return fetch('/api/update-status/', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'X-CSRFToken': csrfToken
-    },
-    body: new URLSearchParams({
-      'image_id': imageId,
-      'status': 'failed'
-    })
-  })
-    .then(response => response.json())
+  return updateStatus(imageId, 'failed')
     .then(data => {
       if (data.ok) {
         console.log('ステータス更新成功:', data);
@@ -501,8 +395,6 @@ function updateImageStatusToFailed(imageId) {
 
 // 進捗監視開始
 function startProgressMonitoring(imageId) {
-  console.log('進捗監視開始:', imageId);
-
   // 既存の監視を停止
   if (progressInterval) {
     clearInterval(progressInterval);
@@ -536,10 +428,8 @@ function startProgressMonitoring(imageId) {
   progressInterval = setInterval(() => {
     getAnalysisProgress(imageId)
       .then(data => {
-        console.log('進捗取得結果:', data);
         if (data.ok && data.progress !== undefined) {
           const progress = data.progress;
-          console.log(`進捗更新: ${progress}% - ${data.description}`);
           if (progressBar) progressBar.style.width = progress + '%';
           if (progressValue) progressValue.textContent = progress;
 
@@ -553,7 +443,6 @@ function startProgressMonitoring(imageId) {
           if (progress >= 100) {
             clearInterval(progressInterval);
             progressInterval = null;
-            console.log('解析完了');
 
             // モーダル表示を完了状態に変更
             updateProgressModalToCompleted();
@@ -561,8 +450,6 @@ function startProgressMonitoring(imageId) {
             // バッジを自動で更新
             updateBadgeStatus(imageId, 'success');
           }
-        } else {
-          console.log('進捗データが無効:', data);
         }
       })
       .catch(error => {
@@ -579,7 +466,6 @@ function stopProgressMonitoring() {
   if (progressInterval) {
     clearInterval(progressInterval);
     progressInterval = null;
-    console.log('進捗監視停止');
   }
 }
 
@@ -628,8 +514,6 @@ function updateProgressModalToCompleted() {
   if (loadingDots) {
     loadingDots.style.display = 'none';
   }
-
-  console.log('進捗モーダルを完了状態に変更しました');
 
   // 3秒後に自動でモーダルを閉じる（オプション）
   setTimeout(() => {
@@ -733,17 +617,13 @@ function updateBadgeStatus(imageId, status) {
 
   if (newBadge) {
     statusCell.appendChild(newBadge);
-    console.log(`バッジを更新: 画像ID ${imageId} -> ${status}`);
-    console.log('新しいバッジのクラス:', newBadge.className);
-    console.log('新しいバッジのdata-overlay:', newBadge.getAttribute('data-overlay'));
 
     // FlyonUIのモーダル機能を再初期化
     if (typeof HSOverlay !== 'undefined') {
       try {
         HSOverlay.autoInit();
-        console.log('FlyonUIを再初期化しました');
       } catch (error) {
-        console.log('FlyonUI再初期化エラー:', error);
+        console.error('FlyonUI再初期化エラー:', error);
       }
     }
 
@@ -752,13 +632,11 @@ function updateBadgeStatus(imageId, status) {
       newBadge.addEventListener('click', function () {
         const row = this.closest('tr');
         const imageId = row ? row.getAttribute('data-image-id') : null;
-        console.log('手動イベント: 解析中バッジクリック、画像ID:', imageId);
 
         if (imageId) {
           startProgressMonitoring(imageId);
         }
       });
-      console.log('解析中バッジに手動クリックイベントを追加しました');
     }
   }
 }
@@ -774,8 +652,6 @@ if (progressModal) {
 
 // Function to reset all filters
 function resetAllFilters() {
-  console.log('Resetting all filters...');
-
   // Reset search input
   const searchInput = document.getElementById('exampleDataList');
   if (searchInput) {
@@ -808,7 +684,6 @@ function resetAllFilters() {
 
   // Apply filters after reset
   applyFilters();
-  console.log('All filters have been reset');
 }
 
 // Function to apply filters
@@ -819,10 +694,7 @@ function applyFilters() {
   const confidenceFilter = document.getElementById('confidenceFilter').value;
   const dateSort = document.getElementById('dateSort').value;
 
-  console.log('フィルター適用:', { searchTerm, statusFilter, labelFilter, confidenceFilter, dateSort });
-
   const rows = document.querySelectorAll('tbody tr[data-image-id]');
-  console.log('見つかった行数:', rows.length);
   let visibleCount = 0;
 
   // First, collect all rows and their data for sorting
@@ -906,8 +778,6 @@ function applyFilters() {
   });
 
   // Apply sorting based on multiple criteria
-  console.log('複合ソート適用:', { dateSort, labelFilter, confidenceFilter });
-
   rowData.sort((a, b) => {
     // Primary sort: Label (if label filter is active)
     if (labelFilter !== 'すべて') {
@@ -951,15 +821,10 @@ function applyFilters() {
     });
   }
 
-  console.log('表示される行数:', visibleCount);
-
   // Show "no results" message if no rows are visible
   let noResultsRow = tbody.querySelector('.no-results-row');
 
-  console.log('検索結果チェック:', { visibleCount, totalRows: rows.length, hasNoResultsRow: !!noResultsRow });
-
   if (visibleCount === 0 && rows.length > 0) {
-    console.log('検索結果なしメッセージを表示');
     if (!noResultsRow) {
       noResultsRow = document.createElement('tr');
       noResultsRow.className = 'no-results-row';
@@ -972,11 +837,9 @@ function applyFilters() {
           </td>
         `;
       tbody.appendChild(noResultsRow);
-      console.log('検索結果なしメッセージを追加');
     }
     noResultsRow.style.display = '';
   } else if (noResultsRow) {
-    console.log('検索結果なしメッセージを非表示');
     noResultsRow.style.display = 'none';
   }
 }
@@ -1000,8 +863,6 @@ document.addEventListener('DOMContentLoaded', function () {
 // タイムラインデータを取得してモーダルに表示する関数
 async function loadTimelineModal(imageId) {
   try {
-    console.log('タイムラインデータを取得中:', imageId);
-
     // api.js統合版を使用
     const data = await getTimeline(imageId);
     if (!data.ok) {
@@ -1009,7 +870,6 @@ async function loadTimelineModal(imageId) {
     }
 
     const timeline = data.timeline;
-    console.log('取得したタイムラインデータ:', timeline);
 
     // モーダルの基本情報を設定
     document.getElementById('timeline-filename').textContent = timeline.filename || 'ファイル名不明';
@@ -1084,8 +944,6 @@ function startTimelineProgressMonitoring(imageId) {
   // 既存の監視を停止
   stopTimelineProgressMonitoring();
 
-  console.log('タイムライン進捗監視開始:', imageId);
-
   timelineProgressInterval = setInterval(async () => {
     try {
       // api.js統合版を使用
@@ -1111,7 +969,6 @@ function stopTimelineProgressMonitoring() {
   if (timelineProgressInterval) {
     clearInterval(timelineProgressInterval);
     timelineProgressInterval = null;
-    console.log('タイムライン進捗監視停止');
   }
 }
 
@@ -1227,6 +1084,7 @@ function updateTimelineDisplay(timeline) {
 
 // 再解析機能
 function retryAnalysis() {
+  const currentImageId = window.currentModalImageId;
   if (!currentImageId) {
     console.error('画像IDが設定されていません');
     return;
@@ -1247,7 +1105,7 @@ function retryAnalysis() {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-CSRFToken': getCookie('csrftoken')
+      'X-CSRFToken': getCSRFToken()
     },
     body: JSON.stringify({
       image_id: currentImageId
@@ -1334,7 +1192,6 @@ document.addEventListener('click', function (event) {
     const row = badge.closest('tr');
     const imageId = row ? row.getAttribute('data-image-id') : null;
     if (imageId) {
-      console.log('タイムラインモーダルを開く、画像ID:', imageId);
       loadTimelineModal(imageId);
     }
   }
@@ -1382,7 +1239,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // 解析中の画像がある場合は監視開始
   if (analyzingImageIds.length > 0) {
-    console.log('解析中の画像を検出、ステータス監視を開始:', analyzingImageIds);
     startStatusMonitoring(analyzingImageIds);
   }
 });
@@ -1399,7 +1255,6 @@ function startStatusMonitoring(initialImageIds) {
   statusMonitoringInterval = setInterval(() => {
     // 監視対象の画像がなくなったら停止
     if (monitoringImageIds.length === 0) {
-      console.log('監視対象の画像がなくなったため、監視を停止します');
       stopStatusMonitoring();
       return;
     }
@@ -1423,10 +1278,6 @@ function startStatusMonitoring(initialImageIds) {
 
           // 完了した画像を監視対象から削除
           monitoringImageIds = monitoringImageIds.filter(id => !completedIds.includes(id.toString()));
-
-          if (completedIds.length > 0) {
-            console.log('解析完了した画像:', completedIds);
-          }
         }
       })
       .catch(error => {
@@ -1440,7 +1291,6 @@ function stopStatusMonitoring() {
   if (statusMonitoringInterval) {
     clearInterval(statusMonitoringInterval);
     statusMonitoringInterval = null;
-    console.log('ステータス監視を停止しました');
   }
 }
 
@@ -1466,17 +1316,12 @@ function updateImageRowStatus(imageId, statusInfo) {
     if (statusInfo.confidence !== null && confidenceCell) {
       confidenceCell.innerHTML = `<span class="badge badge-success">${statusInfo.confidence.toFixed(2)}%</span>`;
     }
-
-    console.log(`画像 ${imageId} のステータスを更新: completed`);
   } else if (statusInfo.status === 'analyzing') {
     statusCell.innerHTML = '<span class="badge badge-outline border-dashed badge-info me-2">解析中</span>';
-    console.log(`画像 ${imageId} のステータスを更新: analyzing`);
   } else if (statusInfo.status === 'preparing') {
     statusCell.innerHTML = '<span class="badge badge-outline border-dashed badge-secondary me-2">準備中</span>';
-    console.log(`画像 ${imageId} のステータスを更新: preparing`);
   } else if (statusInfo.status === 'failed') {
     statusCell.innerHTML = '<span class="badge badge-outline border-dashed badge-error me-2">失敗</span>';
-    console.log(`画像 ${imageId} のステータスを更新: failed`);
   }
 }
 
