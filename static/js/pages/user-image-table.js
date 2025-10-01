@@ -148,10 +148,10 @@ function openImageModal(filename, imageSrc, uploadTime, status, labels, confiden
   }
 }
 
-// テーブルのサムネイル画像クリックイベント
+// ===== DOMContentLoaded イベントハンドラ（統合版）=====
 document.addEventListener('DOMContentLoaded', function () {
+  // 1. テーブルのサムネイル画像クリックイベント
   const avatarElements = document.querySelectorAll('.avatar[data-overlay="#slide-down-animated-modal"]');
-
   avatarElements.forEach(avatar => {
     avatar.addEventListener('click', function () {
       const row = this.closest('tr');
@@ -172,15 +172,46 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
   });
+
+  // 2. フィルターのイベントリスナー
+  const searchInput = document.getElementById('exampleDataList');
+  const filters = document.querySelectorAll('select');
+
+  // Search input
+  if (searchInput) {
+    searchInput.addEventListener('input', applyFilters);
+  }
+
+  // Filter selects
+  filters.forEach(filter => {
+    filter.addEventListener('change', applyFilters);
+  });
+
+  // 3. ステータス監視の開始
+  // 解析中の画像があるかチェック
+  const analyzingImages = document.querySelectorAll('tr[data-image-id]');
+  const analyzingImageIds = [];
+
+  analyzingImages.forEach(row => {
+    const badge = row.querySelector('.badge-info, .badge-secondary');
+    if (badge) {
+      // 解析中または準備中のバッジがある場合
+      const imageId = row.getAttribute('data-image-id');
+      if (imageId) {
+        analyzingImageIds.push(imageId);
+      }
+    }
+  });
+
+  // 解析中の画像がある場合は監視開始
+  if (analyzingImageIds.length > 0) {
+    startStatusMonitoring(analyzingImageIds);
+  }
 });
 
 
 // 進捗監視用の変数
 let progressInterval = null;
-
-
-
-
 
 // 画像ステータスを失敗に更新（api.js統合版を使用）
 function updateImageStatusToFailed(imageId) {
@@ -197,194 +228,185 @@ function updateImageStatusToFailed(imageId) {
     });
 }
 
-// 進捗監視開始
-clearInterval(progressInterval);
-if (progressInterval) {
-  closeButton.click();
-  // 既存のバッジを削除
-  const existingBadge = statusCell.querySelector('.badge');
-
-  // モーダルが閉じられた時に進捗監視を停止
-
-  // Function to reset all filters
-  function resetAllFilters() {
-    // Reset search input
-    const searchInput = document.getElementById('exampleDataList');
-    if (searchInput) {
-      searchInput.value = '';
-    }
-
-    // Reset date sort
-    const dateSort = document.getElementById('dateSort');
-    if (dateSort) {
-      dateSort.selectedIndex = 0; // Select first option
-    }
-
-    // Reset status filter
-    const statusFilter = document.getElementById('selectFloating');
-    if (statusFilter) {
-      statusFilter.selectedIndex = 0; // Select first option
-    }
-
-    // Reset label filter
-    const labelFilter = document.getElementById('labelFilter');
-    if (labelFilter) {
-      labelFilter.selectedIndex = 0; // Select first option
-    }
-
-    // Reset confidence filter
-    const confidenceFilter = document.getElementById('confidenceFilter');
-    if (confidenceFilter) {
-      confidenceFilter.selectedIndex = 0; // Select first option
-    }
-
-    // Apply filters after reset
-    applyFilters();
+// Function to reset all filters
+function resetAllFilters() {
+  // Reset search input
+  const searchInput = document.getElementById('exampleDataList');
+  if (searchInput) {
+    searchInput.value = '';
   }
 
-  // Function to apply filters
-  function applyFilters() {
-    const searchTerm = document.getElementById('exampleDataList').value.toLowerCase();
-    const statusFilter = document.getElementById('selectFloating').value;
-    const labelFilter = document.getElementById('labelFilter').value;
-    const confidenceFilter = document.getElementById('confidenceFilter').value;
-    const dateSort = document.getElementById('dateSort').value;
+  // Reset date sort
+  const dateSort = document.getElementById('dateSort');
+  if (dateSort) {
+    dateSort.selectedIndex = 0; // Select first option
+  }
 
-    const rows = document.querySelectorAll('tbody tr[data-image-id]');
-    let visibleCount = 0;
+  // Reset status filter
+  const statusFilter = document.getElementById('selectFloating');
+  if (statusFilter) {
+    statusFilter.selectedIndex = 0; // Select first option
+  }
 
-    // First, collect all rows and their data for sorting
-    const rowData = [];
-    rows.forEach(row => {
-      let showRow = true;
+  // Reset label filter
+  const labelFilter = document.getElementById('labelFilter');
+  if (labelFilter) {
+    labelFilter.selectedIndex = 0; // Select first option
+  }
 
-      // Search filter
-      if (searchTerm) {
-        const filename = row.querySelector('.font-medium').textContent.toLowerCase();
-        if (!filename.includes(searchTerm)) {
-          showRow = false;
-        }
+  // Reset confidence filter
+  const confidenceFilter = document.getElementById('confidenceFilter');
+  if (confidenceFilter) {
+    confidenceFilter.selectedIndex = 0; // Select first option
+  }
+
+  // Apply filters after reset
+  applyFilters();
+}
+
+// Function to apply filters
+function applyFilters() {
+  const searchTerm = document.getElementById('exampleDataList').value.toLowerCase();
+  const statusFilter = document.getElementById('selectFloating').value;
+  const labelFilter = document.getElementById('labelFilter').value;
+  const confidenceFilter = document.getElementById('confidenceFilter').value;
+  const dateSort = document.getElementById('dateSort').value;
+
+  const rows = document.querySelectorAll('tbody tr[data-image-id]');
+  let visibleCount = 0;
+
+  // First, collect all rows and their data for sorting
+  const rowData = [];
+  rows.forEach(row => {
+    let showRow = true;
+
+    // Search filter
+    if (searchTerm) {
+      const filename = row.querySelector('.font-medium').textContent.toLowerCase();
+      if (!filename.includes(searchTerm)) {
+        showRow = false;
       }
-
-      // Status filter
-      if (statusFilter !== 'すべて') {
-        const statusBadge = row.querySelector('.badge');
-        const statusText = statusBadge.textContent.trim();
-        if (statusFilter === 'アップロード' && statusText !== 'アップロード完了') showRow = false;
-        if (statusFilter === '解析成功' && statusText !== '解析成功') showRow = false;
-        if (statusFilter === '解析中' && statusText !== '解析中') showRow = false;
-        if (statusFilter === '準備中' && statusText !== '準備中') showRow = false;
-        if (statusFilter === '失敗' && statusText !== '失敗') showRow = false;
-      }
-
-      // Label filter
-      if (labelFilter !== 'すべて') {
-        const labelCell = row.querySelector('td:nth-child(4)'); // ラベル列
-        if (labelCell) {
-          const labelText = labelCell.textContent.trim();
-          if (!labelText.includes(labelFilter)) {
-            showRow = false;
-          }
-        } else {
-          showRow = false; // ラベルがない場合は非表示
-        }
-      }
-
-      // Confidence filter
-      if (confidenceFilter !== 'すべて') {
-        const confidenceCell = row.querySelector('td:nth-child(5)'); // 信頼度列
-        if (confidenceCell) {
-          const confidenceText = confidenceCell.textContent.trim();
-          const confidenceValue = parseFloat(confidenceText.replace('%', ''));
-
-          if (confidenceFilter === '90%以上' && confidenceValue < 90) showRow = false;
-          else if (confidenceFilter === '80-89%' && (confidenceValue < 80 || confidenceValue >= 90)) showRow = false;
-          else if (confidenceFilter === '70-79%' && (confidenceValue < 70 || confidenceValue >= 80)) showRow = false;
-          else if (confidenceFilter === '60-69%' && (confidenceValue < 60 || confidenceValue >= 70)) showRow = false;
-          else if (confidenceFilter === '60%未満' && confidenceValue >= 60) showRow = false;
-        } else {
-          showRow = false; // 信頼度がない場合は非表示
-        }
-      }
-
-      if (showRow) {
-        // Get upload date for sorting
-        const uploadDateText = row.querySelector('td:nth-child(2)').textContent.trim();
-        const uploadDate = new Date(uploadDateText);
-
-        // Get confidence for sorting
-        const confidenceCell = row.querySelector('td:nth-child(5)');
-        const confidenceValue = confidenceCell ? parseFloat(confidenceCell.textContent.replace('%', '')) : 0;
-
-        // Get label for sorting
-        const labelCell = row.querySelector('td:nth-child(4)');
-        const labelText = labelCell ? labelCell.textContent.trim() : '';
-
-        rowData.push({
-          row: row,
-          uploadDate: uploadDate,
-          uploadDateText: uploadDateText,
-          confidence: confidenceValue,
-          label: labelText
-        });
-        visibleCount++;
-      } else {
-        row.style.display = 'none';
-      }
-    });
-
-    // Apply sorting based on multiple criteria
-    rowData.sort((a, b) => {
-      // Primary sort: Label (if label filter is active)
-      if (labelFilter !== 'すべて') {
-        const labelA = a.label.toLowerCase();
-        const labelB = b.label.toLowerCase();
-        if (labelA !== labelB) {
-          return labelA.localeCompare(labelB);
-        }
-      }
-
-      // Secondary sort: Confidence (if confidence filter is active)
-      if (confidenceFilter !== 'すべて') {
-        if (a.confidence !== b.confidence) {
-          return b.confidence - a.confidence; // Higher confidence first
-        }
-      }
-
-      // Tertiary sort: Date
-      if (dateSort === '古い順') {
-        return a.uploadDate - b.uploadDate;
-      } else if (dateSort === '新しい順') {
-        return b.uploadDate - a.uploadDate;
-      }
-
-      // Default: filename alphabetical
-      return a.filename.localeCompare(b.filename);
-    });
-
-    // Reorder and show rows
-    const tbody = document.querySelector('tbody');
-    if (tbody) {
-      // Remove existing rows
-      rowData.forEach(item => {
-        item.row.remove();
-      });
-
-      // Add rows in sorted order
-      rowData.forEach(item => {
-        item.row.style.display = '';
-        tbody.appendChild(item.row);
-      });
     }
 
-    // Show "no results" message if no rows are visible
-    let noResultsRow = tbody.querySelector('.no-results-row');
+    // Status filter
+    if (statusFilter !== 'すべて') {
+      const statusBadge = row.querySelector('.badge');
+      const statusText = statusBadge.textContent.trim();
+      if (statusFilter === 'アップロード' && statusText !== 'アップロード完了') showRow = false;
+      if (statusFilter === '解析成功' && statusText !== '解析成功') showRow = false;
+      if (statusFilter === '解析中' && statusText !== '解析中') showRow = false;
+      if (statusFilter === '準備中' && statusText !== '準備中') showRow = false;
+      if (statusFilter === '失敗' && statusText !== '失敗') showRow = false;
+    }
 
-    if (visibleCount === 0 && rows.length > 0) {
-      if (!noResultsRow) {
-        noResultsRow = document.createElement('tr');
-        noResultsRow.className = 'no-results-row';
-        noResultsRow.innerHTML = `
+    // Label filter
+    if (labelFilter !== 'すべて') {
+      const labelCell = row.querySelector('td:nth-child(4)'); // ラベル列
+      if (labelCell) {
+        const labelText = labelCell.textContent.trim();
+        if (!labelText.includes(labelFilter)) {
+          showRow = false;
+        }
+      } else {
+        showRow = false; // ラベルがない場合は非表示
+      }
+    }
+
+    // Confidence filter
+    if (confidenceFilter !== 'すべて') {
+      const confidenceCell = row.querySelector('td:nth-child(5)'); // 信頼度列
+      if (confidenceCell) {
+        const confidenceText = confidenceCell.textContent.trim();
+        const confidenceValue = parseFloat(confidenceText.replace('%', ''));
+
+        if (confidenceFilter === '90%以上' && confidenceValue < 90) showRow = false;
+        else if (confidenceFilter === '80-89%' && (confidenceValue < 80 || confidenceValue >= 90)) showRow = false;
+        else if (confidenceFilter === '70-79%' && (confidenceValue < 70 || confidenceValue >= 80)) showRow = false;
+        else if (confidenceFilter === '60-69%' && (confidenceValue < 60 || confidenceValue >= 70)) showRow = false;
+        else if (confidenceFilter === '60%未満' && confidenceValue >= 60) showRow = false;
+      } else {
+        showRow = false; // 信頼度がない場合は非表示
+      }
+    }
+
+    if (showRow) {
+      // Get upload date for sorting
+      const uploadDateText = row.querySelector('td:nth-child(2)').textContent.trim();
+      const uploadDate = new Date(uploadDateText);
+
+      // Get confidence for sorting
+      const confidenceCell = row.querySelector('td:nth-child(5)');
+      const confidenceValue = confidenceCell ? parseFloat(confidenceCell.textContent.replace('%', '')) : 0;
+
+      // Get label for sorting
+      const labelCell = row.querySelector('td:nth-child(4)');
+      const labelText = labelCell ? labelCell.textContent.trim() : '';
+
+      rowData.push({
+        row: row,
+        uploadDate: uploadDate,
+        uploadDateText: uploadDateText,
+        confidence: confidenceValue,
+        label: labelText
+      });
+      visibleCount++;
+    } else {
+      row.style.display = 'none';
+    }
+  });
+
+  // Apply sorting based on multiple criteria
+  rowData.sort((a, b) => {
+    // Primary sort: Label (if label filter is active)
+    if (labelFilter !== 'すべて') {
+      const labelA = a.label.toLowerCase();
+      const labelB = b.label.toLowerCase();
+      if (labelA !== labelB) {
+        return labelA.localeCompare(labelB);
+      }
+    }
+
+    // Secondary sort: Confidence (if confidence filter is active)
+    if (confidenceFilter !== 'すべて') {
+      if (a.confidence !== b.confidence) {
+        return b.confidence - a.confidence; // Higher confidence first
+      }
+    }
+
+    // Tertiary sort: Date
+    if (dateSort === '古い順') {
+      return a.uploadDate - b.uploadDate;
+    } else if (dateSort === '新しい順') {
+      return b.uploadDate - a.uploadDate;
+    }
+
+    // Default: filename alphabetical
+    return a.filename.localeCompare(b.filename);
+  });
+
+  // Reorder and show rows
+  const tbody = document.querySelector('tbody');
+  if (tbody) {
+    // Remove existing rows
+    rowData.forEach(item => {
+      item.row.remove();
+    });
+
+    // Add rows in sorted order
+    rowData.forEach(item => {
+      item.row.style.display = '';
+      tbody.appendChild(item.row);
+    });
+  }
+
+  // Show "no results" message if no rows are visible
+  let noResultsRow = tbody.querySelector('.no-results-row');
+
+  if (visibleCount === 0 && rows.length > 0) {
+    if (!noResultsRow) {
+      noResultsRow = document.createElement('tr');
+      noResultsRow.className = 'no-results-row';
+      noResultsRow.innerHTML = `
           <td colspan="5" class="text-center py-8">
             <div class="text-gray-500">
               <span class="icon-[tabler--search] size-8 mx-auto mb-2 block"></span>
@@ -392,136 +414,105 @@ if (progressInterval) {
             </div>
           </td>
         `;
-        tbody.appendChild(noResultsRow);
-      }
-      noResultsRow.style.display = '';
-    } else if (noResultsRow) {
-      noResultsRow.style.display = 'none';
+      tbody.appendChild(noResultsRow);
     }
+    noResultsRow.style.display = '';
+  } else if (noResultsRow) {
+    noResultsRow.style.display = 'none';
+  }
+}
+
+// ===== テーブルのステータスリアルタイム更新機能 =====
+
+let statusMonitoringInterval = null;
+
+// ステータス監視を開始
+function startStatusMonitoring(initialImageIds) {
+  // 既存の監視を停止
+  if (statusMonitoringInterval) {
+    clearInterval(statusMonitoringInterval);
   }
 
-  // Add event listeners for filters
-  document.addEventListener('DOMContentLoaded', function () {
-    const searchInput = document.getElementById('exampleDataList');
-    const filters = document.querySelectorAll('select');
+  let monitoringImageIds = [...initialImageIds];
 
-    // Search input
-    if (searchInput) {
-      searchInput.addEventListener('input', applyFilters);
+  statusMonitoringInterval = setInterval(() => {
+    // 監視対象の画像がなくなったら停止
+    if (monitoringImageIds.length === 0) {
+      stopStatusMonitoring();
+      return;
     }
 
-    // Filter selects
-    filters.forEach(filter => {
-      filter.addEventListener('change', applyFilters);
-    });
-  });
+    // ステータスを一括取得（api.js統合版）
+    getImagesStatus(monitoringImageIds)
+      .then(data => {
+        if (data.ok && data.statuses) {
+          // 各画像のステータスを更新
+          const completedIds = [];
 
-  // ===== テーブルのステータスリアルタイム更新機能 =====
+          Object.keys(data.statuses).forEach(imageId => {
+            const statusInfo = data.statuses[imageId];
+            updateImageRowStatus(imageId, statusInfo);
 
-  let statusMonitoringInterval = null;
+            // 完了した画像は監視対象から除外
+            if (statusInfo.status === 'completed') {
+              completedIds.push(imageId);
+            }
+          });
 
-  // ページ読み込み時にステータス監視を開始
-  document.addEventListener('DOMContentLoaded', function () {
-    // 解析中の画像があるかチェック
-    const analyzingImages = document.querySelectorAll('tr[data-image-id]');
-    const analyzingImageIds = [];
-
-    analyzingImages.forEach(row => {
-      const badge = row.querySelector('.badge-info, .badge-secondary');
-      if (badge) {
-        // 解析中または準備中のバッジがある場合
-        const imageId = row.getAttribute('data-image-id');
-        if (imageId) {
-          analyzingImageIds.push(imageId);
+          // 完了した画像を監視対象から削除
+          monitoringImageIds = monitoringImageIds.filter(id => !completedIds.includes(id.toString()));
         }
-      }
-    });
+      })
+      .catch(error => {
+        console.error('ステータス取得エラー:', error);
+      });
+  }, 2000); // 2秒ごとにチェック
+}
 
-    // 解析中の画像がある場合は監視開始
-    if (analyzingImageIds.length > 0) {
-      startStatusMonitoring(analyzingImageIds);
-    }
-  });
-
-  // ステータス監視を開始
-  function startStatusMonitoring(initialImageIds) {
-    // 既存の監視を停止
-    if (statusMonitoringInterval) {
-      clearInterval(statusMonitoringInterval);
-    }
-
-    let monitoringImageIds = [...initialImageIds];
-
-    statusMonitoringInterval = setInterval(() => {
-      // 監視対象の画像がなくなったら停止
-      if (monitoringImageIds.length === 0) {
-        stopStatusMonitoring();
-        return;
-      }
-
-      // ステータスを一括取得（api.js統合版）
-      getImagesStatus(monitoringImageIds)
-        .then(data => {
-          if (data.ok && data.statuses) {
-            // 各画像のステータスを更新
-            const completedIds = [];
-
-            Object.keys(data.statuses).forEach(imageId => {
-              const statusInfo = data.statuses[imageId];
-              updateImageRowStatus(imageId, statusInfo);
-
-              // 完了した画像は監視対象から除外
-              if (statusInfo.status === 'completed') {
-                completedIds.push(imageId);
-              }
-            });
-
-            // 完了した画像を監視対象から削除
-            monitoringImageIds = monitoringImageIds.filter(id => !completedIds.includes(id.toString()));
-          }
-        })
-        .catch(error => {
-          console.error('ステータス取得エラー:', error);
-        });
-    }, 2000); // 2秒ごとにチェック
+// ステータス監視を停止
+function stopStatusMonitoring() {
+  if (statusMonitoringInterval) {
+    clearInterval(statusMonitoringInterval);
+    statusMonitoringInterval = null;
   }
+}
 
-  // ステータス監視を停止
-  function stopStatusMonitoring() {
-    if (statusMonitoringInterval) {
-      clearInterval(statusMonitoringInterval);
-      statusMonitoringInterval = null;
+// テーブル行のステータスを更新
+function updateImageRowStatus(imageId, statusInfo) {
+  const row = document.querySelector(`tr[data-image-id="${imageId}"]`);
+  if (!row) return;
+
+  const statusCell = row.cells[2]; // ステータスカラム
+  const labelCell = row.cells[3];  // ラベルカラム
+  const confidenceCell = row.cells[4]; // 信頼度カラム
+
+  if (!statusCell) return;
+
+  // ステータスバッジを更新
+  if (statusInfo.status === 'completed') {
+    statusCell.innerHTML = '<span class="badge badge-outline border-dashed badge-success me-2">解析成功</span>';
+
+    // ラベルと信頼度を更新
+    if (statusInfo.label && labelCell) {
+      labelCell.innerHTML = `<span class="badge badge-primary">${statusInfo.label}</span>`;
     }
-  }
-
-  // テーブル行のステータスを更新
-  function updateImageRowStatus(imageId, statusInfo) {
-    const row = document.querySelector(`tr[data-image-id="${imageId}"]`);
-    if (!row) return;
-
-    const statusCell = row.cells[2]; // ステータスカラム
-    const labelCell = row.cells[3];  // ラベルカラム
-    const confidenceCell = row.cells[4]; // 信頼度カラム
-
-    if (!statusCell) return;
-
-    // ステータスバッジを更新
-    if (statusInfo.status === 'completed') {
-      statusCell.innerHTML = '<span class="badge badge-outline border-dashed badge-success me-2">解析成功</span>';
-
-      // ラベルと信頼度を更新
-      if (statusInfo.label && labelCell) {
-        labelCell.innerHTML = `<span class="badge badge-primary">${statusInfo.label}</span>`;
-      }
-      if (statusInfo.confidence !== null && confidenceCell) {
-        confidenceCell.innerHTML = `<span class="badge badge-success">${statusInfo.confidence.toFixed(2)}%</span>`;
-      }
-    } else if (statusInfo.status === 'analyzing') {
-      statusCell.innerHTML = '<span class="badge badge-outline border-dashed badge-info me-2">解析中</span>';
-    } else if (statusInfo.status === 'preparing') {
-      statusCell.innerHTML = '<span class="badge badge-outline border-dashed badge-secondary me-2">準備中</span>';
-    } else if (statusInfo.status === 'failed') {
-      statusCell.innerHTML = '<span class="badge badge-outline border-dashed badge-error me-2">失敗</span>';
+    if (statusInfo.confidence !== null && statusInfo.confidence !== undefined && confidenceCell) {
+      // confidenceが数値の場合はtoFixed()を使用、文字列の場合はそのまま使用
+      const confidenceValue = typeof statusInfo.confidence === 'number'
+        ? statusInfo.confidence.toFixed(2)
+        : parseFloat(statusInfo.confidence).toFixed(2);
+      confidenceCell.innerHTML = `<span class="badge badge-success">${confidenceValue}%</span>`;
     }
+  } else if (statusInfo.status === 'analyzing') {
+    statusCell.innerHTML = '<span class="badge badge-outline border-dashed badge-info me-2">解析中</span>';
+  } else if (statusInfo.status === 'preparing') {
+    // 準備中の場合は待ち順番を表示
+    let statusText = '準備中';
+    if (statusInfo.waiting_count !== undefined && statusInfo.waiting_count !== null) {
+      statusText = `準備中（あと${statusInfo.waiting_count}枚）`;
+    }
+    statusCell.innerHTML = `<span class="badge badge-outline border-dashed badge-secondary me-2">${statusText}</span>`;
+  } else if (statusInfo.status === 'failed') {
+    statusCell.innerHTML = '<span class="badge badge-outline border-dashed badge-error me-2">失敗</span>';
   }
 }

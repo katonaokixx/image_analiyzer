@@ -1275,11 +1275,32 @@ def api_get_images_status(request: HttpRequest):
                 image_id=image
             ).order_by('-confidence').first()
             
-            status_data[str(image.image_id)] = {
+            status_info = {
                 'status': image.status,
                 'label': latest_result.label if latest_result else None,
                 'confidence': latest_result.confidence if latest_result else None
             }
+            
+            # 準備中の画像の場合は待ち順番を計算
+            if image.status == 'preparing':
+                # 同じユーザーの解析中の画像数をカウント
+                analyzing_count = TransUploadedImage.objects.filter(
+                    user_id=image.user_id,
+                    status='analyzing'
+                ).count()
+                
+                # 同じユーザーの自分より前の準備中の画像数をカウント
+                preparing_before_count = TransUploadedImage.objects.filter(
+                    user_id=image.user_id,
+                    status='preparing',
+                    upload_order__lt=image.upload_order
+                ).count()
+                
+                # 待ち枚数 = 解析中の枚数 + 自分より前の準備中の枚数
+                waiting_count = analyzing_count + preparing_before_count
+                status_info['waiting_count'] = waiting_count
+            
+            status_data[str(image.image_id)] = status_info
         
         return JsonResponse({
             'ok': True,
