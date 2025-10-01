@@ -417,28 +417,315 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 // タイムラインデータを取得してモーダルに表示する関数
+async function loadTimelineModal(imageId) {
+  try {
+    // api.js統合版を使用
+    const data = await getTimeline(imageId);
+    if (!data.ok) {
+      throw new Error(data.error || 'タイムラインデータの取得に失敗');
+    }
+
+    const timeline = data.timeline;
+
+    // モーダルの基本情報を設定
+    document.getElementById('timeline-filename').textContent = timeline.filename || 'ファイル名不明';
+
+    // ステータス表示（準備中の場合はキュー情報も表示）
+    let statusText = getStatusDisplayName(timeline.status);
+    if (timeline.status === 'preparing' && timeline.queue_info && timeline.queue_info.waiting_position > 0) {
+      statusText += ` → あと${timeline.queue_info.waiting_position}枚`;
+    }
+    document.getElementById('timeline-status').textContent = statusText;
+
+    // 進捗バーの表示制御
+    updateProgressSection(timeline.status, imageId);
+
+    // タイムラインデータを設定
+    updateTimelineDisplay(timeline);
+
+  } catch (error) {
+    console.error('タイムライン取得エラー:', error);
+    // エラー時はデフォルト表示
+    document.getElementById('timeline-filename').textContent = 'データ取得エラー';
     document.getElementById('timeline-status').textContent = 'エラー';
     resetTimelineDisplay();
+  }
+}
+
+// ステータス表示名を取得する関数
+function getStatusDisplayName(status) {
+  const statusMap = {
+    'upload': 'アップロード',
+    'uploaded': 'アップロード完了',
+    'preparing': '準備中',
+    'analyzing': '解析中',
+    'success': '解析成功',
+    'failed': '失敗'
+  };
   return statusMap[status] || status;
 }
+
+// モデル名の表示名変換
+function getModelDisplayName(modelKey) {
+  const modelMap = {
+    'resnet50': 'PyTorch ResNet-50',
+    'efficientnet': 'TensorFlow EfficientNet',
+    'mobilenet': 'PyTorch MobileNet',
+    'vgg16': 'PyTorch VGG-16',
+    'custom': 'CLIP'
+  };
+  return modelMap[modelKey] || modelKey || '-';
+}
+
 // 進捗バーセクションの表示制御
+function updateProgressSection(status, imageId) {
+  const progressSection = document.getElementById('timeline-progress-section');
+
+  if (status === 'analyzing') {
+    // 解析中の場合は進捗バーを表示
+    progressSection.classList.remove('hidden');
+    startTimelineProgressMonitoring(imageId);
+  } else {
+    // 解析中以外の場合は進捗バーを非表示
+    progressSection.classList.add('hidden');
+    stopTimelineProgressMonitoring();
+  }
+}
 
 // タイムライン進捗監視の変数
 let timelineProgressInterval = null;
 
 // タイムライン進捗監視を開始
+function startTimelineProgressMonitoring(imageId) {
+  // 既存の監視を停止
+  stopTimelineProgressMonitoring();
+
+  timelineProgressInterval = setInterval(async () => {
+    try {
+      // api.js統合版を使用
+      const data = await getAnalysisProgress(imageId);
+      if (data.ok) {
+        updateTimelineProgress(data);
+
+        // 100%に達したら監視を停止
+        if (data.progress >= 100) {
+          stopTimelineProgressMonitoring();
+          // タイムラインデータを再取得して更新
+          loadTimelineModal(imageId);
+        }
+      }
+    } catch (error) {
+      console.error('タイムライン進捗取得エラー:', error);
+    }
+  }, 1000);
+}
 
 // タイムライン進捗監視を停止
-// タイムライン進捗バーを更新
+function stopTimelineProgressMonitoring() {
+  if (timelineProgressInterval) {
+    clearInterval(timelineProgressInterval);
+    timelineProgressInterval = null;
+  }
+}
 
+// タイムライン進捗バーを更新
+function updateTimelineProgress(data) {
+  const progressBar = document.getElementById('timeline-progress-bar');
+  const progressValue = document.getElementById('timeline-progress-value');
+  const progressDescription = document.getElementById('timeline-progress-description');
+
+  if (progressBar && progressValue) {
+    progressBar.style.width = `${data.progress}%`;
+    progressValue.textContent = Math.round(data.progress);
+
+    // 進捗に応じてバーの色を変更
+    progressBar.classList.remove('progress-info', 'progress-success');
+    if (data.progress >= 100) {
+      progressBar.classList.add('progress-success');
+    } else {
+      progressBar.classList.add('progress-info');
+    }
+  }
+
+  if (progressDescription && data.description) {
+    progressDescription.textContent = data.description;
+  }
+}
+
+// タイムライン表示を更新する関数
+function updateTimelineDisplay(timeline) {
+  // アップロード時刻
+  if (timeline.upload_completed_at) {
+    const uploadTime = new Date(timeline.upload_completed_at);
+    document.getElementById('upload-time').textContent = formatDateTime(uploadTime);
+
+    if (timeline.upload_duration) {
+      document.getElementById('upload-duration').textContent = `所要時間: ${formatDuration(timeline.upload_duration)}`;
+    }
+  } else {
+    document.getElementById('upload-time').textContent = '-';
+    document.getElementById('upload-duration').textContent = '所要時間: -';
+  }
+
+  // モデル選択時刻
+  const modelSelectionItem = document.querySelector('#timeline-content .flex.items-center.gap-3:nth-child(2)');
+  if (timeline.model_selected_at) {
+    const modelSelectionTime = new Date(timeline.model_selected_at);
+    document.getElementById('model-selection-time').textContent = formatDateTime(modelSelectionTime);
+    document.getElementById('selected-model').textContent = `選択モデル: ${timeline.selected_model || '-'}`;
+    // モデル選択アイテムを表示
+    if (modelSelectionItem) {
+      modelSelectionItem.style.display = 'flex';
+    }
+  } else {
+    document.getElementById('model-selection-time').textContent = '-';
+    document.getElementById('selected-model').textContent = '選択モデル: -';
+    // モデル選択アイテムを非表示
+    if (modelSelectionItem) {
+      modelSelectionItem.style.display = 'none';
+    }
+  }
+
+  // 解析開始時刻
+  if (timeline.analysis_started_at) {
+    const analysisStartTime = new Date(timeline.analysis_started_at);
+    document.getElementById('analysis-start-time').textContent = formatDateTime(analysisStartTime);
+
+    // モデル名を適切に表示
+    const modelName = getModelDisplayName(timeline.model_used);
+    document.getElementById('model-used').textContent = `使用モデル: ${modelName}`;
+  } else {
+    document.getElementById('analysis-start-time').textContent = '-';
+    document.getElementById('model-used').textContent = '使用モデル: -';
+  }
+
+  // エラー情報の表示
+  const errorInfoSection = document.getElementById('error-info-section');
+  const retryBtn = document.getElementById('retry-analysis-btn');
+  if (timeline.status === 'failed' && timeline.error_info) {
+    errorInfoSection.classList.remove('hidden');
+    retryBtn.classList.remove('hidden');
+    document.getElementById('error-message').textContent = `エラーメッセージ: ${timeline.error_info.error_message}`;
+    if (timeline.error_info.error_timestamp) {
+      const errorTime = new Date(timeline.error_info.error_timestamp);
+      document.getElementById('error-timestamp').textContent = formatDateTime(errorTime);
+    } else {
+      document.getElementById('error-timestamp').textContent = '-';
+    }
+  } else {
+    errorInfoSection.classList.add('hidden');
+    retryBtn.classList.add('hidden');
+  }
+
+  // 解析完了時刻
+  if (timeline.analysis_completed_at) {
+    const analysisEndTime = new Date(timeline.analysis_completed_at);
+    document.getElementById('analysis-end-time').textContent = formatDateTime(analysisEndTime);
+
+    if (timeline.analysis_duration) {
+      document.getElementById('analysis-duration').textContent = `所要時間: ${formatDuration(timeline.analysis_duration)}`;
+    }
+  } else {
+    document.getElementById('analysis-end-time').textContent = '-';
+    document.getElementById('analysis-duration').textContent = '所要時間: -';
+  }
+
+  // 総所要時間
+  if (timeline.total_duration) {
+    document.getElementById('total-duration').textContent = formatDuration(timeline.total_duration);
+  } else {
+    document.getElementById('total-duration').textContent = '-';
+  }
+}
+
+// 再解析機能
 function retryAnalysis() {
   const currentImageId = window.currentModalImageId;
+  if (!currentImageId) {
+    console.error('画像IDが設定されていません');
+    return;
+  }
+
+  // 確認ダイアログ
+  if (!confirm('この画像を再解析しますか？')) {
+    return;
+  }
+
+  // 再解析ボタンを無効化
+  const retryBtn = document.getElementById('retry-analysis-btn');
+  retryBtn.disabled = true;
+  retryBtn.innerHTML = '<span class="icon-[tabler--loader-2] size-4 mr-2 animate-spin"></span>再解析中...';
+
+  // 再解析APIを呼び出し（api.js未統合、modelパラメータが必要なため直接fetch）
+  fetch('/v2/api/analysis/retry/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCSRFToken()
+    },
+    body: JSON.stringify({
+      image_id: currentImageId
+    })
+  })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success || data.ok) {
+        // 成功時はモーダルを閉じてページをリロード
+        closeTimelineModal();
         location.reload();
       } else {
+        alert('再解析の開始に失敗しました: ' + (data.error || '不明なエラー'));
+        // ボタンを元に戻す
+        retryBtn.disabled = false;
+        retryBtn.innerHTML = '<span class="icon-[tabler--refresh] size-4 mr-2"></span>再解析';
+      }
+    })
+    .catch(error => {
+      console.error('再解析エラー:', error);
+      alert('再解析の開始に失敗しました: ' + error.message);
+      // ボタンを元に戻す
+      retryBtn.disabled = false;
+      retryBtn.innerHTML = '<span class="icon-[tabler--refresh] size-4 mr-2"></span>再解析';
+    });
+}
+
+// タイムライン表示をリセットする関数
+function resetTimelineDisplay() {
+  document.getElementById('upload-time').textContent = '-';
+  document.getElementById('upload-duration').textContent = '所要時間: -';
+  document.getElementById('model-selection-time').textContent = '-';
+  document.getElementById('selected-model').textContent = '選択モデル: -';
+  document.getElementById('analysis-start-time').textContent = '-';
+  document.getElementById('model-used').textContent = '使用モデル: -';
+  document.getElementById('analysis-end-time').textContent = '-';
   document.getElementById('analysis-duration').textContent = '所要時間: -';
   document.getElementById('total-duration').textContent = '-';
+
+  // エラー情報セクションを非表示
+  const errorInfoSection = document.getElementById('error-info-section');
+  const retryBtn = document.getElementById('retry-analysis-btn');
+  if (errorInfoSection) errorInfoSection.classList.add('hidden');
+  if (retryBtn) retryBtn.classList.add('hidden');
+
+  // モデル選択アイテムを非表示
+  const modelSelectionItem = document.querySelector('#timeline-content .flex.items-center.gap-3:nth-child(2)');
+  if (modelSelectionItem) {
     modelSelectionItem.style.display = 'none';
   }
+}
+
+// 日時をフォーマットする関数
+function formatDateTime(date) {
+  return date.toLocaleString('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+}
+
 // 所要時間をフォーマットする関数
 function formatDuration(seconds) {
   if (seconds < 60) {
@@ -454,7 +741,34 @@ function formatDuration(seconds) {
   }
 }
 
+// バッジクリック時にタイムラインモーダルを開く機能を追加
+document.addEventListener('click', function (event) {
+  const badge = event.target;
+  if (badge.classList.contains('badge') && badge.getAttribute('data-overlay') === '#timeline-modal') {
+    const row = badge.closest('tr');
+    const imageId = row ? row.getAttribute('data-image-id') : null;
+    if (imageId) {
+      loadTimelineModal(imageId);
+    }
+  }
+});
 
+// タイムラインモーダルが閉じられた時に進捗監視を停止
+document.addEventListener('DOMContentLoaded', function () {
+  const timelineModal = document.getElementById('timeline-modal');
+  if (timelineModal) {
+    // FlyonUIのモーダルイベントを監視
+    timelineModal.addEventListener('hidden.bs.modal', function () {
+      stopTimelineProgressMonitoring();
+    });
+
+    // 閉じるボタンクリック時も監視停止
+    const closeButtons = timelineModal.querySelectorAll('[data-overlay="#timeline-modal"]');
+    closeButtons.forEach(button => {
+      button.addEventListener('click', function () {
+        stopTimelineProgressMonitoring();
+      });
+    });
   }
 });
 
