@@ -766,6 +766,31 @@ window.addEventListener('load', () => {
     showUploadError('アップロード処理でエラーが発生しました');
   });
 
+  // モデル選択時の説明表示
+  const modelSelector = document.getElementById('model-selector');
+  if (modelSelector) {
+    modelSelector.addEventListener('change', (e) => {
+      const selectedModel = e.target.value;
+      const descriptionEl = document.getElementById('model-description');
+      if (!descriptionEl) return;
+
+      const descriptions = {
+        'resnet50': 'ResNet-50 v2.1は、深層学習における代表的な画像分類モデルです。高い精度と汎用性を持ち、様々な画像タスクに適用できます。ImageNetで学習済みで、1000クラスの分類が可能です。',
+        'efficientnet': 'EfficientNet-B0は、効率性を重視した軽量モデルです。少ないパラメータ数で高い性能を実現し、モバイルデバイスやエッジコンピューティングに最適です。高速な推論が可能です。',
+        'mobilenet': 'MobileNet v2は、モバイル環境に特化して設計されたモデルです。軽量で高速な処理が可能で、スマートフォンやタブレットでのリアルタイム画像認識に適しています。',
+        'vgg16': 'VGG-16は、深いネットワーク構造を持つ高精度モデルです。詳細な特徴抽出が得意で、複雑な画像パターンの識別に優れています。計算量は多いですが、高い精度が期待できます。',
+        'clip': 'CLIPは、テキストと画像を同時に理解するマルチモーダルモデルです。アニメやイラストの検出に特化しており、詳細な画像分類が可能です。',
+        'custom': 'カスタムモデルは、特定の用途やデータセットに特化して学習されたモデルです。ドメイン固有の特徴を捉えることができ、専門的な画像解析タスクに最適です。'
+      };
+
+      if (selectedModel && descriptions[selectedModel]) {
+        descriptionEl.textContent = descriptions[selectedModel];
+      } else {
+        descriptionEl.textContent = 'モデルを選択すると、ここに詳細な説明が表示されます。';
+      }
+    });
+  }
+
   // モーダル内の解析開始ボタンのイベントリスナー
   // （元 image-upload.js から統合）
   const modalAnalysisButton = document.getElementById('modal-start-analysis-btn');
