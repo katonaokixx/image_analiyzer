@@ -1004,8 +1004,5 @@ if (modelSelector) {
   });
 }
 
-// CSRFトークン取得関数
-function getCSRFToken() {
-  return document.querySelector('[name=csrfmiddlewaretoken]').value;
-}
+// CSRFトークン取得は共通ユーティリティ（utils.js）を使用
 

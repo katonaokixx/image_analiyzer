@@ -740,10 +740,7 @@ window.addEventListener('load', () => {
   let batchFailCount = 0;
   let sessionUploadCount = 0; // セッション内の累積アップロード数
 
-  function getCSRFToken() {
-    const token = document.querySelector('[name=csrfmiddlewaretoken]');
-    return token ? token.value : '';
-  }
+  // CSRFトークン取得は共通ユーティリティ（utils.js）を使用
 
   function getUploadBtn() {
     return document.getElementById('start-upload-btn');
@@ -1652,20 +1649,7 @@ function saveModelSelection(modelName) {
 }
 
 // CSRFトークン取得関数
-function getCookie(name) {
-  let cookieValue = null;
-  if (document.cookie && document.cookie !== '') {
-    const cookies = document.cookie.split(';');
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i].trim();
-      if (cookie.substring(0, name.length + 1) === (name + '=')) {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-        break;
-      }
-    }
-  }
-  return cookieValue;
-}
+// getCookie()は共通ユーティリティ（utils.js）を使用
 
 function updateDatabaseStatus() {
 
@@ -1769,10 +1753,4 @@ function updateAnalysisCardToCompleted() {
 
 }
 
-function getCSRFToken() {
-  const token = document.querySelector('[name=csrfmiddlewaretoken]');
-  if (token) {
-    return token.value;
-  }
-  return '';
-}
+// getCSRFToken()は共通ユーティリティ（utils.js）を使用

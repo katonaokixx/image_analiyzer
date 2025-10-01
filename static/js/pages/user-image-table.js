@@ -111,53 +111,7 @@ function confirmDeleteImage() {
 }
 
 // CSRFトークンを取得する関数
-function getCSRFToken() {
-  console.log('=== CSRFトークン取得開始 ===');
-
-  // 方法1: csrfmiddlewaretokenフィールドから取得
-  const token = document.querySelector('[name=csrfmiddlewaretoken]');
-  if (token && token.value) {
-    console.log('CSRFトークンをフィールドから取得:', token.value);
-    console.log('フィールドトークンの長さ:', token.value.length);
-    return token.value;
-  }
-
-  // 方法2: Cookieから取得（Djangoの標準的な方法）
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      const cookies = document.cookie.split(';');
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
-  }
-
-  const csrfToken = getCookie('csrftoken');
-  if (csrfToken) {
-    console.log('CSRFトークンをCookieから取得:', csrfToken);
-    console.log('Cookieトークンの長さ:', csrfToken.length);
-    return csrfToken;
-  }
-
-  // 方法3: メタタグから取得
-  const metaToken = document.querySelector('meta[name=csrf-token]');
-  if (metaToken) {
-    console.log('CSRFトークンをメタタグから取得:', metaToken.getAttribute('content'));
-    return metaToken.getAttribute('content');
-  }
-
-  console.error('CSRFトークンが見つかりません');
-  console.log('利用可能なCookie:', document.cookie);
-  console.log('利用可能なCSRFフィールド:', document.querySelectorAll('[name*="csrf"]'));
-  console.log('=== CSRFトークン取得終了 ===');
-  return null;
-}
+// getCSRFToken()とgetCookie()は共通ユーティリティ（utils.js）を使用
 
 // 削除確認をキャンセルして通常状態に戻す関数
 function cancelDeleteConfirm() {

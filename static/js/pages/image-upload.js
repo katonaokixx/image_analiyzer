@@ -704,31 +704,7 @@ function updateProgressBar(percentage) {
 }
 
 // CSRFトークン取得
-function getCSRFToken() {
-  // 複数の方法でCSRFトークンを取得
-  let token = document.querySelector('[name=csrfmiddlewaretoken]');
-  if (token) {
-    return token.value;
-  }
-
-  // Cookieから取得
-  const cookies = document.cookie.split(';');
-  for (let cookie of cookies) {
-    const [name, value] = cookie.trim().split('=');
-    if (name === 'csrftoken') {
-      return value;
-    }
-  }
-
-  // メタタグから取得
-  token = document.querySelector('meta[name=csrf-token]');
-  if (token) {
-    return token.getAttribute('content');
-  }
-
-  console.warn('CSRFトークンが見つかりません');
-  return '';
-}
+// getCSRFToken()は共通ユーティリティ（utils.js）を使用
 
 // 各画像の個別進捗を更新
 function updateIndividualImagesProgress() {
