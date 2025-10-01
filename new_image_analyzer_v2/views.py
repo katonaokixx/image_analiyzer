@@ -376,8 +376,19 @@ def image_upload(request: HttpRequest):
         return redirect('v2_login')
     
     # 新規アップロードページでは、セッションをクリア（まっさらな状態から開始）
-    if 'clear_session' not in request.GET:
-        # 初回アクセス時はセッションをクリア
+    # ただし、既に画像がアップロード済みで解析中の場合はクリアしない
+    uploaded_image_ids = request.session.get('uploaded_image_ids', [])
+    has_active_analysis = False
+    if uploaded_image_ids:
+        # アップロード済み画像があり、解析中または準備中の場合はクリアしない
+        active_images = TransUploadedImage.objects.filter(
+            image_id__in=uploaded_image_ids,
+            status__in=['analyzing', 'preparing']
+        )
+        has_active_analysis = active_images.exists()
+    
+    if 'clear_session' not in request.GET and not has_active_analysis:
+        # 初回アクセス時、または解析がアクティブでない場合のみセッションをクリア
         request.session['uploaded_image_ids'] = []
         request.session['selected_model'] = ''
         request.session.modified = True
@@ -701,11 +712,13 @@ def api_form_upload(request: HttpRequest):
     
     # セッションにアップロードした画像IDを保存
     uploaded_image_ids = request.session.get('uploaded_image_ids', [])
+    print(f"DEBUG: セッション保存前のimage_ids = {uploaded_image_ids}")
     for img in saved:
         if img.image_id not in uploaded_image_ids:
             uploaded_image_ids.append(img.image_id)
     request.session['uploaded_image_ids'] = uploaded_image_ids
     request.session.modified = True
+    print(f"DEBUG: セッション保存後のimage_ids = {uploaded_image_ids}")
     
     # レスポンス用の画像情報を準備
     response_data = []
@@ -1494,6 +1507,8 @@ def api_analysis_progress(request: HttpRequest):
         else:
             # セッション画像の一括進捗を取得（複数画像対応）
             uploaded_image_ids = request.session.get('uploaded_image_ids', [])
+            print(f"DEBUG進捗API: セッションから取得したimage_ids = {uploaded_image_ids}")
+            print(f"DEBUG進捗API: セッションキー一覧 = {list(request.session.keys())}")
             
             if not uploaded_image_ids:
                 return JsonResponse({
@@ -1510,6 +1525,9 @@ def api_analysis_progress(request: HttpRequest):
                 # 対象画像を全て取得
                 images = TransUploadedImage.objects.filter(image_id__in=uploaded_image_ids)
                 total_count = images.count()
+                print(f"DEBUG進捗API: クエリ実行 image_ids={uploaded_image_ids}")
+                print(f"DEBUG進捗API: 取得した画像数={total_count}")
+                print(f"DEBUG進捗API: 画像リスト={list(images.values_list('image_id', 'status'))}")
                 
                 if total_count == 0:
                     return JsonResponse({
@@ -1526,9 +1544,11 @@ def api_analysis_progress(request: HttpRequest):
                 completed_count = images.filter(status='completed').count()
                 analyzing_count = images.filter(status='analyzing').count()
                 preparing_count = images.filter(status='preparing').count()
+                print(f"DEBUG進捗API: 完了={completed_count}, 解析中={analyzing_count}, 準備中={preparing_count}, 合計={total_count}")
                 
                 # 実際の進捗を計算（完了画像数 / 総画像数）
                 progress_percentage = int((completed_count / total_count) * 100)
+                print(f"DEBUG進捗API: 進捗パーセンテージ={progress_percentage}%")
                 
                 # ステータスと説明文を決定
                 if completed_count == total_count:

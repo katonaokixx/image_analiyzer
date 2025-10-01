@@ -201,7 +201,7 @@
                   images.0.timeline_log.analysis_completed_at|date:'Y-m-d H:i' }}{% endif %}
                 </span>
               </div>
-              <p class="mb-2 text-xs sm:text-sm">AIによる画像解析を開始しました。</p>
+              <p id="timeline-analysis-description" class="mb-2 text-xs sm:text-sm">AIによる画像解析を開始しました。</p>
 
               <!-- アップロードUIを流用した解析進捗表示 -->
               <div class="mx-4 sm:mx-8 lg:mx-12 space-y-2" id="analysis-progress-previews">
@@ -353,7 +353,7 @@
 
 {% block extra_js %}
 <!-- 簡素化されたアップロード機能 -->
-<script src="{% static 'js/upload-simplified.js' %}?v=3.5"></script>
+<script src="{% static 'js/upload-simplified.js' %}?v=3.6"></script>
 <script>
   // テンプレート変数をJavaScriptに渡す
   window.uploadedImagesJson = '{{ uploaded_images_json|default:"[]"|escapejs }}';
@@ -373,7 +373,7 @@
     }
   });
 </script>
-<script src="{% static 'js/image-upload.js' %}?v=3.5"></script>
+<script src="{% static 'js/image-upload.js' %}?v=3.6"></script>
 {% endblock %}
 
 {% block extra_css %}

@@ -413,6 +413,12 @@ function startProgressMonitoring() {
         console.log('進捗ステータス:', data.status);
         console.log('進捗パーセンテージ:', data.progress_percentage);
 
+        // 進捗説明を常に更新
+        const progressDescription = document.getElementById('timeline-analysis-description');
+        if (progressDescription && data.description) {
+          progressDescription.textContent = data.description;
+        }
+
         if (data.status === 'completed' && data.progress >= 100) {
           // 全画像が完了したことを確認
           if (data.completed_images === data.total_images && data.total_images > 0) {
@@ -455,12 +461,6 @@ function startProgressMonitoring() {
 
           // 各画像の個別進捗を更新
           updateIndividualImagesProgress();
-
-          // v1と同様に進捗説明も更新
-          const progressDescription = document.querySelector('#timeline-item-2 .text-xs');
-          if (progressDescription && data.description) {
-            progressDescription.textContent = data.description;
-          }
         }
       })
       .catch(error => {
