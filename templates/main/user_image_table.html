@@ -546,56 +546,6 @@
 
 
 <!-- 解析進捗モーダル -->
-<div id="analysis-progress-modal" class="overlay modal overlay-open:opacity-100 overlay-open:duration-300 hidden"
-  role="dialog" tabindex="-1">
-  <div
-    class="modal-dialog overlay-open:mt-4 sm:overlay-open:mt-8 lg:overlay-open:mt-12 overlay-open:duration-300 transition-all ease-out max-w-sm sm:max-w-md lg:max-w-lg">
-    <div class="modal-content">
-      <div class="modal-header p-4 sm:p-6">
-        <h3 class="modal-title text-lg sm:text-xl">解析進捗</h3>
-        <button type="button" class="btn btn-text btn-circle btn-sm absolute end-3 top-3" aria-label="Close"
-          data-overlay="#analysis-progress-modal">
-          <span class="icon-[tabler--x] size-4"></span>
-        </button>
-      </div>
-      <div class="modal-body p-4 sm:p-6">
-        <div class="flex flex-col gap-4 sm:gap-6">
-          <div class="text-center">
-            <p class="text-sm sm:text-base text-gray-600 mb-4">画像解析の進捗状況を表示しています。</p>
-
-            <!-- ローディングアニメーション -->
-            <div class="flex justify-center items-center gap-2 mb-4">
-              <div class="flex gap-1">
-                <span class="w-1.5 h-1.5 bg-info rounded-full animate-pulse"></span>
-                <span class="w-1.5 h-1.5 bg-info rounded-full animate-pulse"></span>
-                <span class="w-1.5 h-1.5 bg-info rounded-full animate-pulse"></span>
-              </div>
-            </div>
-
-            <!-- 進捗バー -->
-            <div class="flex items-center gap-x-3 whitespace-nowrap mb-4">
-              <div class="progress h-2 flex-1" id="modal-analysis-progress">
-                <div class="progress-bar progress-info transition-all duration-500" style="width:0%"
-                  id="modal-analysis-progress-bar"></div>
-              </div>
-              <span class="text-base-content mb-0.5 text-sm">
-                <span id="modal-analysis-progress-value">0</span>%
-              </span>
-            </div>
-
-            <!-- ステータス表示 -->
-            <div class="flex items-center justify-center gap-2">
-              <span class="icon-[tabler--brain] text-info size-4"></span>
-              <span class="text-sm text-info font-medium">解析中</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <div class="flex justify-end gap-3">
-          <button type="button" class="btn btn-soft btn-secondary" data-overlay="#analysis-progress-modal">閉じる</button>
-        </div>
-      </div>
     </div>
   </div>
 </div>
