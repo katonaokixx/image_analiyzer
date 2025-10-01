@@ -69,24 +69,8 @@ function confirmDeleteImage() {
   console.log('削除API呼び出し開始:', `/v2/api/images/${currentImageId}/delete/`);
   console.log('使用するCSRFトークン:', csrfToken);
 
-  fetch(`/v2/api/images/${currentImageId}/delete/`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': csrfToken
-    }
-  })
-    .then(response => {
-      console.log('削除API応答:', response.status, response.statusText);
-      if (response.ok) {
-        return response.json();
-      } else {
-        return response.text().then(text => {
-          console.error('削除APIエラー:', text);
-          throw new Error(`削除に失敗しました (${response.status}): ${text}`);
-        });
-      }
-    })
+  // api.js統合版を使用
+  deleteImage(currentImageId)
     .then(data => {
       console.log('削除API応答データ:', data);
       if (data.success || data.ok) {
@@ -548,15 +532,9 @@ function startProgressMonitoring(imageId) {
     progressDescription.textContent = '解析を開始しています...';
   }
 
-  // 0.5秒ごとに進捗を取得
+  // 0.5秒ごとに進捗を取得（api.js統合版）
   progressInterval = setInterval(() => {
-    fetch(`/v2/api/analysis/progress/?image_id=${imageId}`)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      })
+    getAnalysisProgress(imageId)
       .then(data => {
         console.log('進捗取得結果:', data);
         if (data.ok && data.progress !== undefined) {
